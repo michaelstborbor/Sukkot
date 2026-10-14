@@ -1,0 +1,104 @@
+# Render Blueprint for Sukkot Salone: web app + API, a scheduled maintenance job and Postgres.
+# In Render: New > Blueprint > pick this repository. Values marked `sync: false` are asked for
+# when the Blueprint is first applied; secrets never live in this file. See docs/DEPLOYMENT.md.
+
+previews:
+  generation: off
+
+services:
+  - type: web
+    name: sukkot-web
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: main
+    autoDeploy: true
+    # Dev dependencies (Prisma CLI, TypeScript) are needed to build, so install them explicitly.
+    buildCommand: corepack enable && NODE_ENV=development pnpm install --frozen-lockfile && pnpm build
+    preDeployCommand: pnpm --filter @sukkot/web db:deploy
+    startCommand: pnpm --filter @sukkot/web start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sukkot-db
+          property: connectionString
+      - key: APP_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false # e.g. https://sukkotsalone.com
+      # Files: Cloudflare R2 (or any S3-compatible bucket). Render's disk is wiped on every deploy.
+      - key: STORAGE_DRIVER
+        value: s3
+      - key: S3_ENDPOINT
+        sync: false # https://<account-id>.r2.cloudflarestorage.com
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_PUBLIC_BASE_URL
+        sync: false # optional CDN origin for public images; leave empty to serve through the app
+      # Email
+      - key: EMAIL_DRIVER
+        value: resend
+      - key: EMAIL_FROM
+        sync: false # e.g. Sukkot Salone <no-reply@sukkotsalone.com>
+      - key: RESEND_API_KEY
+        sync: false
+      # Payments: add ORANGE_MONEY and AFRIMONEY here once their settings below are filled in and tested.
+      # Never add SANDBOX on a live site.
+      - key: PAYMENT_METHODS_ENABLED
+        value: BANK_TRANSFER,CASH,MANUAL
+      - key: ORANGE_MONEY_CLIENT_ID
+        sync: false
+      - key: ORANGE_MONEY_CLIENT_SECRET
+        sync: false
+      - key: ORANGE_MONEY_MERCHANT_KEY
+        sync: false
+      - key: ORANGE_MONEY_WEBHOOK_SECRET
+        sync: false
+      - key: AFRIMONEY_API_BASE
+        sync: false
+      - key: AFRIMONEY_MERCHANT_ID
+        sync: false
+      - key: AFRIMONEY_API_KEY
+        sync: false
+      - key: AFRIMONEY_WEBHOOK_SECRET
+        sync: false
+
+  - type: cron
+    name: sukkot-expire
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: main
+    schedule: "*/15 * * * *"
+    buildCommand: corepack enable && NODE_ENV=development pnpm install --frozen-lockfile
+    startCommand: pnpm --filter @sukkot/web jobs:expire
+    # The job only touches the database.
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sukkot-db
+          property: connectionString
+
+databases:
+  - name: sukkot-db
+    region: frankfurt
+    plan: basic-1gb # paid plan: daily backups and point-in-time recovery; the free plan expires
+    postgresMajorVersion: "16"
+    databaseName: sukkot
+    user: sukkot
+    ipAllowList: [] # reachable only from Render services in the same region

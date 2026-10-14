@@ -47,6 +47,11 @@ pnpm dev:mobile                                 # opens Expo; scan the QR code w
 
 See [apps/mobile/README.md](apps/mobile/README.md).
 
+## Deploying
+
+The recommended host is Render: `render.yaml` sets up the web app, the scheduled job and Postgres.
+Follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#recommended-setup-render-frankfurt).
+
 ## Common commands
 
 | Command | What it does |
