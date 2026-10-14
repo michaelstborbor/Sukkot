@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Sukkot Salone",
+    "slug": "sukkot-salone",
+    "scheme": "sukkot",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F8FA",
+    "ios": {
+      "bundleIdentifier": "sl.sukkot.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "sl.sukkot.app",
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

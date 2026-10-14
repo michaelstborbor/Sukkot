@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sukkot_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sukkot_test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sukkot_test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sukkot/web db:generate
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      - name: Bundle the mobile app (Android and iOS)
+        working-directory: apps/mobile
+        run: npx expo export --platform android --platform ios --output-dir /tmp/expo-dist
+        env:
+          CI: "1"
+          EXPO_NO_TELEMETRY: "1"
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sukkot_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sukkot_e2e
+      APP_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      # The e2e suite signs in with seeded demo accounts, which only works in demo mode.
+      DEMO_MODE: "true"
+      PAYMENT_METHODS_ENABLED: SANDBOX,BANK_TRANSFER,CASH,MANUAL
+      ALLOW_SANDBOX_IN_PRODUCTION: "true"
+      SANDBOX_WEBHOOK_SECRET: ci-sandbox-secret
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /tmp/sukkot-storage
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sukkot/web db:deploy
+      - run: pnpm db:seed
+      - run: pnpm build
+      - run: pnpm --filter @sukkot/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @sukkot/web test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          retention-days: 7

@@ -1,0 +1,60 @@
+{
+  "name": "@sukkot/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "postinstall": "prisma generate",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "jobs:expire": "tsx scripts/expire-records.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/s3-request-presigner": "^3.1151.0",
+    "@prisma/client": "6.19.3",
+    "@sukkot/shared": "workspace:*",
+    "bcryptjs": "3.0.3",
+    "clsx": "2.1.1",
+    "lucide-react": "0.554.0",
+    "next": "15.5.27",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "3.4.1",
+    "server-only": "0.0.1",
+    "sharp": "0.34.5",
+    "sonner": "2.0.7",
+    "tailwind-merge": "3.4.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@playwright/test": "1.56.1",
+    "@tailwindcss/postcss": "4.1.17",
+    "@types/node": "22.19.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "eslint": "9.39.1",
+    "eslint-config-next": "15.5.27",
+    "prisma": "6.19.3",
+    "tailwindcss": "4.1.17",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}
