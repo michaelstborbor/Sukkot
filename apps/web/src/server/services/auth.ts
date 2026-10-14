@@ -61,6 +61,9 @@ export async function login(
     throw new AppError("UNAUTHENTICATED", GENERIC_LOGIN_ERROR);
   }
   if (user.status !== "ACTIVE") throw new AppError("FORBIDDEN", "This account is not active. Contact support for help.");
+  // Seeded demo accounts share a published password, so they can only sign in when demo mode is on
+  // (never by default in production).
+  if (user.isDemo && !env.demoMode) throw new AppError("FORBIDDEN", "Demo accounts are disabled on this site.");
   await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() } });
   await audit({ actorId: user.id, action: "auth.login", targetType: "User", targetId: user.id, ipHash: meta.ipHash });
   const session = await createSession(user.id, meta);

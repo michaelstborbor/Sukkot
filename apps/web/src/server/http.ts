@@ -31,6 +31,10 @@ export function clientIp(req: Request): string | null {
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+export function isMobileClient(req: Request) {
+  return req.headers.get("x-client") === "mobile";
+}
+
 /**
  * CSRF protection for cookie-authenticated requests: the Origin (or Referer) must match our host.
  * Bearer-token requests (mobile app) are not cookie-bound and are exempt.
@@ -69,6 +73,11 @@ export async function resolveRequestActor(req: Request): Promise<{ actor: Actor 
   if (auth?.startsWith("Bearer ")) {
     return { actor: await resolveSession(auth.slice(7).trim()), viaBearer: true };
   }
+  // The mobile app never uses cookies. Its requests (including sign-in, before it has a token) are
+  // treated as token-only: cookies are ignored, so the CSRF origin check is not needed. Native apps
+  // send no Origin header, and a browser cannot add the custom X-Client header cross-site without a
+  // CORS preflight, which this API never approves.
+  if (isMobileClient(req)) return { actor: null, viaBearer: true };
   const cookie = req.headers
     .get("cookie")
     ?.split(/;\s*/)
