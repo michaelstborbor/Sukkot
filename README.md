@@ -51,6 +51,8 @@ See [apps/mobile/README.md](apps/mobile/README.md).
 
 The recommended host is Render: `render.yaml` sets up the web app, the scheduled job and Postgres.
 Follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#recommended-setup-render-frankfurt).
+To try it at no cost first, `render.free.yaml` sets up a free test site with a free Neon database:
+see [Free testing setup](docs/DEPLOYMENT.md#free-testing-setup-render-free-plan--neon).
 
 ## Common commands
 

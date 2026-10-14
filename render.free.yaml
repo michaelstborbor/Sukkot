@@ -1,0 +1,51 @@
+# Free-tier Render Blueprint for TESTING Sukkot Salone. Not for a live site: see render.yaml for that.
+# In Render: New > Blueprint > pick this repository, then set "Blueprint Path" to render.free.yaml.
+# The database is a free Neon Postgres (Render's free database is deleted after 30 days).
+# Values marked `sync: false` are asked for when the Blueprint is first applied; secrets never live
+# in this file. See "Free testing setup" in docs/DEPLOYMENT.md.
+
+previews:
+  generation: off
+
+services:
+  - type: web
+    name: sukkot-web-test
+    runtime: node
+    region: frankfurt
+    plan: free # sleeps after ~15 idle minutes; the next visit takes about a minute to wake it
+    branch: main
+    autoDeploy: true
+    # Dev dependencies (Prisma CLI, TypeScript) are needed to build, so install them explicitly.
+    buildCommand: corepack enable && NODE_ENV=development pnpm install --frozen-lockfile && pnpm build
+    # The free plan has no pre-deploy step, so pending migrations are applied on start
+    # (`prisma migrate deploy` only applies new migrations; it never drops data).
+    startCommand: pnpm --filter @sukkot/web db:deploy && pnpm --filter @sukkot/web start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon connection string, the direct (non-pooled) one, ending in ?sslmode=require
+      - key: APP_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false # https://sukkot-web-test.onrender.com, or whatever URL Render gives the service
+      # Test-only switches. Pages show sample-data notices, labelled demo accounts can sign in and the
+      # sandbox payment provider simulates fee payments. No real money moves. Remove all three before
+      # anyone real uses the site.
+      - key: DEMO_MODE
+        value: "true"
+      - key: ALLOW_SANDBOX_IN_PRODUCTION
+        value: "true"
+      - key: PAYMENT_METHODS_ENABLED
+        value: SANDBOX,BANK_TRANSFER,CASH,MANUAL
+      # Uploaded files go on the service's own disk, which the free plan wipes on every restart or
+      # deploy. Fine for clicking through; switch to Cloudflare R2 (see render.yaml) to keep them.
+      - key: STORAGE_DRIVER
+        value: local
+      # Emails (verification links, password resets) are written to the service's Logs tab instead of
+      # being sent. Switch to Resend (see render.yaml) to send real email.
+      - key: EMAIL_DRIVER
+        value: console
