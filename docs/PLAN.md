@@ -19,14 +19,14 @@ Leone"). The name, tagline, logo text and contact details are configurable in
 | Web + API | **Next.js 15 (App Router) + TypeScript** | Server rendering for SEO on public listings, route handlers for the JSON API, one deployable unit (spec Option A). |
 | Database | **PostgreSQL 16 + Prisma 6** | Relational integrity, migrations, typed queries, transactions. |
 | Styling | Tailwind CSS 4 with a small in-repo component kit (shadcn-style, Radix-free to keep bundles small) | Consistent design tokens, no runtime CSS-in-JS cost on slow connections. |
-| Motion | Framer Motion (restrained, honours `prefers-reduced-motion`) | Page/section reveals, card hovers, modal transitions. |
-| Icons | lucide-react / lucide-react-native | One consistent icon family on web and mobile. |
-| Forms | React Hook Form + Zod (schemas from `@sukkot/shared`) | The same Zod schema validates in the browser, in the API and in the app. |
+| Motion | CSS transitions only (honour `prefers-reduced-motion`) | No animation library in the bundle; matters on slow connections. |
+| Icons | lucide-react (web), Ionicons via `@expo/vector-icons` (mobile) | Bundled with Expo, no extra native setup. |
+| Forms | Small controlled-form helpers + Zod (schemas from `@sukkot/shared`) | The API validates every request with the shared Zod schemas and returns per-field errors that both clients display. |
 | Charts | Recharts | Dashboard charts from real aggregates. |
 | Auth | First-party session auth: bcrypt password hashes, opaque random session tokens stored hashed in `sessions`, HttpOnly cookie on web, `Authorization: Bearer` on mobile | One auth model for both clients, revocable sessions, no third-party dependency. |
 | Files | Storage driver interface: local private disk in development, S3-compatible (Cloudflare R2 / AWS S3 / Backblaze) in production. Images resized to WebP with `sharp`. Private documents only via short-lived HMAC-signed URLs. | Cheap, portable, no sensitive file ever in a public directory. |
 | Payments | Provider abstraction with **Orange Money**, **Afrimoney**, bank transfer, card (placeholder), manual and cash recording, plus a sandbox provider for development | Mobile money first, as requested; nothing is marked paid without a verified callback or a provider status query. |
-| Mobile | **Expo SDK 54 + Expo Router + React Native** | Android-first (dominant in Sierra Leone) and iOS from one codebase; consumes the same `/api/v1`. |
+| Mobile | **Expo SDK 57 + Expo Router + React Native** | Android-first (dominant in Sierra Leone) and iOS from one codebase; consumes the same `/api/v1`. |
 | Tests | Vitest (unit + DB integration), Playwright (end-to-end, desktop and mobile viewports) | Fast, TypeScript-native. |
 | Deploy | Vercel or Render for web/API, Neon/Render/Supabase Postgres, R2/S3 storage, EAS Build for mobile | Free tiers available during development. |
 
