@@ -1,5 +1,5 @@
 import "server-only";
-import { slugify, type Role } from "@sukkot/shared";
+import { parseMajorToMinor, slugify, type Role } from "@sukkot/shared";
 import { z } from "zod";
 import type { LocationLevel, Prisma } from "@prisma/client";
 import { db } from "../db";
@@ -113,10 +113,11 @@ const planSchema = z.object({
   name: z.string().trim().min(2).max(60),
   audience: z.enum(["LANDLORD", "AGENT", "AGENCY"]),
   description: z.string().trim().min(5).max(500),
-  priceMinor: z.coerce.bigint().nonnegative(),
+  /** Major units as typed by staff, e.g. "250" or "250.50". */
+  price: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
   currency: z.enum(["SLE", "USD"]),
   periodDays: z.coerce.number().int().min(1).max(366),
-  maxListings: z.coerce.number().int().min(1).max(10000).nullable(),
+  maxListings: z.preprocess((v) => (v === "" || v === undefined || v === null ? null : v), z.coerce.number().int().min(1).max(10000).nullable()),
   featuredSlots: z.coerce.number().int().min(0).max(100),
   features: z.array(z.string().trim().min(2).max(120)).max(12),
   isActive: z.boolean(),
@@ -124,9 +125,12 @@ const planSchema = z.object({
 
 export async function upsertPlan(actorIn: Actor | null, input: unknown) {
   const actor = assertPermission(actorIn, "admin:plans.manage");
-  const data = planSchema.parse(input);
+  const { price, ...rest } = planSchema.parse(input);
+  const priceMinor = price === "0" || price === "" ? 0n : parseMajorToMinor(price, rest.currency);
+  if (priceMinor === null) throw new AppError("VALIDATION", "Enter a valid price", { price: "Invalid amount" });
+  const data = { ...rest, priceMinor };
   const plan = await db.subscriptionPlan.upsert({ where: { code: data.code }, create: data, update: data });
-  await audit({ actorId: actor.id, action: "plan.upsert", targetType: "SubscriptionPlan", targetId: plan.id, metadata: { price: data.priceMinor.toString(), currency: data.currency } });
+  await audit({ actorId: actor.id, action: "plan.upsert", targetType: "SubscriptionPlan", targetId: plan.id, metadata: { price: priceMinor.toString(), currency: data.currency } });
   return plan;
 }
 

@@ -60,10 +60,15 @@ export function JsonForm({
         const body: Record<string, unknown> = { ...extra };
         for (const f of fields) {
           const val = v[f.name];
-          if (f.type === "checkbox") body[f.name] = val === true;
-          else if (f.type === "number") body[f.name] = val === "" ? undefined : Number(val);
-          else if (f.type === "list") body[f.name] = String(val).split("\n").map((s) => s.trim()).filter(Boolean);
-          else body[f.name] = val;
+          let out: unknown = val;
+          if (f.type === "checkbox") out = val === true;
+          else if (f.type === "number") out = val === "" ? undefined : Number(val);
+          else if (f.type === "list") out = String(val).split("\n").map((s) => s.trim()).filter(Boolean);
+          // "a.b" names build nested objects.
+          const path = f.name.split(".");
+          let target = body;
+          for (const key of path.slice(0, -1)) target = (target[key] ??= {}) as Record<string, unknown>;
+          target[path[path.length - 1]!] = out;
         }
         submit(body);
       }}

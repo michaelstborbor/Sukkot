@@ -122,7 +122,7 @@ const DOC_KINDS = [
   ["OTHER", "Other"],
 ] as const;
 
-export function DocumentManager({ propertyId, documents }: { propertyId: string; documents: { id: string; label: string; kind: string; createdAt: string; visibility: string }[] }) {
+export function DocumentManager({ propertyId, documents, canUpload = true }: { propertyId: string; canUpload?: boolean; documents: { id: string; label: string; kind: string; createdAt: string; visibility: string }[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<string>("TITLE_DEED");
@@ -158,6 +158,7 @@ export function DocumentManager({ propertyId, documents }: { propertyId: string;
         Documents are stored privately. Only you and authorised Sukkot Salone staff can open them. Uploading documents lets our team review them; a
         &ldquo;Documents reviewed&rdquo; badge does not confirm legal ownership.
       </p>
+      {canUpload && (
       <form onSubmit={submit} className="grid gap-3 rounded-xl border border-line bg-canvas p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <Field id="doc-kind" label="Document type">
           <Select id="doc-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -176,6 +177,7 @@ export function DocumentManager({ propertyId, documents }: { propertyId: string;
           </Button>
         </div>
       </form>
+      )}
       {documents.length === 0 ? (
         <p className="text-sm text-muted">No documents uploaded.</p>
       ) : (

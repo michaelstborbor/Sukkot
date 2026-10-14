@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { AVAILABILITY, AVAILABILITY_LABELS, formatDateTime, formatMoney, listingMachine, LISTING_STATUS_LABELS } from "@sukkot/shared";
-import { requirePagePermission } from "@/server/auth/actor";
+import { requirePageActor } from "@/server/auth/actor";
 import { AppError } from "@/server/errors";
 import { getCatalog } from "@/server/services/catalog";
 import { getManagedProperty } from "@/server/services/properties";
@@ -33,7 +33,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
   const { id } = await params;
   const { tab: rawTab } = await searchParams;
   const tab: Tab = (TABS.map((t) => t[0]) as string[]).includes(rawTab ?? "") ? (rawTab as Tab) : "overview";
-  const actor = await requirePagePermission("listing:create", `/dashboard/properties/${id}`);
+  const actor = await requirePageActor(`/dashboard/properties/${id}`);
   const p = await getManagedProperty(actor, id).catch((e) => {
     if (e instanceof AppError && (e.code === "NOT_FOUND" || e.code === "FORBIDDEN")) notFound();
     throw e;
@@ -165,6 +165,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
       {tab === "documents" && (
         <DocumentManager
           propertyId={p.id}
+          canUpload={isManager}
           documents={p.documents.map((d) => ({ id: d.id, label: d.label, kind: d.kind, createdAt: d.createdAt.toISOString(), visibility: d.visibility }))}
         />
       )}
