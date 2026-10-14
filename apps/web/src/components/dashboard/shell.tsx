@@ -16,7 +16,7 @@ export function DashboardNav({ items, title }: { items: NavItem[]; title: string
   const active = (href: string) => (href === "/dashboard" || href === "/admin" ? pathname === href : pathname.startsWith(href));
   return (
     <>
-      <nav aria-label={title} className="sticky top-16 z-20 -mx-4 overflow-x-auto border-b border-line bg-white/95 px-4 backdrop-blur lg:hidden">
+      <nav aria-label={title} className="sticky top-16 z-20 -mx-4 -mt-6 overflow-x-auto border-b border-line bg-white/95 px-4 backdrop-blur lg:hidden">
         <ul className="flex gap-1 py-2">
           {items.map((i) => (
             <li key={i.href}>

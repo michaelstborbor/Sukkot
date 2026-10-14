@@ -60,7 +60,8 @@ export interface RouteContext<P> {
   body<T>(schema: ZodType<T, ZodTypeDef, unknown>): Promise<T>;
   query<T>(schema: ZodType<T, ZodTypeDef, unknown>): T;
   requireActor(): Actor;
-  limit(bucket: string, l: { limit: number; window: number }): Promise<void>;
+  /** Rate-limit by user (or IP when anonymous); `scope` narrows the bucket further, e.g. to an email. */
+  limit(bucket: string, l: { limit: number; window: number }, scope?: string): Promise<void>;
 }
 
 export async function resolveRequestActor(req: Request): Promise<{ actor: Actor | null; viaBearer: boolean }> {
@@ -108,8 +109,8 @@ export function handler<P = Record<string, string>>(fn: Handler<P>, opts: { csrf
           if (!actor) throw unauthenticated();
           return actor;
         },
-        async limit(bucket, l) {
-          await rateLimit(`${bucket}:${actor?.id ?? ctx.ipHash ?? "anon"}`, l.limit, l.window);
+        async limit(bucket, l, scope) {
+          await rateLimit(`${bucket}:${actor?.id ?? ctx.ipHash ?? "anon"}${scope ? `:${scope}` : ""}`, l.limit, l.window);
         },
       };
       const result = await fn(ctx);

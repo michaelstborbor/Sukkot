@@ -24,6 +24,8 @@ export async function rateLimit(key: string, limit: number, windowSeconds: numbe
 
 export const LIMITS = {
   login: { limit: 10, window: 15 * 60 },
+  /** Per-IP ceiling across all accounts (shared networks and NAT are common, so it is generous). */
+  loginIp: { limit: 60, window: 15 * 60 },
   register: { limit: 5, window: 60 * 60 },
   passwordReset: { limit: 5, window: 60 * 60 },
   enquiry: { limit: 20, window: 60 * 60 },

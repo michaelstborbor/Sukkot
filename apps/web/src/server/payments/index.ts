@@ -48,8 +48,8 @@ function newReference() {
 
 /** Allowed status changes. Terminal states never move except SUCCEEDED → REFUNDED/DISPUTED. */
 const ALLOWED: Record<PaymentStatus, PaymentStatus[]> = {
-  CREATED: ["PENDING", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED"],
-  PENDING: ["SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED"],
+  CREATED: ["PENDING", "SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "DISPUTED"],
+  PENDING: ["SUCCEEDED", "FAILED", "CANCELLED", "EXPIRED", "DISPUTED"],
   SUCCEEDED: ["REFUNDED", "DISPUTED"],
   FAILED: [],
   CANCELLED: [],
