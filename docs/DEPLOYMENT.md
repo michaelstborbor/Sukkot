@@ -10,6 +10,75 @@
 | Email | Resend (`EMAIL_DRIVER=resend`) | Verify your sending domain |
 | Mobile | EAS Build → Google Play / App Store | Set `EXPO_PUBLIC_API_URL` to the production HTTPS URL |
 
+## Recommended setup: Render (Frankfurt)
+
+The repository includes a Render Blueprint (`render.yaml`) that creates:
+
+- `sukkot-web`: the web app and API (Node 22, Starter plan). Database migrations run before each
+  deploy (`preDeployCommand`), and Render health-checks `/api/health`.
+- `sukkot-expire`: a cron job that runs `jobs:expire` every 15 minutes.
+- `sukkot-db`: PostgreSQL 16 on a paid plan, so it has daily backups and point-in-time recovery.
+
+Everything is in the Frankfurt region. Photos and documents go to Cloudflare R2, email goes through
+Resend, and Cloudflare handles the domain.
+
+### Before you start
+
+1. **Cloudflare R2**: create a bucket (for example `sukkot-files`), then an R2 API token with
+   read and write access to that bucket only. Note the account endpoint
+   (`https://<account-id>.r2.cloudflarestorage.com`), access key ID and secret.
+2. **Resend**: add and verify your sending domain, then create an API key.
+3. **Domain**: decide the address, for example `https://sukkotsalone.com`.
+
+### Create the services
+
+1. In Render, choose **New > Blueprint**, connect GitHub and pick the Sukkot repository.
+2. Render lists the three resources and asks for the values marked `sync: false`. Fill in:
+   - `APP_URL`: your final address, with `https://`
+   - `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`: from R2
+   - `EMAIL_FROM` and `RESEND_API_KEY`: from Resend
+   - Leave `STORAGE_PUBLIC_BASE_URL` and all Orange Money and Afrimoney values empty for now.
+
+   `APP_SECRET` is generated for you. `PAYMENT_METHODS_ENABLED` starts as bank transfer, cash and
+   manual records only.
+3. Apply the Blueprint. The first deploy builds the app and creates the database tables.
+
+### Load reference data and create the first admin
+
+Open the `sukkot-web` service, then **Shell**, and run:
+
+```bash
+pnpm db:seed                               # locations, property types, amenities, plans (no demo data in production)
+pnpm --filter @sukkot/web admin:create     # asks for the admin's email, name and password
+```
+
+### Connect the domain
+
+1. In `sukkot-web` > **Settings > Custom Domains**, add your domain and `www`.
+2. In Cloudflare DNS, add the records Render shows. Keep Cloudflare's proxy on (orange cloud)
+   once Render has issued the certificate.
+3. Make sure `APP_URL` matches the domain exactly.
+
+### Turn on mobile money (later)
+
+When Orange Money or Afrimoney gives you merchant credentials:
+
+1. Fill in their values on `sukkot-web` > **Environment**.
+2. Register the callback URLs listed under "Payment providers" below.
+3. Test in the provider's sandbox first, then add `ORANGE_MONEY` and/or `AFRIMONEY` to
+   `PAYMENT_METHODS_ENABLED`.
+
+### Notes
+
+- Pushing to `main` deploys automatically. A failed migration stops the deploy, and the previous
+  version keeps running.
+- Check in the Render dashboard that the database plan shows backups and point-in-time recovery
+  before launch.
+- Per-IP rate limits read the first address in `X-Forwarded-For` (see "Reverse proxy and client
+  IPs" below). Proxies such as Cloudflare and Render may append to a header the visitor already
+  sent rather than replace it, so treat per-IP limits as best-effort; per-account login limits and
+  lockouts do not depend on it.
+
 ## Environment
 
 Copy `apps/web/.env.example`. In production you must set at least:
