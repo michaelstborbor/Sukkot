@@ -72,7 +72,7 @@ export async function decideVerification(actorIn: Actor | null, id: string, inpu
     const label = VERIFICATION_BADGES[req.kind].label;
     const body =
       data.decision === "VERIFIED" ? `Your ${label} check is complete.` : data.decision === "INFO_REQUIRED" ? `We need more information: ${data.reason}` : `Your verification was not approved: ${data.reason}`;
-    await tx.notification.create({ data: { userId: req.userId, type: "verification.decision", title: `Verification update: ${label}`, body, link: "/dashboard/verification" } });
+    await notify([{ userId: req.userId, type: "verification.decision", title: `Verification update: ${label}`, body, link: "/dashboard/verification", email: true }], tx);
     return updated;
   });
 }

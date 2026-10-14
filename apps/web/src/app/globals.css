@@ -143,3 +143,27 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Long-form content pages */
+.prose-page h2 {
+  @apply mt-10 mb-3 text-2xl font-bold text-navy-900;
+}
+.prose-page h3 {
+  @apply mt-6 mb-2 text-lg font-semibold text-navy-900;
+}
+.prose-page p,
+.prose-page li {
+  @apply text-[15px] leading-relaxed text-ink;
+}
+.prose-page p + p {
+  @apply mt-3;
+}
+.prose-page ul {
+  @apply mt-2 list-disc space-y-1.5 pl-5;
+}
+.prose-page ol {
+  @apply mt-2 list-decimal space-y-1.5 pl-5;
+}
+.prose-page a {
+  @apply font-medium text-emerald-700 underline underline-offset-4;
+}
