@@ -1,0 +1,14 @@
+# Local development database. `docker compose up -d` then `pnpm db:migrate && pnpm db:seed`.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sukkot
+      POSTGRES_PASSWORD: sukkot
+      POSTGRES_DB: sukkot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

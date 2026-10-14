@@ -1,0 +1,22 @@
+{
+  "name": "sukkot-salone",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sukkot Salone: real estate marketplace and property management platform for Sierra Leone (web + mobile).",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @sukkot/web dev",
+    "dev:mobile": "pnpm --filter @sukkot/mobile start",
+    "build": "pnpm --filter @sukkot/web build",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "db:migrate": "pnpm --filter @sukkot/web db:migrate",
+    "db:deploy": "pnpm --filter @sukkot/web db:deploy",
+    "db:seed": "pnpm --filter @sukkot/web db:seed",
+    "db:reset": "pnpm --filter @sukkot/web db:reset"
+  }
+}
