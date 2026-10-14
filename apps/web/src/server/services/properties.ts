@@ -25,6 +25,7 @@ import { actorIsStaff, assertPermission, can } from "../auth/actor";
 import { audit } from "../audit";
 import { notify } from "../notify";
 import { publicImageUrl, storage } from "../storage";
+import { assertListingCapacity } from "./billing";
 import { storeImage, storePrivateDocument } from "../uploads";
 
 /* ------------------------------------------------------------ Includes */
@@ -480,6 +481,7 @@ export async function ownerListingAction(actorIn: Actor | null, id: string, acti
       const imageCount = await tx.propertyImage.count({ where: { propertyId: id } });
       if (imageCount === 0) throw new AppError("VALIDATION", "Add at least one photo before submitting for review");
     }
+    if (action === "submit" || action === "resume") await assertListingCapacity(tx, p.listerId, p.id);
     const next = listingMachine.next(p.listingStatus, action, "OWNER");
     const updated = await tx.property.update({ where: { id }, data: { listingStatus: next } });
     await tx.propertyStatusHistory.create({

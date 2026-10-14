@@ -34,4 +34,6 @@ export const LIMITS = {
   upload: { limit: 60, window: 60 * 60 },
   offer: { limit: 20, window: 60 * 60 },
   webhook: { limit: 600, window: 60 },
+  /** Transfers waiting for finance; each one notifies staff. */
+  manualPayment: { limit: 10, window: 60 * 60 },
 } as const;

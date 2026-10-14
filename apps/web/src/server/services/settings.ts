@@ -9,6 +9,16 @@ export interface SettingTypes {
   "promotion.featured7d": { priceMinor: string; currency: Currency } | null;
   "listing.autoExpireDays": number;
   "inspection.maxPerDay": number;
+  /** Sukkot Salone's own wallet numbers and bank account, shown to customers who pay by transfer. */
+  "billing.manual": ManualBillingSettings;
+}
+
+export interface ManualBillingSettings {
+  enabled: boolean;
+  accountName: string;
+  orangeMoneyNumber: string;
+  afrimoneyNumber: string;
+  bankDetails: string;
 }
 
 export const SETTING_DEFAULTS: SettingTypes = {
@@ -20,6 +30,7 @@ export const SETTING_DEFAULTS: SettingTypes = {
   "promotion.featured7d": null,
   "listing.autoExpireDays": 90,
   "inspection.maxPerDay": 8,
+  "billing.manual": { enabled: false, accountName: "", orangeMoneyNumber: "", afrimoneyNumber: "", bankDetails: "" },
 };
 
 export async function getSetting<K extends keyof SettingTypes>(key: K): Promise<SettingTypes[K]> {

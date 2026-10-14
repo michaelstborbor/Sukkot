@@ -342,6 +342,29 @@ export const paymentInitiateSchema = z.object({
   idempotencyKey: z.string().min(8).max(100),
 });
 
+/** Channels a customer can use to pay Sukkot Salone by transfer, before online collection is live. */
+export const MANUAL_PLATFORM_CHANNELS = ["ORANGE_MONEY", "AFRIMONEY", "BANK_TRANSFER"] as const;
+export type ManualPlatformChannel = (typeof MANUAL_PLATFORM_CHANNELS)[number];
+
+/**
+ * A plan or promotion paid by transfer to Sukkot Salone's own wallet or bank account. The amount is
+ * priced on the server; the customer only says how they paid and gives the transaction ID, which
+ * finance staff check against the statement before anything is activated.
+ */
+export const manualPlatformPaymentSchema = z.object({
+  purpose: z.enum(["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION"]),
+  subscriptionPlanId: idSchema.optional(),
+  propertyId: idSchema.optional(),
+  channel: z.enum(MANUAL_PLATFORM_CHANNELS),
+  externalReference: trimmed(4, 60),
+  payerPhone: phoneSchema.optional(),
+  idempotencyKey: z.string().min(8).max(100),
+});
+
+export const manualPaymentReviewSchema = z
+  .object({ approve: z.boolean(), reason: optionalText(500) })
+  .refine((v) => v.approve || (v.reason && v.reason.length >= 5), { message: "Say why the payment is rejected", path: ["reason"] });
+
 export const paymentRecordSchema = z.object({
   method: z.enum(["BANK_TRANSFER", "CASH", "MANUAL", "ORANGE_MONEY", "AFRIMONEY"]),
   purpose: z.enum(PAYMENT_PURPOSES),

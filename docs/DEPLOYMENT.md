@@ -182,6 +182,37 @@ Run every 15 minutes (Render cron job, GitHub Actions schedule, or system cron):
 pnpm --filter @sukkot/web jobs:expire
 ```
 
+## Getting paid for plans and featured listings
+
+Landlords and agents pay Sukkot Salone for Pro plans and featured listings. Rent and sale money never
+passes through the platform.
+
+**Before the mobile money APIs are live**, take payment by transfer:
+
+1. In **Admin → Site settings → Pay by transfer**, enter the account name customers see and at least one
+   of: an Orange Money or Afrimoney business number, or bank details. Tick **Offer pay by transfer at
+   checkout** and save. Use business accounts only.
+2. At checkout, customers see those details and the exact amount, send the money, and enter the
+   transaction ID from their confirmation SMS or receipt.
+3. Finance staff (Finance or Super admin role) are notified. In **Admin → Payments → Transfers to
+   check**, find the same amount and transaction ID on the business statement, then click
+   **Confirm received** (the plan or promotion starts and the customer is notified) or **Not found**
+   with a reason.
+
+A transaction ID can only be used once. Confirmed transfers are marked *Recorded* and never
+*Provider verified*. Nobody can confirm their own payment.
+
+**Prices** are set in **Admin → Plans** (plans) and **Admin → Site settings** (featured listing, 7
+days). The seed starts at Landlord Pro SLE 300 and Agent Pro SLE 900 per 30 days and a featured listing
+at SLE 100. These are starting guesses; change them as you learn what customers accept.
+
+**What a plan gives**: the listing limit applies when a listing is submitted for review or resumed
+(listings already live are never taken down when a plan ends). Featured slots are used from
+**Plans and billing** on a listing's "Feature for 7 days" link. Renewing before a plan ends queues the
+new period to start when the current one ends. The scheduled job marks ended plans as expired and
+sends a reminder three days before the end; without the job, limits still follow the paid dates, but
+no reminders go out.
+
 ## Payment providers
 
 Callback URLs to register with each provider:

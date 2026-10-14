@@ -144,15 +144,28 @@ async function seedCatalog() {
   for (const [name, group] of AMENITIES) {
     await db.amenity.upsert({ where: { slug: slugify(name) }, create: { name, slug: slugify(name), group }, update: {} });
   }
+  // Starting prices in new Leones; administrators change them in Admin → Plans. Features list only
+  // what the platform actually enforces or provides.
   const plans = [
-    { code: "landlord-free", name: "Landlord Basic", audience: "LANDLORD", description: "List up to 3 properties for free.", priceMinor: 0n, maxListings: 3, featuredSlots: 0, features: ["Up to 3 active listings", "Enquiries and messaging", "Inspection booking"], sortOrder: 0 },
-    { code: "landlord-pro", name: "Landlord Pro", audience: "LANDLORD", description: "For landlords managing several properties.", priceMinor: 25_000n * 100n, maxListings: 25, featuredSlots: 1, features: ["Up to 25 active listings", "Tenancy and rent records", "1 featured listing per month"], sortOrder: 1 },
-    { code: "agent-pro", name: "Agent Pro", audience: "AGENT", description: "For agents and small agencies.", priceMinor: 60_000n * 100n, maxListings: 100, featuredSlots: 3, features: ["Up to 100 active listings", "Agency profile page", "Lead analytics", "3 featured listings per month"], sortOrder: 2 },
+    { code: "landlord-free", name: "Landlord Basic", audience: "LANDLORD", description: "List up to 3 properties for free.", priceMinor: 0n, maxListings: 3, featuredSlots: 0, features: ["Up to 3 active listings", "Enquiries, messaging and inspection booking", "Tenancy and rent records"], sortOrder: 0 },
+    { code: "landlord-pro", name: "Landlord Pro", audience: "LANDLORD", description: "For landlords managing several properties.", priceMinor: 300n * 100n, maxListings: 25, featuredSlots: 1, features: ["Up to 25 active listings", "1 featured listing (7 days) every 30 days", "Everything in Landlord Basic"], sortOrder: 1 },
+    { code: "agent-pro", name: "Agent Pro", audience: "AGENT", description: "For agents and small agencies.", priceMinor: 900n * 100n, maxListings: 100, featuredSlots: 3, features: ["Up to 100 active listings", "3 featured listings (7 days each) every 30 days", "Everything in Landlord Basic"], sortOrder: 2 },
   ];
-  // Prices are placeholders for local development; administrators set real prices in Admin → Plans.
+  // Earlier seeds used placeholder prices a hundred times too high. Replace them only where an
+  // administrator has not changed the price since.
+  const OLD_PLACEHOLDER_PRICES: Record<string, bigint> = { "landlord-pro": 25_000n * 100n, "agent-pro": 60_000n * 100n };
   for (const p of plans) {
-    await db.subscriptionPlan.upsert({ where: { code: p.code }, create: { ...p, currency: "SLE", periodDays: 30, isActive: true }, update: {} });
+    const existing = await db.subscriptionPlan.findUnique({ where: { code: p.code } });
+    if (!existing) await db.subscriptionPlan.create({ data: { ...p, currency: "SLE", periodDays: 30, isActive: true } });
+    else if (existing.priceMinor === OLD_PLACEHOLDER_PRICES[p.code]) {
+      await db.subscriptionPlan.update({ where: { code: p.code }, data: { priceMinor: p.priceMinor, features: p.features, description: p.description } });
+    }
   }
+  await db.systemSetting.upsert({
+    where: { key: "promotion.featured7d" },
+    create: { key: "promotion.featured7d", value: { priceMinor: (100n * 100n).toString(), currency: "SLE" } },
+    update: {},
+  });
   await db.systemSetting.upsert({
     where: { key: "site.announcement" },
     create: { key: "site.announcement", value: { text: "Never pay for a property before inspecting it and checking the documents.", link: "/safety", enabled: true } },
@@ -261,6 +274,14 @@ async function seedDemo() {
   const agent = await demoUser("agent@demo.sukkot.sl", "Fatmata Bangura (Demo)", ["AGENT"], "+23230300300", { showPhone: true, whatsapp: "+23230300300", bio: "Fictional demo agent at Lion Mountain Realty (Demo)." });
   const tenant = await demoUser("tenant@demo.sukkot.sl", "Mohamed Kamara (Demo)", [], "+23278400400");
   const buyer = await demoUser("buyer@demo.sukkot.sl", "Hawa Koroma (Demo)", [], "+23233500500");
+
+  // Demo plans so the paid features can be tried: the landlord and agent are on Pro, landlord2 stays
+  // on the free plan (and is over its limit, which shows the upgrade prompt).
+  for (const [userId, code] of [[landlord.id, "landlord-pro"], [agent.id, "agent-pro"]] as const) {
+    if (await db.subscription.count({ where: { userId } })) continue;
+    const plan = await db.subscriptionPlan.findUniqueOrThrow({ where: { code } });
+    await db.subscription.create({ data: { userId, planId: plan.id, status: "ACTIVE", startsAt: new Date(), endsAt: new Date(Date.now() + plan.periodDays * 86400_000) } });
+  }
 
   const agency = await db.agency.upsert({
     where: { slug: "lion-mountain-realty-demo" },

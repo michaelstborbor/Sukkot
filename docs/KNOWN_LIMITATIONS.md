@@ -23,6 +23,10 @@ Honest list of what is incomplete or needs work before production.
   checkout, lease-terms proposals and payee confirmation of recorded payments are done on the website.
   The app links to the relevant web pages.
 - Rent schedules are generated when a tenancy starts; there are no automatic reminders yet.
+- Plans are bought from the website's Plans and billing page; the mobile app does not sell plans.
+- Pay by transfer relies on finance staff checking the business statement by hand. There is no
+  automatic statement import yet.
+- Plan prices are starting guesses, not market research. Set real prices in Admin → Plans.
 
 ## Operations
 

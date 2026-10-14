@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Site settings" };
 
 export default async function AdminSettingsPage() {
   await requirePagePermission("admin:settings.manage", "/admin/settings");
-  const [announcement, promo] = await Promise.all([getSetting("site.announcement"), getSetting("promotion.featured7d")]);
+  const [announcement, promo, manual] = await Promise.all([getSetting("site.announcement"), getSetting("promotion.featured7d"), getSetting("billing.manual")]);
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader title="Site settings" />
@@ -32,6 +32,22 @@ export default async function AdminSettingsPage() {
           fields={[
             { name: "promotionPrice.amount", label: "Amount", optional: true, defaultValue: promo ? minorToMajorString(promo.priceMinor, promo.currency) : "" },
             { name: "promotionPrice.currency", label: "Currency", type: "select", defaultValue: promo?.currency ?? "SLE", options: [{ value: "SLE", label: "SLE" }, { value: "USD", label: "USD" }] },
+          ]}
+        />
+      </section>
+      <section className="card p-5">
+        <h2 className="mb-1 font-bold text-navy-900">Pay by transfer</h2>
+        <p className="mb-3 text-sm text-muted">
+          Lets customers pay for plans and featured listings by sending money to Sukkot Salone&apos;s own wallet or bank account. They enter the transaction ID, and nothing starts until finance confirms it under Payments → Transfers to check. Use business accounts only, never a personal number.
+        </p>
+        <JsonForm
+          path="/admin/settings"
+          fields={[
+            { name: "billingManual.enabled", label: "Offer pay by transfer at checkout", type: "checkbox", defaultValue: manual.enabled, wide: true },
+            { name: "billingManual.accountName", label: "Account name customers see", optional: true, defaultValue: manual.accountName, placeholder: "Sukkot Salone Ltd", wide: true },
+            { name: "billingManual.orangeMoneyNumber", label: "Orange Money merchant or business number", optional: true, defaultValue: manual.orangeMoneyNumber },
+            { name: "billingManual.afrimoneyNumber", label: "Afrimoney merchant or business number", optional: true, defaultValue: manual.afrimoneyNumber },
+            { name: "billingManual.bankDetails", label: "Bank details", type: "textarea", optional: true, defaultValue: manual.bankDetails, placeholder: "Bank, branch, account number" },
           ]}
         />
       </section>
