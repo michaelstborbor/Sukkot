@@ -266,3 +266,17 @@ export async function hideMessage(actorIn: Actor | null, messageId: string, reas
   await db.message.update({ where: { id: messageId }, data: { hiddenAt: new Date(), hiddenReason: reason } });
   await audit({ actorId: actor.id, action: "message.hide", targetType: "Message", targetId: messageId, metadata: { reason } });
 }
+
+/** Enquiries received on listings the actor manages (lister inbox). */
+export async function listReceivedEnquiries(actorIn: Actor | null) {
+  const actor = assertActor(actorIn);
+  return db.enquiry.findMany({
+    where: { property: { OR: [{ listerId: actor.id }, { ownerId: actor.id }] } },
+    include: {
+      property: { select: { id: true, title: true, reference: true } },
+      user: { select: { phone: true, profile: { select: { fullName: true } } } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 200,
+  });
+}

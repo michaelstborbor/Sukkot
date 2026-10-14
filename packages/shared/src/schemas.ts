@@ -329,7 +329,8 @@ export const reportSchema = z
 export const paymentInitiateSchema = z.object({
   method: z.enum(PAYMENT_METHODS),
   purpose: z.enum(PAYMENT_PURPOSES),
-  amount: amountSchema,
+  /** Ignored for platform purchases: the server prices plans and promotions itself. */
+  amount: amountSchema.optional(),
   currency: z.enum(CURRENCIES).default("SLE"),
   /** Mobile money wallet number of the payer. */
   payerPhone: phoneSchema.optional(),
