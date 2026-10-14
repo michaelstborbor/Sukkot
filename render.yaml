@@ -10,7 +10,7 @@ services:
     name: sukkot-web
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: free
     branch: main
     autoDeploy: true
     # Dev dependencies (Prisma CLI, TypeScript) are needed to build, so install them explicitly.
@@ -78,7 +78,7 @@ services:
     name: sukkot-expire
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: free
     branch: main
     schedule: "*/15 * * * *"
     buildCommand: corepack enable && NODE_ENV=development pnpm install --frozen-lockfile
