@@ -33,5 +33,8 @@ Run on 2026-10-14 in the development container (Node 22, Postgres 16, Chromium):
 | Mobile manual smoke test (web build of the app against the local API, Pixel 7 viewport) | explore, purpose filter, filters sheet, listing detail, sign-up, enquiry, conversation and sending a message worked with no console errors |
 
 Not yet done: running the mobile app on a physical Android or iOS device, and testing the Orange Money
-and Afrimoney adapters against the providers' sandboxes (no merchant credentials yet). The GitHub
-Actions workflow has not run yet because the code has not been pushed at the time of writing.
+and Afrimoney adapters against the providers' sandboxes (no merchant credentials yet).
+
+GitHub Actions: the first run caught that the end-to-end job seeded the database before the Prisma
+client was generated (fixed by generating it on install). The next run passed both jobs: typecheck,
+lint, tests, build and mobile bundling, and the Playwright suite.
