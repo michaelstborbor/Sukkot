@@ -10,6 +10,64 @@
 | Email | Resend (`EMAIL_DRIVER=resend`) | Verify your sending domain |
 | Mobile | EAS Build → Google Play / App Store | Set `EXPO_PUBLIC_API_URL` to the production HTTPS URL |
 
+## Free testing setup: Render free plan + Neon
+
+Use this to try the platform at no cost. It is a test site, not a live one: it runs in demo mode,
+uploaded files do not survive a restart, and emails are written to the logs instead of being sent.
+The Blueprint is `render.free.yaml`.
+
+| Piece | Free option | Limit to know about |
+|---|---|---|
+| Web + API | Render free web service | Sleeps after about 15 idle minutes; the next visit takes about a minute |
+| Database | Neon free Postgres | 0.5 GB; does not expire (Render's free database is deleted after 30 days) |
+| Files | The service's own disk | Wiped on every restart and deploy |
+| Email | Console driver | Verification and reset links appear in Render's Logs tab |
+| Expiry job | Not scheduled | Expired holds and offers are not cleaned up automatically |
+
+### Steps
+
+1. **Neon**: sign up at neon.tech and create a project (region: Frankfurt, Postgres 16). On the
+   dashboard, click **Connect**, turn **Connection pooling** off and copy the connection string. It
+   looks like `postgresql://user:password@ep-....eu-central-1.aws.neon.tech/neondb?sslmode=require`.
+   Keep it private.
+2. **Render**: sign up at render.com with GitHub and allow access to this repository.
+3. **New > Blueprint**, pick this repository and set **Blueprint Path** to `render.free.yaml`.
+4. Render asks for two values:
+   - `DATABASE_URL`: the Neon string from step 1.
+   - `APP_URL`: enter `https://sukkot-web-test.onrender.com` for now. If Render gives the service a
+     different URL, update this value under the service's **Environment** tab and save.
+5. Click **Apply**. The first build takes several minutes. Migrations run when the service starts.
+6. **Load reference data and demo accounts** from your own computer (the free plan has no Shell).
+   With Node 22 and pnpm installed, in a checkout of this repository:
+
+   ```bash
+   pnpm install
+   export DATABASE_URL='<the Neon string from step 1>'
+   pnpm --filter @sukkot/web db:deploy
+   export SEED_DEMO_PASSWORD="$(openssl rand -base64 18)"
+   echo "$SEED_DEMO_PASSWORD"               # note it down; it is the password for every demo account
+   SEED_ALLOW_DEMO=true pnpm db:seed
+   pnpm --filter @sukkot/web admin:create   # your own administrator account
+   ```
+
+   The seed adds locations, property types and amenities, plus labelled demo listings and demo
+   accounts such as `admin@demo.sukkot.sl`, `landlord@demo.sukkot.sl` and `tenant@demo.sukkot.sl`.
+   The test site is on the public internet and one demo account is a super administrator, so always
+   set `SEED_DEMO_PASSWORD` as above. Never use the built-in local development password here. Never
+   run `db:reset` against this database unless you mean to erase it.
+7. Open the service URL and sign in. To try the mobile app against it, set
+   `EXPO_PUBLIC_API_URL` to the same URL in `apps/mobile/.env`.
+
+To test real file uploads or real email, add the R2 or Resend settings from `render.yaml` under the
+service's **Environment** tab and change `STORAGE_DRIVER` to `s3` or `EMAIL_DRIVER` to `resend`.
+
+### Before real users arrive
+
+Do not turn the test site into the live one by editing it. Create the live site from `render.yaml`
+(next section) instead. If you do reuse anything, first remove `DEMO_MODE` and
+`ALLOW_SANDBOX_IN_PRODUCTION`, remove `SANDBOX` from `PAYMENT_METHODS_ENABLED`, and delete the demo
+data.
+
 ## Recommended setup: Render (Frankfurt)
 
 The repository includes a Render Blueprint (`render.yaml`) that creates:
