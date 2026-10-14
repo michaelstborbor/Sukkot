@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import { brand } from "@/config/brand";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
-const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap", weight: ["500", "600", "700"] });
+// Fonts are bundled from src/fonts (SIL Open Font License) so builds never depend on Google Fonts being reachable.
+const jakarta = localFont({ src: "../fonts/plus-jakarta-sans-latin-wght-normal.woff2", variable: "--font-jakarta", display: "swap", weight: "200 800" });
+const fraunces = localFont({ src: "../fonts/fraunces-latin-wght-normal.woff2", variable: "--font-fraunces", display: "swap", weight: "100 900" });
 
 const appUrl = process.env.APP_URL || "http://localhost:3000";
 
