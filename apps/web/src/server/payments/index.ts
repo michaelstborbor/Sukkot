@@ -1,25 +1,30 @@
 import "server-only";
 import {
+  PAYMENT_METHOD_LABELS,
   PAYMENT_PURPOSE_LABELS,
   PLATFORM_COLLECTED_PURPOSES,
   PROVIDER_VERIFIED_METHODS,
   formatMoney,
+  manualPaymentReviewSchema,
+  manualPlatformPaymentSchema,
   parseMajorToMinor,
   paymentInitiateSchema,
   paymentRecordSchema,
+  type ManualPlatformChannel,
   type PaymentDTO,
   type PaymentMethod,
 } from "@sukkot/shared";
-import { Prisma, type PaymentStatus, type PaymentTransaction } from "@prisma/client";
+import { Prisma, type Currency, type PaymentPurpose, type PaymentStatus, type PaymentTransaction } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { db, type Tx } from "../db";
 import { AppError, forbidden, notFound } from "../errors";
 import type { Actor } from "../auth/session";
-import { assertActor, can } from "../auth/actor";
+import { assertActor, assertPermission, can } from "../auth/actor";
 import { audit } from "../audit";
 import { notify } from "../notify";
 import { env } from "../env";
 import { getSetting } from "../services/settings";
+import { FEATURED_PERIOD_DAYS, featuredStart, renewalStart } from "../services/billing";
 import { afrimoneyProvider } from "./providers/afrimoney";
 import { orangeMoneyProvider } from "./providers/orange-money";
 import { sandboxProvider } from "./providers/sandbox";
@@ -74,6 +79,37 @@ export function toPaymentDto(p: PaymentTransaction): PaymentDTO {
   };
 }
 
+interface PricedItem {
+  amountMinor: bigint;
+  currency: Currency;
+  description: string;
+  planId?: string;
+  propertyId?: string;
+}
+
+/** Price a plan or promotion on the server. Whatever amount a client sends is never used. */
+async function pricePlatformItem(
+  userId: string,
+  purpose: PaymentPurpose,
+  ids: { subscriptionPlanId?: string; propertyId?: string },
+): Promise<PricedItem> {
+  if (purpose === "PLATFORM_SUBSCRIPTION") {
+    const plan = ids.subscriptionPlanId ? await db.subscriptionPlan.findFirst({ where: { id: ids.subscriptionPlanId, isActive: true } }) : null;
+    if (!plan) throw new AppError("VALIDATION", "Choose a plan", { subscriptionPlanId: "Required" });
+    if (plan.priceMinor <= 0n) throw new AppError("BAD_REQUEST", "This plan is free; no payment is needed");
+    return { amountMinor: plan.priceMinor, currency: plan.currency, description: `${plan.name} plan`, planId: plan.id };
+  }
+  if (purpose === "LISTING_PROMOTION") {
+    const property = ids.propertyId ? await db.property.findUnique({ where: { id: ids.propertyId }, select: { id: true, reference: true, listerId: true, ownerId: true, listingStatus: true } }) : null;
+    if (!property || (property.listerId !== userId && property.ownerId !== userId)) throw notFound("Listing");
+    if (property.listingStatus !== "PUBLISHED") throw new AppError("CONFLICT", "Only published listings can be promoted");
+    const price = await getSetting("promotion.featured7d");
+    if (!price) throw new AppError("NOT_CONFIGURED", "Listing promotion is not on sale yet");
+    return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: `Featured listing ${property.reference}`, propertyId: property.id };
+  }
+  throw new AppError("NOT_CONFIGURED", "Platform fees are not enabled");
+}
+
 /**
  * Start an online payment for something the platform itself sells (subscription, promotion, fee).
  * Rent, deposits and sale proceeds flow directly between the parties and are recorded, not collected.
@@ -99,34 +135,11 @@ export async function initiatePayment(actorIn: Actor | null, input: unknown) {
     throw new AppError("VALIDATION", "Enter the mobile money number to charge", { payerPhone: "Required" });
   }
 
-  let amountMinor: bigint;
-  let currency = data.currency;
-  let description: string;
-  let subscriptionId: string | undefined;
-  let propertyId: string | undefined;
-
-  if (data.purpose === "PLATFORM_SUBSCRIPTION") {
-    const plan = data.subscriptionPlanId ? await db.subscriptionPlan.findFirst({ where: { id: data.subscriptionPlanId, isActive: true } }) : null;
-    if (!plan) throw new AppError("VALIDATION", "Choose a plan", { subscriptionPlanId: "Required" });
-    if (plan.priceMinor <= 0n) throw new AppError("BAD_REQUEST", "This plan is free; no payment is needed");
-    amountMinor = plan.priceMinor;
-    currency = plan.currency;
-    description = `${plan.name} plan`;
-    const sub = await db.subscription.create({ data: { userId: actor.id, planId: plan.id, status: "PENDING_PAYMENT" } });
-    subscriptionId = sub.id;
-  } else if (data.purpose === "LISTING_PROMOTION") {
-    const property = data.propertyId ? await db.property.findUnique({ where: { id: data.propertyId }, select: { id: true, reference: true, listerId: true, ownerId: true, listingStatus: true } }) : null;
-    if (!property || (property.listerId !== actor.id && property.ownerId !== actor.id)) throw notFound("Listing");
-    if (property.listingStatus !== "PUBLISHED") throw new AppError("CONFLICT", "Only published listings can be promoted");
-    const price = await getSetting("promotion.featured7d");
-    if (!price) throw new AppError("NOT_CONFIGURED", "Listing promotion is not on sale yet");
-    amountMinor = BigInt(price.priceMinor);
-    currency = price.currency;
-    description = `Featured listing ${property.reference}`;
-    propertyId = property.id;
-  } else {
-    throw new AppError("NOT_CONFIGURED", "Platform fees are not enabled");
-  }
+  const item = await pricePlatformItem(actor.id, data.purpose, data);
+  const { amountMinor, currency, description, propertyId } = item;
+  const subscriptionId = item.planId
+    ? (await db.subscription.create({ data: { userId: actor.id, planId: item.planId, status: "PENDING_PAYMENT" } })).id
+    : undefined;
 
   const reference = newReference();
   const tx = await db.paymentTransaction.create({
@@ -180,7 +193,8 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
   if (p.purpose === "PLATFORM_SUBSCRIPTION" && p.subscriptionId) {
     const sub = await tx.subscription.findUnique({ where: { id: p.subscriptionId }, include: { plan: true } });
     if (sub && sub.status === "PENDING_PAYMENT") {
-      const startsAt = new Date();
+      // A renewal bought before the current period ends starts when that period ends.
+      const startsAt = await renewalStart(sub.userId, sub.planId, tx);
       await tx.subscription.update({
         where: { id: sub.id },
         data: { status: "ACTIVE", startsAt, endsAt: new Date(startsAt.getTime() + sub.plan.periodDays * 86400_000) },
@@ -188,12 +202,12 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
     }
   }
   if (p.purpose === "LISTING_PROMOTION" && p.propertyId) {
-    const startsAt = new Date();
-    await tx.featuredListing.create({ data: { propertyId: p.propertyId, startsAt, endsAt: new Date(startsAt.getTime() + 7 * 86400_000), source: `payment:${p.reference}` } });
+    const startsAt = await featuredStart(p.propertyId, tx);
+    await tx.featuredListing.create({ data: { propertyId: p.propertyId, startsAt, endsAt: new Date(startsAt.getTime() + FEATURED_PERIOD_DAYS * 86400_000), source: `payment:${p.reference}` } });
     await tx.property.update({ where: { id: p.propertyId }, data: { isFeatured: true } });
   }
   if (p.payerId) {
-    await notify([{ userId: p.payerId, type: "payment.succeeded", title: "Payment confirmed", body: `${formatMoney(p.amountMinor, p.currency)} for ${PAYMENT_PURPOSE_LABELS[p.purpose]} was confirmed by the provider.`, link: "/dashboard/payments" }], tx);
+    await notify([{ userId: p.payerId, type: "payment.succeeded", title: "Payment confirmed", body: `${formatMoney(p.amountMinor, p.currency)} for ${PAYMENT_PURPOSE_LABELS[p.purpose]} was confirmed${p.providerVerified ? " by the provider" : " by Sukkot Salone finance"}.`, link: "/dashboard/payments" }], tx);
   }
 }
 
@@ -300,6 +314,112 @@ export async function refreshPaymentStatus(actorIn: Actor | null, id: string) {
     return u;
   });
   return toPaymentDto(updated);
+}
+
+/* ------------------------------------------- Plans and promotions paid by transfer */
+
+/** How a customer paid Sukkot Salone by transfer. Kept beside the transaction, never sent to other users. */
+export function manualChannelOf(p: Pick<PaymentTransaction, "providerData">): ManualPlatformChannel | null {
+  const data = p.providerData as { manualChannel?: ManualPlatformChannel } | null;
+  return data?.manualChannel ?? null;
+}
+
+/** Waiting for finance to check a transfer. */
+export const isAwaitingFinance = (p: Pick<PaymentTransaction, "status" | "payeeId" | "purpose" | "providerData">) =>
+  p.status === "PENDING" && p.payeeId === null && PLATFORM_COLLECTED_PURPOSES.includes(p.purpose) && manualChannelOf(p) !== null;
+
+/**
+ * A customer says they paid for a plan or promotion by sending money to Sukkot Salone's own Orange
+ * Money or Afrimoney number or bank account. Nothing is activated until finance staff find the
+ * transaction on the statement and confirm it.
+ */
+export async function submitManualPlatformPayment(actorIn: Actor | null, input: unknown) {
+  const actor = assertActor(actorIn);
+  const data = manualPlatformPaymentSchema.parse(input);
+  const existing = await db.paymentTransaction.findUnique({ where: { idempotencyKey_payerId: { idempotencyKey: data.idempotencyKey, payerId: actor.id } } });
+  if (existing) return toPaymentDto(existing);
+  const settings = await getSetting("billing.manual");
+  if (!settings.enabled) throw new AppError("NOT_CONFIGURED", "Paying by transfer is not available yet");
+
+  const externalReference = data.externalReference.replace(/\s+/g, "").toUpperCase();
+  const reused = await db.paymentTransaction.findFirst({
+    where: { externalReference, payeeId: null, purpose: { in: [...PLATFORM_COLLECTED_PURPOSES] }, status: { notIn: ["FAILED", "CANCELLED", "EXPIRED"] } },
+    select: { id: true },
+  });
+  if (reused) throw new AppError("CONFLICT", "This transaction ID has already been submitted", { externalReference: "Already used" });
+
+  const item = await pricePlatformItem(actor.id, data.purpose, data);
+  const method: PaymentMethod = data.channel === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MANUAL";
+  const p = await db.$transaction(async (tx) => {
+    const sub = item.planId ? await tx.subscription.create({ data: { userId: actor.id, planId: item.planId, status: "PENDING_PAYMENT" } }) : null;
+    const created = await tx.paymentTransaction.create({
+      data: {
+        reference: newReference(),
+        idempotencyKey: data.idempotencyKey,
+        method,
+        purpose: data.purpose,
+        status: "PENDING",
+        amountMinor: item.amountMinor,
+        currency: item.currency,
+        payerId: actor.id,
+        payerPhone: data.payerPhone ?? null,
+        recordedById: actor.id,
+        subscriptionId: sub?.id,
+        propertyId: item.propertyId,
+        externalReference,
+        notes: item.description,
+        providerData: { manualChannel: data.channel },
+        events: { create: { type: "transfer_submitted", source: "payer", statusAfter: "PENDING", payload: { channel: data.channel } } },
+      },
+    });
+    const finance = await tx.userRoleAssignment.findMany({ where: { role: { in: ["FINANCE", "SUPER_ADMIN"] } }, select: { userId: true }, distinct: ["userId"] });
+    await notify(
+      finance.map((f) => ({
+        userId: f.userId,
+        type: "payment.awaiting_finance",
+        title: "Transfer to check",
+        body: `${formatMoney(item.amountMinor, item.currency)} for ${item.description}, ${PAYMENT_METHOD_LABELS[data.channel]} transaction ${externalReference}.`,
+        link: "/admin/payments?status=AWAITING",
+      })),
+      tx,
+    );
+    return created;
+  });
+  return toPaymentDto(p);
+}
+
+/**
+ * Finance staff confirm or reject a transfer after checking Sukkot Salone's wallet or bank statement.
+ * A confirmed transfer is marked RECORDED (checked by a person), never provider-verified.
+ */
+export async function reviewManualPayment(actorIn: Actor | null, id: string, input: unknown, ipHash?: string | null) {
+  const actor = assertPermission(actorIn, "admin:payments.manage");
+  const { approve, reason } = manualPaymentReviewSchema.parse(input);
+  return db.$transaction(async (tx) => {
+    const p = await tx.paymentTransaction.findUnique({ where: { id } });
+    if (!p || !isAwaitingFinance(p)) throw new AppError("CONFLICT", "This payment is not waiting for a finance check");
+    if (p.payerId === actor.id) throw forbidden("You cannot confirm your own payment");
+    const status: PaymentStatus = approve ? "RECORDED" : "FAILED";
+    const updated = await tx.paymentTransaction.update({
+      where: { id, status: "PENDING" },
+      data: {
+        status,
+        paidAt: approve ? new Date() : null,
+        confirmedByPayeeAt: approve ? new Date() : null,
+        events: { create: { type: approve ? "finance_confirmed" : "finance_rejected", source: "finance", statusBefore: p.status, statusAfter: status, payload: { by: actor.id, reason: reason ?? null } } },
+      },
+    });
+    if (approve) {
+      await fulfil(tx, updated);
+    } else {
+      if (p.subscriptionId) await tx.subscription.updateMany({ where: { id: p.subscriptionId, status: "PENDING_PAYMENT" }, data: { status: "CANCELLED" } });
+      if (p.payerId) {
+        await notify([{ userId: p.payerId, type: "payment.rejected", title: "Payment not found", body: `We could not match ${formatMoney(p.amountMinor, p.currency)} (transaction ${p.externalReference}) to our statement: ${reason}`, link: "/dashboard/billing", email: true }], tx);
+      }
+    }
+    await audit({ actorId: actor.id, action: approve ? "payment.finance_confirm" : "payment.finance_reject", targetType: "PaymentTransaction", targetId: id, metadata: { reference: p.reference, reason: reason ?? null }, ipHash }, tx);
+    return toPaymentDto(updated);
+  });
 }
 
 /**

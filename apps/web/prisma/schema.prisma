@@ -1165,10 +1165,13 @@ model Subscription {
   status    SubscriptionStatus @default(PENDING_PAYMENT)
   startsAt  DateTime?          @db.Timestamptz(3)
   endsAt    DateTime?          @db.Timestamptz(3)
+  /// When the "your plan ends soon" reminder went out, so it is sent once per period.
+  reminderSentAt DateTime?     @db.Timestamptz(3)
   createdAt DateTime           @default(now()) @db.Timestamptz(3)
   payments  PaymentTransaction[]
 
   @@index([userId, status])
+  @@index([status, endsAt])
   @@map("subscriptions")
 }
 

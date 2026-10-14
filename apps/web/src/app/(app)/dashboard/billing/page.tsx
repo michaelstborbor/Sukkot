@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { Check } from "lucide-react";
-import { formatDate, formatMoney } from "@sukkot/shared";
+import { formatDate, formatMoney, PAYMENT_METHOD_LABELS } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
-import { availableOnlineMethods } from "@/server/payments";
+import { availableOnlineMethods, isAwaitingFinance, manualChannelOf } from "@/server/payments";
+import { getEntitlements, transferDetails } from "@/server/services/billing";
 import { getSetting } from "@/server/services/settings";
 import { PageHeader } from "@/components/dashboard/shell";
 import { CheckoutButton } from "@/components/dashboard/checkout";
+import { ActionButton } from "@/components/dashboard/action-button";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Notice } from "@/components/ui/misc";
 
@@ -15,53 +17,92 @@ export const metadata: Metadata = { title: "Plans and billing" };
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ promote?: string }> }) {
   const actor = await requirePagePermission("listing:create", "/dashboard/billing");
   const { promote } = await searchParams;
-  const [plans, subs, promoPrice, promoProperty] = await Promise.all([
+  const [plans, subs, promoPrice, promoProperty, ent, transfer, myPlatformPayments] = await Promise.all([
     db.subscriptionPlan.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     db.subscription.findMany({ where: { userId: actor.id }, include: { plan: true }, orderBy: { createdAt: "desc" }, take: 10 }),
     getSetting("promotion.featured7d"),
     promote ? db.property.findFirst({ where: { id: promote, listingStatus: "PUBLISHED", OR: [{ listerId: actor.id }, { ownerId: actor.id }] }, select: { id: true, title: true, isFeatured: true } }) : null,
+    getEntitlements(actor.id),
+    transferDetails(),
+    db.paymentTransaction.findMany({ where: { payerId: actor.id, payeeId: null, status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
   const methods = availableOnlineMethods();
-  const active = subs.find((s) => s.status === "ACTIVE" && (!s.endsAt || s.endsAt > new Date()));
+  const active = ent.subscription;
+  const awaiting = myPlatformPayments.filter(isAwaitingFinance);
+  const slotsLeft = Math.max(0, ent.featuredSlots - ent.featuredUsed);
+  const queued = subs.filter((s) => s.status === "ACTIVE" && s.startsAt && s.startsAt > new Date());
 
   return (
     <>
       <PageHeader title="Plans and billing" description="Plans and promotions are the only payments Sukkot Salone collects. Rent and sale money always goes directly between the parties." />
-      {methods.length === 0 && <Notice tone="warning" className="mb-6">Online payments are not switched on for this site yet. An administrator needs to configure Orange Money or Afrimoney.</Notice>}
+      {methods.length === 0 && !transfer && <Notice tone="warning" className="mb-6">Payments are not switched on for this site yet. An administrator needs to add Sukkot Salone&apos;s payment details or configure Orange Money or Afrimoney.</Notice>}
+
+      <section className="card mb-6 grid gap-4 p-5 sm:grid-cols-3">
+        <div>
+          <p className="text-xs font-bold tracking-wider text-muted uppercase">Your plan</p>
+          <p className="mt-1 text-lg font-bold text-navy-900">{ent.plan?.name ?? "No plan"}</p>
+          {active?.endsAt && <p className="text-sm text-muted">Paid until {formatDate(active.endsAt)}</p>}
+          {queued.map((q) => <p key={q.id} className="text-sm text-muted">Renewed: {q.plan.name} from {formatDate(q.startsAt!)}</p>)}
+        </div>
+        <div>
+          <p className="text-xs font-bold tracking-wider text-muted uppercase">Active listings</p>
+          <p className="mt-1 text-lg font-bold text-navy-900">
+            {ent.activeListings}
+            {ent.maxListings !== null && <span className="text-sm font-normal text-muted"> of {ent.maxListings}</span>}
+          </p>
+          {ent.maxListings !== null && ent.activeListings >= ent.maxListings && <p className="text-sm text-amber-800">Limit reached. Upgrade to list more.</p>}
+        </div>
+        <div>
+          <p className="text-xs font-bold tracking-wider text-muted uppercase">Included featured listings</p>
+          <p className="mt-1 text-lg font-bold text-navy-900">
+            {ent.featuredSlots ? <>{slotsLeft}<span className="text-sm font-normal text-muted"> of {ent.featuredSlots} left this period</span></> : "None on this plan"}
+          </p>
+        </div>
+      </section>
+
+      {awaiting.length > 0 && (
+        <Notice tone="info" title="Waiting for our finance team" className="mb-6">
+          <ul className="space-y-1">
+            {awaiting.map((p) => (
+              <li key={p.id}>
+                {formatMoney(p.amountMinor, p.currency)} for {p.notes ?? "your purchase"} by {PAYMENT_METHOD_LABELS[manualChannelOf(p)!]}, transaction <span className="font-mono">{p.externalReference}</span>. It starts as soon as the payment is confirmed.
+              </li>
+            ))}
+          </ul>
+        </Notice>
+      )}
 
       {promoProperty && (
         <section className="card mb-8 flex flex-col gap-4 border-gold-500 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-bold text-navy-900">Feature &ldquo;{promoProperty.title}&rdquo; for 7 days</h2>
-            <p className="text-sm text-muted">Appears in the homepage carousel and at the top of matching searches, marked &ldquo;Featured&rdquo;.</p>
+            <p className="text-sm text-muted">Appears in the homepage carousel and at the top of matching searches, marked &ldquo;Featured&rdquo;.{promoProperty.isFeatured && " It is featured now; another 7 days start when the current period ends."}</p>
           </div>
-          {promoProperty.isFeatured ? (
-            <StatusBadge status="ACTIVE" />
-          ) : promoPrice ? (
-            <CheckoutButton
-              label={`Pay ${formatMoney(BigInt(promoPrice.priceMinor), promoPrice.currency)}`}
-              title="Feature this listing"
-              amountLabel={formatMoney(BigInt(promoPrice.priceMinor), promoPrice.currency)}
-              methods={methods}
-              purpose="LISTING_PROMOTION"
-              propertyId={promoProperty.id}
-              variant="accent"
-            />
-          ) : (
-            <p className="text-sm text-muted">Promotion is not on sale yet.</p>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {slotsLeft > 0 && (
+              <ActionButton path="/billing/featured" body={{ propertyId: promoProperty.id }} label={`Use an included slot (${slotsLeft} left)`} variant="accent" size="md" success="Listing featured" />
+            )}
+            {promoPrice ? (
+              <CheckoutButton
+                label={`Pay ${formatMoney(BigInt(promoPrice.priceMinor), promoPrice.currency)}`}
+                title="Feature this listing"
+                amountLabel={formatMoney(BigInt(promoPrice.priceMinor), promoPrice.currency)}
+                methods={methods}
+                transfer={transfer}
+                purpose="LISTING_PROMOTION"
+                propertyId={promoProperty.id}
+                variant={slotsLeft > 0 ? "outline" : "accent"}
+              />
+            ) : (
+              slotsLeft === 0 && <p className="text-sm text-muted">Promotion is not on sale yet.</p>
+            )}
+          </div>
         </section>
-      )}
-
-      {active && (
-        <Notice tone="success" className="mb-6">
-          You are on the <strong>{active.plan.name}</strong> plan{active.endsAt ? ` until ${formatDate(active.endsAt)}` : ""}.
-        </Notice>
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
         {plans.map((p) => {
-          const current = active?.planId === p.id;
+          const current = active?.planId === p.id || (!active && p.id === ent.plan?.id);
           return (
             <section key={p.id} className={`card flex flex-col p-5 ${current ? "ring-2 ring-emerald-600" : ""}`}>
               <p className="text-xs font-bold tracking-wider text-emerald-700 uppercase">{p.audience}</p>
@@ -76,12 +117,22 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                   <li key={f} className="flex gap-2"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" /> {f}</li>
                 ))}
               </ul>
-              {current ? (
-                <StatusBadge status="ACTIVE" />
-              ) : p.priceMinor > 0n ? (
-                <CheckoutButton label="Choose plan" title={`${p.name} plan`} amountLabel={formatMoney(p.priceMinor, p.currency)} methods={methods} purpose="PLATFORM_SUBSCRIPTION" subscriptionPlanId={p.id} />
+              {p.priceMinor > 0n ? (
+                <div className="space-y-2">
+                  {current && <StatusBadge status="ACTIVE" />}
+                  <CheckoutButton
+                    label={current ? "Renew for another period" : "Choose plan"}
+                    title={`${p.name} plan`}
+                    amountLabel={formatMoney(p.priceMinor, p.currency)}
+                    methods={methods}
+                    transfer={transfer}
+                    purpose="PLATFORM_SUBSCRIPTION"
+                    subscriptionPlanId={p.id}
+                    variant={current ? "outline" : "primary"}
+                  />
+                </div>
               ) : (
-                <p className="text-sm text-muted">Included for every account.</p>
+                <p className="text-sm text-muted">{current ? "Your current plan. " : ""}Included for every account.</p>
               )}
             </section>
           );
