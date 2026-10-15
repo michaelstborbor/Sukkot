@@ -19,7 +19,9 @@ services:
     buildCommand: corepack enable && NODE_ENV=development pnpm install --frozen-lockfile && pnpm build
     # The free plan has no pre-deploy step, so pending migrations are applied on start
     # (`prisma migrate deploy` only applies new migrations; it never drops data).
-    startCommand: pnpm --filter @sukkot/web db:deploy && pnpm --filter @sukkot/web start
+    # `bootstrap` loads reference data into an empty database and creates the first admin from
+    # ADMIN_EMAIL and ADMIN_PASSWORD (see "First admin without a terminal" in docs/DEPLOYMENT.md).
+    startCommand: pnpm --filter @sukkot/web db:deploy && pnpm --filter @sukkot/web bootstrap && pnpm --filter @sukkot/web start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
@@ -32,6 +34,11 @@ services:
         generateValue: true
       - key: APP_URL
         sync: false # https://sukkot-web-test.onrender.com, or whatever URL Render gives the service
+      # First administrator, created on start while none exists. Remove ADMIN_PASSWORD after signing in.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       # Test-only switches. Pages show sample-data notices, labelled demo accounts can sign in and the
       # sandbox payment provider simulates fee payments. No real money moves. Remove all three before
       # anyone real uses the site.

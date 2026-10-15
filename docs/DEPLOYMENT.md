@@ -58,6 +58,22 @@ The Blueprint is `render.free.yaml`.
 7. Open the service URL and sign in. To try the mobile app against it, set
    `EXPO_PUBLIC_API_URL` to the same URL in `apps/mobile/.env`.
 
+### First admin without a terminal
+
+On every start the service runs `bootstrap`, which loads the reference data into an empty database
+and, while there is no super administrator yet, creates one from two environment variables:
+
+1. In Render, open the web service, then **Environment**. Add `ADMIN_EMAIL` (your email) and
+   `ADMIN_PASSWORD` (at least 10 characters, letters and numbers), optionally `ADMIN_NAME`, and save.
+   Render restarts the service.
+2. In **Logs**, look for `[bootstrap] Super administrator ready`. Sign in with that email and password,
+   then open `/admin`.
+3. Delete `ADMIN_PASSWORD` from **Environment**. Once an administrator exists the variables are
+   ignored, but the password should not stay in the settings.
+
+If the start command shown under **Settings** does not include `bootstrap`, set it to the
+`startCommand` in `render.free.yaml`. Demo accounts do not count as an administrator here.
+
 To test real file uploads or real email, add the R2 or Resend settings from `render.yaml` under the
 service's **Environment** tab and change `STORAGE_DRIVER` to `s3` or `EMAIL_DRIVER` to `resend`.
 
