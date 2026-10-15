@@ -90,7 +90,7 @@ function activeBadges(rows: { kind: string; expiresAt: Date | null }[]): Verific
   return [...new Set(rows.filter((r) => !r.expiresAt || r.expiresAt > now).map((r) => r.kind as VerificationKind))];
 }
 
-function imageDto(img: { id: string; storageKey: string; width: number | null; height: number | null; alt: string | null; illustrative: boolean }, title: string) {
+function imageDto(img: { id: string; storageKey: string; width: number | null; height: number | null; alt: string | null; illustrative: boolean; placeholder?: string | null }, title: string) {
   return {
     id: img.id,
     url: publicImageUrl(img.storageKey, 1600),
@@ -99,6 +99,7 @@ function imageDto(img: { id: string; storageKey: string; width: number | null; h
     height: img.height,
     alt: img.alt ?? title,
     illustrative: img.illustrative,
+    placeholder: img.placeholder ?? null,
   };
 }
 
@@ -564,7 +565,7 @@ export async function addImages(actorIn: Actor | null, id: string, files: File[]
     const stored = await storeImage(file, `properties/${p.id}`);
     created.push(
       await db.propertyImage.create({
-        data: { propertyId: id, storageKey: stored.baseKey, width: stored.width, height: stored.height, sortOrder: existing + i, alt: p.title },
+        data: { propertyId: id, storageKey: stored.baseKey, width: stored.width, height: stored.height, placeholder: stored.placeholder, sortOrder: existing + i, alt: p.title },
       }),
     );
   }

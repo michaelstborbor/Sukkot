@@ -52,6 +52,8 @@ export interface ImageDTO {
   height: number | null;
   alt: string;
   illustrative: boolean;
+  /** Tiny blurred preview (data: URL) to show while the photo loads, when one was made. */
+  placeholder?: string | null;
 }
 
 export interface ListerDTO {

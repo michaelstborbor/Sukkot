@@ -20,6 +20,8 @@ export function PropertyImage({ image, sizes, className, priority = false }: { i
       decoding="async"
       width={image.width ?? 1600}
       height={image.height ?? 1200}
+      // The blurred preview fills the space at once; the photo paints over it when it arrives.
+      style={image.placeholder ? { backgroundImage: `url(${image.placeholder})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
       className={cn("h-full w-full object-cover", className)}
     />
   );
