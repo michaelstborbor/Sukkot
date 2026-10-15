@@ -626,6 +626,7 @@ model Property {
   updatedAt          DateTime         @updatedAt @db.Timestamptz(3)
 
   images            PropertyImage[]
+  video             PropertyVideo?
   documents         PropertyDocument[]
   amenities         PropertyAmenity[]
   statusHistory     PropertyStatusHistory[]
@@ -671,6 +672,33 @@ model PropertyImage {
 
   @@index([propertyId, sortOrder])
   @@map("property_images")
+}
+
+enum VideoStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+/// One short video per listing, uploaded by the lister and converted to a small MP4 (H.264, at most
+/// 1280 px on the long side, location and other metadata removed). Shown only once READY.
+model PropertyVideo {
+  id          String      @id @default(cuid())
+  propertyId  String      @unique
+  property    Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  status      VideoStatus @default(PROCESSING)
+  /// Base storage key; the video is `${key}.mp4` and its still image `${key}-poster.webp`.
+  storageKey  String
+  durationSec Int?
+  width       Int?
+  height      Int?
+  sizeBytes   Int?
+  /// Why processing failed, in words the lister can act on.
+  error       String?
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
+
+  @@map("property_videos")
 }
 
 model PropertyDocument {

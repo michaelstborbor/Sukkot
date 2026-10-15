@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDown, ArrowUp, FileLock2, ImagePlus, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, FileLock2, ImagePlus, Trash2, Upload, Video } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/form";
 import { Badge, EmptyState } from "@/components/ui/misc";
@@ -17,8 +17,18 @@ interface Img {
 }
 
 const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_MB = 100;
+const MAX_VIDEO_SECONDS = 60;
 
-export function PhotoManager({ propertyId, images }: { propertyId: string; images: Img[] }) {
+export interface ListingVideo {
+  status: "PROCESSING" | "READY" | "FAILED";
+  url: string | null;
+  posterUrl: string | null;
+  durationSec: number | null;
+  error: string | null;
+}
+
+export function PhotoManager({ propertyId, images, video }: { propertyId: string; images: Img[]; video: ListingVideo | null }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -73,12 +83,18 @@ export function PhotoManager({ propertyId, images }: { propertyId: string; image
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted">JPEG, PNG or WebP up to 10 MB each. The first photo is the cover. Photos are resized and location data is removed.</p>
+        <p className="text-sm text-muted">
+          Photos: JPEG, PNG or WebP up to 10 MB each; the first is the cover. Short video: up to {MAX_VIDEO_SECONDS} seconds and {MAX_VIDEO_MB} MB. Files are compressed and location data is removed.
+        </p>
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" id="photo-upload" onChange={(e) => upload(e.target.files)} />
-        <Button onClick={() => input.current?.click()} loading={busy} variant="secondary">
-          <ImagePlus className="h-4 w-4" /> Upload photos
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => input.current?.click()} loading={busy} variant="secondary">
+            <ImagePlus className="h-4 w-4" /> Upload photos
+          </Button>
+          <VideoButton propertyId={propertyId} hasVideo={!!video} />
+        </div>
       </div>
+      {video && <VideoPanel propertyId={propertyId} video={video} />}
       {list.length === 0 ? (
         <EmptyState icon={<ImagePlus className="h-6 w-6" />} title="No photos yet" body="Add at least one clear, honest photo before submitting for review." />
       ) : (
@@ -108,6 +124,135 @@ export function PhotoManager({ propertyId, images }: { propertyId: string; image
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/** How long a video file runs, read in the browser. null when the browser cannot read it (e.g. HEVC). */
+function readDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const el = document.createElement("video");
+    const url = URL.createObjectURL(file);
+    const done = (d: number | null) => {
+      URL.revokeObjectURL(url);
+      resolve(d);
+    };
+    el.preload = "metadata";
+    el.onloadedmetadata = () => done(Number.isFinite(el.duration) ? el.duration : null);
+    el.onerror = () => done(null);
+    setTimeout(() => done(null), 5000);
+    el.src = url;
+  });
+}
+
+/** Upload with a progress bar: videos are large and connections slow. */
+function uploadWithProgress(path: string, form: FormData, onProgress: (pct: number) => void) {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `/api/v1${path}`);
+    xhr.withCredentials = true;
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) return resolve();
+      let message = "Upload failed";
+      try {
+        message = JSON.parse(xhr.responseText)?.error?.message ?? message;
+      } catch {}
+      reject(new ApiError(message, "ERROR", xhr.status));
+    };
+    xhr.onerror = () => reject(new ApiError("The upload was interrupted. Check your connection and try again.", "NETWORK", 0));
+    xhr.send(form);
+  });
+}
+
+function VideoButton({ propertyId, hasVideo }: { propertyId: string; hasVideo: boolean }) {
+  const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+
+  async function upload(file: File | undefined) {
+    if (!file) return;
+    try {
+      if (file.size > MAX_VIDEO_MB * 1024 * 1024) return toast.error(`Videos can be up to ${MAX_VIDEO_MB} MB`);
+      const seconds = await readDuration(file);
+      if (seconds !== null && seconds > MAX_VIDEO_SECONDS + 0.5) return toast.error(`Videos can be up to ${MAX_VIDEO_SECONDS} seconds long. This one is ${Math.round(seconds)} seconds.`);
+      if (hasVideo && !window.confirm("Replace the current video?")) return;
+      const form = new FormData();
+      form.append("file", file);
+      setProgress(0);
+      await uploadWithProgress(`/properties/${propertyId}/video`, form, setProgress);
+      toast.success("Video uploaded. It will show on your listing once it has been converted.");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setProgress(null);
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <input ref={input} type="file" accept="video/mp4,video/quicktime,video/webm" className="sr-only" id="video-upload" onChange={(e) => upload(e.target.files?.[0])} />
+      <Button onClick={() => input.current?.click()} loading={progress !== null} variant="outline">
+        <Video className="h-4 w-4" /> {progress !== null ? `Uploading ${progress}%` : hasVideo ? "Replace short video" : "Add short video"}
+      </Button>
+    </>
+  );
+}
+
+function VideoPanel({ propertyId, video }: { propertyId: string; video: ListingVideo }) {
+  const router = useRouter();
+  const [current, setCurrent] = useState(video);
+  useEffect(() => setCurrent(video), [video]);
+
+  // While the video converts, check every few seconds and refresh once it is done.
+  useEffect(() => {
+    if (current.status !== "PROCESSING") return;
+    const timer = setInterval(async () => {
+      try {
+        const { video: next } = await api<{ video: ListingVideo | null }>(`/properties/${propertyId}/video`);
+        if (!next || next.status !== "PROCESSING") {
+          clearInterval(timer);
+          router.refresh();
+        }
+      } catch {
+        // Try again on the next tick.
+      }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [current.status, propertyId, router]);
+
+  async function remove() {
+    if (!window.confirm("Delete this video?")) return;
+    try {
+      await api(`/properties/${propertyId}/video`, { method: "DELETE" });
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete");
+    }
+  }
+
+  return (
+    <div className="card flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+      <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-navy-950 sm:w-56">
+        {current.status === "READY" && current.url ? (
+          <video src={current.url} poster={current.posterUrl ?? undefined} controls preload="none" playsInline className="h-full w-full object-contain" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-white/70">
+            <Video className="h-8 w-8" />
+          </div>
+        )}
+      </div>
+      <div className="flex-1 text-sm">
+        <p className="font-semibold text-navy-900">Short video</p>
+        {current.status === "PROCESSING" && <p className="text-muted">Converting your video so it loads quickly. This can take a few minutes; you can leave this page.</p>}
+        {current.status === "READY" && <p className="text-muted">Shown on your listing{current.durationSec ? ` · ${current.durationSec} seconds` : ""}.</p>}
+        {current.status === "FAILED" && <p className="text-danger">{current.error ?? "We could not convert this video."} Upload it again or try another file.</p>}
+      </div>
+      <Button size="icon" variant="ghost" aria-label="Delete video" onClick={remove}>
+        <Trash2 className="h-4 w-4 text-danger" />
+      </Button>
     </div>
   );
 }

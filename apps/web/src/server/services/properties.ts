@@ -26,7 +26,7 @@ import type { Actor } from "../auth/session";
 import { actorIsStaff, assertPermission, can } from "../auth/actor";
 import { audit } from "../audit";
 import { notify } from "../notify";
-import { publicImageUrl, storage } from "../storage";
+import { publicFileUrl, publicImageUrl, storage } from "../storage";
 import { assertListingCapacity } from "./billing";
 import { storeImage, storePrivateDocument } from "../uploads";
 
@@ -61,6 +61,7 @@ export const summaryInclude = {
 const detailInclude = {
   ...summaryInclude,
   images: { orderBy: { sortOrder: "asc" } },
+  video: true,
   amenities: { include: { amenity: true } },
   agency: { select: { id: true, name: true } },
 } satisfies Prisma.PropertyInclude;
@@ -171,6 +172,10 @@ function toDetail(p: DetailRow, opts: { saved: boolean; canSeeExact: boolean }):
     coordinates,
     availableFrom: p.availableFrom?.toISOString() ?? null,
     videoUrl: p.videoUrl,
+    video:
+      p.video?.status === "READY"
+        ? { url: publicFileUrl(`${p.video.storageKey}.mp4`), posterUrl: publicFileUrl(`${p.video.storageKey}-poster.webp`), durationSec: p.video.durationSec, width: p.video.width, height: p.video.height }
+        : null,
     virtualTourUrl: p.virtualTourUrl,
     attributes: (p.attributes ?? {}) as Record<string, unknown>,
     rentalTerms: (p.rentalTerms ?? null) as Record<string, unknown> | null,

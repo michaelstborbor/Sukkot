@@ -32,6 +32,10 @@ Honest list of what is incomplete or needs work before production.
   OpenStreetMap) has been tested only against a small sample file; it has not yet been run
   against the live Overpass service. Areas that OpenStreetMap places far from any city or town
   are reported and skipped, and villages are left out unless asked for.
+- Listing videos (one per listing, up to 60 seconds and 100 MB) are converted on the web server
+  itself with ffmpeg, one at a time. On a small server such as Render's free plan a one-minute
+  clip can take several minutes. If the server restarts mid-conversion the lister is told to upload
+  again. The mobile app does not play listing videos yet; they show on the website.
 - "Other (specify)" listings are searchable under the Other category, not by the lister's own words
   in the type filter.
 

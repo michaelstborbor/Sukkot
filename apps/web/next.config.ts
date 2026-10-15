@@ -8,6 +8,7 @@ const cdn = process.env.STORAGE_PUBLIC_BASE_URL ? new URL(process.env.STORAGE_PU
 const csp = [
   "default-src 'self'",
   `img-src 'self' data: blob: ${cdn}`.trim(),
+  `media-src 'self' blob: ${cdn}`.trim(),
   "style-src 'self' 'unsafe-inline'",
   `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
   "font-src 'self' data:",
@@ -31,7 +32,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@sukkot/shared"],
-  serverExternalPackages: ["sharp", "bcryptjs"],
+  serverExternalPackages: ["sharp", "bcryptjs", "ffmpeg-static"],
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 480, 640, 828, 1080, 1280, 1600],
