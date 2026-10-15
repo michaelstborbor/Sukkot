@@ -54,6 +54,8 @@ export interface ImageDTO {
   illustrative: boolean;
   /** Tiny blurred preview (data: URL) to show while the photo loads, when one was made. */
   placeholder?: string | null;
+  /** The Sukkot Salone mark is drawn into the stored photo itself. */
+  watermarked?: boolean;
 }
 
 export interface ListerDTO {

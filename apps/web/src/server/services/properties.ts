@@ -91,7 +91,7 @@ function activeBadges(rows: { kind: string; expiresAt: Date | null }[]): Verific
   return [...new Set(rows.filter((r) => !r.expiresAt || r.expiresAt > now).map((r) => r.kind as VerificationKind))];
 }
 
-function imageDto(img: { id: string; storageKey: string; width: number | null; height: number | null; alt: string | null; illustrative: boolean; placeholder?: string | null }, title: string) {
+function imageDto(img: { id: string; storageKey: string; width: number | null; height: number | null; alt: string | null; illustrative: boolean; placeholder?: string | null; watermarked?: boolean }, title: string) {
   return {
     id: img.id,
     url: publicImageUrl(img.storageKey, 1600),
@@ -101,6 +101,7 @@ function imageDto(img: { id: string; storageKey: string; width: number | null; h
     alt: img.alt ?? title,
     illustrative: img.illustrative,
     placeholder: img.placeholder ?? null,
+    watermarked: img.watermarked ?? false,
   };
 }
 
@@ -567,10 +568,10 @@ export async function addImages(actorIn: Actor | null, id: string, files: File[]
   if (existing + files.length > 30) throw new AppError("VALIDATION", "A listing can have up to 30 photos");
   const created = [];
   for (const [i, file] of files.entries()) {
-    const stored = await storeImage(file, `properties/${p.id}`);
+    const stored = await storeImage(file, `properties/${p.id}`, { watermark: true });
     created.push(
       await db.propertyImage.create({
-        data: { propertyId: id, storageKey: stored.baseKey, width: stored.width, height: stored.height, placeholder: stored.placeholder, sortOrder: existing + i, alt: p.title },
+        data: { propertyId: id, storageKey: stored.baseKey, width: stored.width, height: stored.height, placeholder: stored.placeholder, watermarked: stored.watermarked, sortOrder: existing + i, alt: p.title },
       }),
     );
   }
