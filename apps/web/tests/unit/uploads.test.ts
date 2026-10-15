@@ -33,3 +33,34 @@ describe("photo uploads", () => {
     }
   });
 });
+
+/** How far apart two stored variants are, per pixel on average, within a region. */
+async function regionDiff(a: Buffer, b: Buffer, left: number, top: number, width: number, height: number) {
+  const px = (buf: Buffer) => sharp(buf).extract({ left, top, width, height }).removeAlpha().raw().toBuffer();
+  const [x, y] = await Promise.all([px(a), px(b)]);
+  let sum = 0;
+  for (let i = 0; i < x.length; i++) sum += Math.abs(x[i]! - y[i]!);
+  return sum / x.length;
+}
+
+describe("listing photo watermark", () => {
+  it("draws the Sukkot Salone mark into the bottom-right of every size, and nowhere else", async () => {
+    const grey = await sharp({ create: { width: 2000, height: 1500, channels: 3, background: { r: 60, g: 60, b: 60 } } }).jpeg().toBuffer();
+    const file = () => new File([new Uint8Array(grey)], "plain.jpg", { type: "image/jpeg" });
+    const plain = await storeImage(file(), "test-uploads");
+    const marked = await storeImage(file(), "test-uploads", { watermark: true });
+    expect(plain.watermarked).toBe(false);
+    expect(marked.watermarked).toBe(true);
+
+    for (const w of [480, 960, 1600]) {
+      const h = Math.round((w * 3) / 4);
+      const a = (await storage().get(`${plain.baseKey}-${w}.webp`, "public"))!.body;
+      const b = (await storage().get(`${marked.baseKey}-${w}.webp`, "public"))!.body;
+      expect((await sharp(b).metadata()).width).toBe(w);
+      // The mark sits in the bottom-right corner…
+      expect(await regionDiff(a, b, Math.round(w * 0.7), Math.round(h * 0.88), Math.round(w * 0.27), Math.round(h * 0.08))).toBeGreaterThan(10);
+      // …and the rest of the photo is left as it was.
+      expect(await regionDiff(a, b, 0, 0, Math.round(w * 0.6), Math.round(h * 0.6))).toBeLessThan(1);
+    }
+  });
+});

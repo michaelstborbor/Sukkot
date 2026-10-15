@@ -668,6 +668,8 @@ model PropertyImage {
   illustrative Boolean  @default(false)
   /// Tiny blurred preview (a data: URL of a few hundred bytes) shown while the photo loads.
   placeholder  String?
+  /// The Sukkot Salone mark is drawn into every stored size of this photo.
+  watermarked  Boolean  @default(false)
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([propertyId, sortOrder])

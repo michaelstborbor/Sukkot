@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { ArrowRight, BadgeCheck, Building2, Eye, FileCheck2, Hotel, Home as HomeIcon, Landmark, MessagesSquare, ShieldCheck, Trees, UserCheck } from "lucide-react";
 import { VERIFICATION_BADGES } from "@sukkot/shared";
 import { brand } from "@/config/brand";
@@ -14,6 +15,7 @@ import { SearchPanel } from "@/components/search/search-panel";
 import { HeroArt } from "@/components/home/hero-art";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { Faq } from "@/components/home/faq";
+import { CategoryGallery } from "@/components/home/category-gallery";
 import { Reveal } from "@/components/layout/reveal";
 import { ButtonLink } from "@/components/ui/button";
 import { Avatar, EmptyState, SectionHeading } from "@/components/ui/misc";
@@ -29,9 +31,19 @@ const CATEGORIES = [
   { href: "/properties?purpose=SHORT_STAY", label: "Short stays", icon: Hotel, blurb: "Nightly and weekly" },
 ];
 
+/** Photo rows on the home page, one per kind of property. Rows with no photographed listing are left out. */
+const GALLERY = [
+  { label: "Houses", href: "/properties?category=HOUSE", where: { category: "HOUSE" } },
+  { label: "Apartments", href: "/properties?category=APARTMENT", where: { category: "APARTMENT" } },
+  { label: "Land", href: "/properties?category=LAND", where: { category: "LAND" } },
+  { label: "Commercial", href: "/properties?category=COMMERCIAL", where: { category: "COMMERCIAL" } },
+  { label: "Short stays", href: "/properties?purpose=SHORT_STAY", where: { OR: [{ category: "SHORT_STAY" }, { purpose: "SHORT_STAY" }] } },
+  { label: "Other property", href: "/properties?category=OTHER", where: { category: "OTHER" } },
+] satisfies { label: string; href: string; where: Prisma.PropertyWhereInput }[];
+
 export default async function HomePage() {
   const actor = await getCurrentActor();
-  const [featured, recent, districts, options, agents] = await Promise.all([
+  const [featured, recent, districts, options, agents, galleryListings] = await Promise.all([
     listProperties({ isFeatured: true }, 6, [{ publishedAt: "desc" }]),
     listProperties({}, 8, [{ publishedAt: "desc" }]),
     locationsWithCounts("DISTRICT"),
@@ -41,7 +53,9 @@ export default async function HomePage() {
       include: { profile: true, agencyMemberships: { include: { agency: true } }, _count: { select: { listedProperties: { where: { listingStatus: "PUBLISHED" } } } } },
       take: 4,
     }),
+    Promise.all(GALLERY.map((g) => listProperties({ ...g.where, images: { some: {} } }, 4, [{ publishedAt: "desc" }]))),
   ]);
+  const gallery = GALLERY.map((g, i) => ({ label: g.label, href: g.href, listings: galleryListings[i]! })).filter((g) => g.listings.length > 0);
   const saved = await savedIds(actor?.id, [...featured, ...recent].map((p) => p.id));
   const topDistricts = districts.sort((a, b) => b.count - a.count).slice(0, 8);
 
@@ -79,6 +93,14 @@ export default async function HomePage() {
           ))}
         </ul>
       </section>
+
+      {/* Photos by category */}
+      {gallery.length > 0 && (
+        <section className="container-page mt-20">
+          <SectionHeading eyebrow="Browse" title="Photos from every category" body="A look at homes, land and more listed across Salone. Search or pick a filter to narrow it down." />
+          <CategoryGallery rows={gallery} />
+        </section>
+      )}
 
       {/* Featured */}
       <section className="container-page mt-20">

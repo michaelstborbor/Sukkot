@@ -5,6 +5,7 @@
  * - when ADMIN_EMAIL and ADMIN_PASSWORD are set and there is no super administrator yet (demo accounts
  *   aside), that account is created or promoted. Once one exists the variables are ignored, so delete
  *   ADMIN_PASSWORD from the host's settings after the first sign-in.
+ * - listing photos uploaded before photos were watermarked get the Sukkot Salone mark.
  * The password is never printed.
  */
 import { spawnSync } from "node:child_process";
@@ -19,6 +20,14 @@ async function main() {
       console.log("[bootstrap] Empty database: loading reference data.");
       const seed = spawnSync("npx", ["tsx", path.join(__dirname, "../prisma/seed.ts")], { stdio: "inherit", env: { ...process.env, SEED_ALLOW_DEMO: "false" } });
       if (seed.status !== 0) console.error("[bootstrap] Loading reference data failed; see the log above.");
+    }
+
+    try {
+      const { watermarkExistingPhotos } = await import("../src/server/watermark-backfill");
+      const marked = await watermarkExistingPhotos();
+      if (marked) console.log(`[bootstrap] Added the Sukkot Salone mark to ${marked} older photo${marked === 1 ? "" : "s"}.`);
+    } catch (e) {
+      console.error(`[bootstrap] Watermarking older photos skipped: ${e instanceof Error ? e.message : e}`);
     }
 
     const { ADMIN_EMAIL: email, ADMIN_PASSWORD: password, ADMIN_NAME: name } = process.env;
