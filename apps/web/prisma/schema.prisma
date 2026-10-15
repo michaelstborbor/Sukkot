@@ -665,6 +665,8 @@ model PropertyImage {
   sortOrder    Int      @default(0)
   /// Illustrative artwork (demo data), never presented as a photo of the property.
   illustrative Boolean  @default(false)
+  /// Tiny blurred preview (a data: URL of a few hundred bytes) shown while the photo loads.
+  placeholder  String?
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([propertyId, sortOrder])

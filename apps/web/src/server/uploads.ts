@@ -27,7 +27,9 @@ async function readFile(file: File, max: number): Promise<Buffer> {
 
 /**
  * Store an uploaded image: re-encode to WebP at several widths (strips EXIF/GPS metadata and any
- * embedded payload), and return the base key.
+ * embedded payload), and return the base key plus a tiny blurred preview to show while it loads.
+ * Photos are decoded once and the widths encoded in parallel; quality 80 with sharp YUV is visually
+ * lossless for photos at a fraction of a phone camera JPEG's size.
  */
 export async function storeImage(file: File, prefix: string) {
   const buf = await readFile(file, MAX_IMAGE_BYTES);
@@ -37,11 +39,21 @@ export async function storeImage(file: File, prefix: string) {
   const meta = await img.metadata();
   if (!meta.width || !meta.height || meta.width < 400) throw new AppError("VALIDATION", "Images must be at least 400px wide");
   const baseKey = `${prefix}/${randomUUID()}`;
-  for (const w of IMAGE_WIDTHS) {
-    const out = await sharp(buf).rotate().resize({ width: w, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer();
-    await storage().put(`${baseKey}-${w}.webp`, out, "image/webp", "public");
-  }
-  return { baseKey, width: meta.width, height: meta.height };
+  await Promise.all(
+    IMAGE_WIDTHS.map(async (w) => {
+      const out = await img.clone().resize({ width: w, withoutEnlargement: true }).webp({ quality: 80, smartSubsample: true, effort: 4 }).toBuffer();
+      await storage().put(`${baseKey}-${w}.webp`, out, "image/webp", "public");
+    }),
+  );
+  const tiny = await img.clone().resize({ width: 24 }).blur(1).webp({ quality: 40 }).toBuffer();
+  // Width/height as displayed (after EXIF rotation), so the page reserves the right space.
+  const rotated = (meta.orientation ?? 1) >= 5;
+  return {
+    baseKey,
+    width: rotated ? meta.height : meta.width,
+    height: rotated ? meta.width : meta.height,
+    placeholder: `data:image/webp;base64,${tiny.toString("base64")}`,
+  };
 }
 
 /** Store a private document (ID, title deed, survey plan). Never publicly addressable. */

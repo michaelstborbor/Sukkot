@@ -1,6 +1,7 @@
 import { handler } from "@/server/http";
 import { notFound } from "@/server/errors";
 import { getPropertyDetail, recordView, updateProperty } from "@/server/services/properties";
+import { refreshPublicPages } from "@/server/refresh-pages";
 
 export const GET = handler<{ id: string }>(async (ctx) => {
   const p = await getPropertyDetail(ctx.params.id, ctx.actor);
@@ -11,5 +12,6 @@ export const GET = handler<{ id: string }>(async (ctx) => {
 
 export const PATCH = handler<{ id: string }>(async (ctx) => {
   const p = await updateProperty(ctx.actor, ctx.params.id, await ctx.req.json().catch(() => ({})));
+  refreshPublicPages();
   return { id: p.id, slug: p.slug };
 });
