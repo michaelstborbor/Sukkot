@@ -167,6 +167,24 @@ export default async function PropertyPage({ params }: Props) {
             </section>
           )}
 
+          {p.video && (
+            <section className="mt-8" aria-labelledby="video">
+              <h2 id="video" className="text-xl font-bold text-navy-900">Video</h2>
+              <video
+                src={p.video.url}
+                poster={p.video.posterUrl}
+                controls
+                preload="none"
+                playsInline
+                className="mt-3 max-h-[70vh] w-full rounded-xl bg-navy-950 object-contain"
+                width={p.video.width ?? undefined}
+                height={p.video.height ?? undefined}
+              >
+                <a href={p.video.url}>Download the video</a>
+              </video>
+            </section>
+          )}
+
           <section className="mt-8" aria-labelledby="desc">
             <h2 id="desc" className="text-xl font-bold text-navy-900">Description</h2>
             <div className="prose-body mt-3 text-[15px] leading-relaxed whitespace-pre-line text-ink/90">{p.description}</div>

@@ -26,6 +26,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".pdf": "application/pdf",
+  ".mp4": "video/mp4",
 };
 
 /** Local filesystem driver for development. Private files live outside any public directory. */
@@ -134,5 +135,10 @@ export function publicImageUrl(baseKey: string, width: (typeof IMAGE_WIDTHS)[num
     return env.storagePublicBaseUrl ? `${env.storagePublicBaseUrl}/public/${baseKey}` : `/api/v1/files/public/${baseKey}`;
   }
   const key = `${baseKey}-${width}.webp`;
+  return env.storagePublicBaseUrl ? `${env.storagePublicBaseUrl}/public/${key}` : `/api/v1/files/public/${key}`;
+}
+
+/** Public URL of any public object (videos, posters). Uses the CDN when configured. */
+export function publicFileUrl(key: string): string {
   return env.storagePublicBaseUrl ? `${env.storagePublicBaseUrl}/public/${key}` : `/api/v1/files/public/${key}`;
 }

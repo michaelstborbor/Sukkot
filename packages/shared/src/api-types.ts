@@ -110,7 +110,10 @@ export interface PropertyDetailDTO extends PropertySummaryDTO {
   addressLine: string | null;
   coordinates: { lat: number; lng: number; approximate: boolean } | null;
   availableFrom: string | null;
+  /** Link to a video hosted elsewhere (YouTube, Vimeo). */
   videoUrl: string | null;
+  /** Short video uploaded by the lister, once it has been converted. */
+  video: { url: string; posterUrl: string; durationSec: number | null; width: number | null; height: number | null } | null;
   virtualTourUrl: string | null;
   attributes: Record<string, unknown>;
   rentalTerms: Record<string, unknown> | null;

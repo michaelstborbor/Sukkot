@@ -8,6 +8,7 @@ import { AppError } from "@/server/errors";
 import { getCatalog } from "@/server/services/catalog";
 import { getManagedProperty } from "@/server/services/properties";
 import { publicImageUrl } from "@/server/storage";
+import { getListingVideo, videoDto } from "@/server/services/video";
 import { listingFormValues } from "@/server/listing-form-values";
 import { PageHeader } from "@/components/dashboard/shell";
 import { ListingForm } from "@/components/dashboard/listing-form";
@@ -23,7 +24,7 @@ export const metadata: Metadata = { title: "Manage listing" };
 const TABS = [
   ["overview", "Status"],
   ["details", "Details"],
-  ["photos", "Photos"],
+  ["photos", "Photos and video"],
   ["documents", "Documents"],
   ["history", "History"],
 ] as const;
@@ -157,6 +158,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
             key={p.images.map((i) => i.id).join(",")}
             propertyId={p.id}
             images={p.images.map((i) => ({ id: i.id, thumbUrl: publicImageUrl(i.storageKey, 480), alt: i.alt ?? p.title, illustrative: i.illustrative }))}
+            video={videoDto(await getListingVideo(p.id))}
           />
         ) : (
           <Notice>Only the lister can change photos.</Notice>
