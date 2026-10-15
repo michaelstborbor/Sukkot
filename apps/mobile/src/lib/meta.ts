@@ -5,7 +5,7 @@ import { api } from "./api";
 export interface Meta {
   types: { id: string; name: string; slug: string; category: PropertyCategory }[];
   amenities: { id: string; name: string; slug: string; group: string }[];
-  locations: { id: string; name: string; slug: string; level: string; parentId: string | null }[];
+  locations: { id: string; name: string; slug: string; level: string; parentId: string | null; isCity?: boolean }[];
   paymentMethods: PaymentMethod[];
 }
 

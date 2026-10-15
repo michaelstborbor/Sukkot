@@ -49,6 +49,7 @@ enum PropertyCategory {
   LAND
   COMMERCIAL
   SHORT_STAY
+  OTHER
 }
 
 enum RentalPeriod {
@@ -516,6 +517,10 @@ model Location {
   pathIds   String[]
   latitude  Float?
   longitude Float?
+  /// For CITY-level places: true for cities, false for towns.
+  isCity    Boolean       @default(false)
+  /// OpenStreetMap element (e.g. "node/123") this place was imported from, when it was.
+  osmId     String?       @unique
   isActive  Boolean       @default(true)
   sortOrder Int           @default(0)
   createdAt DateTime      @default(now()) @db.Timestamptz(3)
@@ -572,6 +577,8 @@ model Property {
   description        String
   propertyTypeId     String
   propertyType       PropertyType     @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
+  /// What the lister typed when the type is "Other (specify)".
+  propertyTypeOther  String?
   category           PropertyCategory
   purpose            ListingPurpose
   priceMinor         BigInt

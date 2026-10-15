@@ -10,7 +10,9 @@ import {
   ELECTRICITY_LABELS,
   FURNISHING,
   FURNISHING_LABELS,
+  LAND_WITH_BUILDING_TYPE_SLUGS,
   LISTING_PURPOSES,
+  OTHER_PROPERTY_TYPE_SLUG,
   LISTING_PURPOSE_LABELS,
   NOTICES,
   RENTAL_PERIODS,
@@ -23,11 +25,12 @@ import { useApiForm } from "@/hooks/use-api-form";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Notice } from "@/components/ui/misc";
+import { LocationCascade } from "@/components/forms/location-cascade";
 
 export interface ListingFormCatalog {
-  types: { id: string; name: string; category: PropertyCategory }[];
+  types: { id: string; name: string; slug: string; category: PropertyCategory }[];
   amenities: { id: string; name: string; group: string }[];
-  locations: { id: string; name: string; level: string; parentId: string | null }[];
+  locations: { id: string; name: string; level: string; parentId: string | null; isCity: boolean }[];
 }
 
 /** Flat string-keyed form state; converted to the API shape on submit. */
@@ -37,6 +40,7 @@ const EMPTY: ListingFormValues = {
   title: "",
   description: "",
   propertyTypeId: "",
+  propertyTypeOther: "",
   purpose: "RENT",
   price: "",
   currency: "SLE",
@@ -90,7 +94,13 @@ const RESPONSIBILITY = [
   ["NEGOTIABLE", "Negotiable"],
 ] as const;
 
-function toPayload(v: ListingFormValues, category: PropertyCategory | undefined) {
+/** Land listings have no building details, except land sold or leased with a building on it. */
+const hasNoBuilding = (type: { slug: string; category: PropertyCategory } | undefined) =>
+  type?.category === "LAND" && !LAND_WITH_BUILDING_TYPE_SLUGS.includes(type.slug);
+
+function toPayload(v: ListingFormValues, type: { slug: string; category: PropertyCategory } | undefined) {
+  const category = type?.category;
+  const noBuilding = hasNoBuilding(type);
   const s = (k: string) => {
     const x = v[k];
     return typeof x === "string" && x.trim() !== "" ? x.trim() : undefined;
@@ -111,13 +121,14 @@ function toPayload(v: ListingFormValues, category: PropertyCategory | undefined)
     title: s("title") ?? "",
     description: s("description") ?? "",
     propertyTypeId: s("propertyTypeId") ?? "",
+    propertyTypeOther: type?.slug === OTHER_PROPERTY_TYPE_SLUG ? s("propertyTypeOther") : undefined,
     purpose,
     price: s("price") ?? "",
     currency: v.currency,
     rentalPeriod: purpose === "SALE" ? null : (s("rentalPeriod") ?? null),
     negotiable: v.negotiable === true,
-    bedrooms: category === "LAND" ? undefined : n("bedrooms"),
-    bathrooms: category === "LAND" ? undefined : n("bathrooms"),
+    bedrooms: noBuilding ? undefined : n("bedrooms"),
+    bathrooms: noBuilding ? undefined : n("bathrooms"),
     floorArea: n("floorArea"),
     floorAreaUnit: v.floorAreaUnit,
     plotSize: n("plotSize"),
@@ -175,6 +186,7 @@ export function ListingForm({
   const type = catalog.types.find((t) => t.id === v.propertyTypeId);
   const category = type?.category;
   const isLand = category === "LAND";
+  const noBuilding = hasNoBuilding(type);
   const isSale = v.purpose === "SALE";
 
   const { submit, pending, errors, formError } = useApiForm<{ id: string }>(propertyId ? `/properties/${propertyId}` : "/properties", {
@@ -185,21 +197,6 @@ export function ListingForm({
       else router.refresh();
     },
   });
-
-  // Group towns/neighbourhoods under their district for the location picker.
-  const locationGroups = useMemo(() => {
-    const byId = new Map(catalog.locations.map((l) => [l.id, l]));
-    const groups = new Map<string, { label: string; options: { id: string; label: string }[] }>();
-    for (const l of catalog.locations) {
-      if (l.level !== "CITY" && l.level !== "LOCALITY") continue;
-      const city = l.level === "LOCALITY" ? byId.get(l.parentId ?? "") : l;
-      const district = city ? byId.get(city.parentId ?? "") : undefined;
-      const key = district?.id ?? "other";
-      if (!groups.has(key)) groups.set(key, { label: district?.name ?? "Other", options: [] });
-      groups.get(key)!.options.push({ id: l.id, label: l.level === "LOCALITY" ? `${l.name}, ${city?.name ?? ""}` : `${l.name} (whole town)` });
-    }
-    return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [catalog.locations]);
 
   const amenityGroups = useMemo(() => {
     const g = new Map<string, { id: string; name: string }[]>();
@@ -236,7 +233,7 @@ export function ListingForm({
       className="space-y-8"
       onSubmit={(e) => {
         e.preventDefault();
-        submit(toPayload(v, category));
+        submit(toPayload(v, type));
       }}
     >
       {formError && <Notice tone="danger">{formError}</Notice>}
@@ -245,25 +242,13 @@ export function ListingForm({
         <div className="grid gap-4 sm:grid-cols-2">
           {select("propertyTypeId", "Property type", catalog.types.map((t) => [t.id, t.name] as const), { placeholder: "Choose a type" })}
           {select("purpose", "Listing for", entries(LISTING_PURPOSES, LISTING_PURPOSE_LABELS))}
+          {type?.slug === OTHER_PROPERTY_TYPE_SLUG && text("propertyTypeOther", "What kind of property is it?", { maxLength: 60, placeholder: "e.g. School building, filling station, church hall" })}
         </div>
         {text("title", "Listing title", { maxLength: 140, placeholder: "e.g. Three-bedroom family house with garden in Hill Station" })}
         <Field id="f-description" label="Description" error={err("description")} hint="At least 40 characters. Describe the property honestly, including anything a visitor should know.">
           <Textarea id="f-description" rows={7} value={str("description")} onChange={(e) => set("description", e.target.value)} maxLength={6000} aria-invalid={!!err("description")} />
         </Field>
-        <Field id="f-locationId" label="Town or neighbourhood" error={err("locationId")}>
-          <Select id="f-locationId" value={str("locationId")} onChange={(e) => set("locationId", e.target.value)} aria-invalid={!!err("locationId")}>
-            <option value="">Choose a location</option>
-            {locationGroups.map((g) => (
-              <optgroup key={g.label} label={g.label}>
-                {g.options.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </Select>
-        </Field>
+        <LocationCascade locations={catalog.locations} value={str("locationId")} onChange={(id) => set("locationId", id)} error={err("locationId")} idPrefix="f-loc" />
         {text("addressLine", "Street or landmark", { optional: true, hint: "Shown only if you allow the exact location below.", maxLength: 200 })}
         <div className="grid gap-4 sm:grid-cols-2">
           {text("latitude", "Latitude", { optional: true, inputMode: "decimal", placeholder: "8.4657" })}
@@ -283,16 +268,16 @@ export function ListingForm({
 
       <Section title="Details">
         <div className="grid gap-4 sm:grid-cols-3">
-          {!isLand && text("bedrooms", "Bedrooms", { inputMode: "numeric" })}
-          {!isLand && text("bathrooms", "Bathrooms", { inputMode: "numeric" })}
-          {!isLand && text("parkingSpaces", "Parking spaces", { inputMode: "numeric", optional: true })}
+          {!noBuilding && text("bedrooms", "Bedrooms", { inputMode: "numeric" })}
+          {!noBuilding && text("bathrooms", "Bathrooms", { inputMode: "numeric" })}
+          {!noBuilding && text("parkingSpaces", "Parking spaces", { inputMode: "numeric", optional: true })}
           {text("floorArea", "Floor area", { inputMode: "decimal", optional: !isLand && category !== "COMMERCIAL" })}
           {select("floorAreaUnit", "Floor area unit", entries(AREA_UNITS, AREA_UNIT_LABELS))}
           <span className="hidden sm:block" />
           {text("plotSize", "Plot size", { inputMode: "decimal", optional: !isLand })}
           {select("plotUnit", "Plot unit", entries(AREA_UNITS, AREA_UNIT_LABELS), { placeholder: "Choose a unit", optional: !isLand })}
         </div>
-        {!isLand && (
+        {!noBuilding && (
           <div className="grid gap-4 sm:grid-cols-3">
             {select("furnishing", "Furnishing", entries(FURNISHING, FURNISHING_LABELS), { placeholder: "Not specified", optional: true })}
             {select("waterSupply", "Water supply", entries(WATER_SUPPLY, WATER_SUPPLY_LABELS), { placeholder: "Not specified", optional: true })}
@@ -344,7 +329,7 @@ export function ListingForm({
         </Section>
       )}
 
-      {!isLand && amenityGroups.length > 0 && (
+      {!noBuilding && amenityGroups.length > 0 && (
         <Section title="Amenities">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {amenityGroups.map(([group, items]) => (

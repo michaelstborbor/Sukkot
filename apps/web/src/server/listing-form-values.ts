@@ -12,6 +12,7 @@ export function listingFormValues(p: Property & { amenities: { amenityId: string
     title: p.title,
     description: p.description,
     propertyTypeId: p.propertyTypeId,
+    propertyTypeOther: p.propertyTypeOther ?? "",
     purpose: p.purpose,
     price: minorToMajorString(p.priceMinor, p.currency),
     currency: p.currency,

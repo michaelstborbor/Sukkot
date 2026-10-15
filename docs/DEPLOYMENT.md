@@ -182,6 +182,29 @@ Run every 15 minutes (Render cron job, GitHub Actions schedule, or system cron):
 pnpm --filter @sukkot/web jobs:expire
 ```
 
+## Locations from OpenStreetMap
+
+The seed loads a starter list of Sierra Leone's 16 districts with their cities, towns and areas
+(sections). To fill in more places from OpenStreetMap, run the import from any machine that can
+reach `overpass-api.de` and the database:
+
+```bash
+pnpm --filter @sukkot/web locations:import-osm               # report what would change
+pnpm --filter @sukkot/web locations:import-osm -- --apply    # write it
+```
+
+- It only adds places and links existing ones (matched by OpenStreetMap id, then by name inside the
+  same parent). It never deletes, hides or renames a location. Hide anything unwanted in
+  Admin → Locations.
+- Cities and towns become the second level of the filter; suburbs, quarters and neighbourhoods
+  become areas under the nearest city (within 15 km) or town (within 5 km).
+- If Sierra Leone's districts are tagged at a different level, pass `--district-level 6`. Villages
+  are skipped unless you pass `--include-villages`.
+- No access to Overpass from the server? Run the same query elsewhere, save the JSON and pass
+  `--file export.json` (`--save` keeps a copy of a live download).
+- OpenStreetMap data is © OpenStreetMap contributors under the ODbL. Once any place is imported, the
+  search filters show that attribution automatically; keep it.
+
 ## Getting paid for plans and featured listings
 
 Landlords and agents pay Sukkot Salone for Pro plans and featured listings. Rent and sale money never

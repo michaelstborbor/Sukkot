@@ -17,8 +17,8 @@ export async function makeUser(roles: Role[] = ["USER"], name = "Test User"): Pr
 
 export async function refs() {
   const [house, land, freetown] = await Promise.all([
-    db.propertyType.findFirstOrThrow({ where: { category: "HOUSE" } }),
-    db.propertyType.findFirstOrThrow({ where: { category: "LAND" } }),
+    db.propertyType.findUniqueOrThrow({ where: { slug: "house" } }),
+    db.propertyType.findUniqueOrThrow({ where: { slug: "empty-land" } }),
     db.location.findFirstOrThrow({ where: { level: "LOCALITY" } }),
   ]);
   return { house, land, locality: freetown };

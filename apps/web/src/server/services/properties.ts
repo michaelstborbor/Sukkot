@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 import { Prisma, type Property } from "@prisma/client";
 import {
   DEFAULT_PER_PAGE,
+  LAND_WITH_BUILDING_TYPE_SLUGS,
+  OTHER_PROPERTY_TYPE_SLUG,
   formatMoney,
   listingMachine,
   parseMajorToMinor,
@@ -109,7 +111,7 @@ export function toSummary(p: SummaryRow & { isFeatured: boolean }): PropertySumm
     slug: p.slug,
     title: p.title,
     category: p.category,
-    typeName: p.propertyType.name,
+    typeName: p.propertyTypeOther ?? p.propertyType.name,
     purpose: p.purpose,
     price: {
       amountMinor: p.priceMinor.toString(),
@@ -349,9 +351,9 @@ async function prepareData(input: unknown) {
   ]);
   if (!type) throw new AppError("VALIDATION", "Choose a property type", { propertyTypeId: "Choose a property type" });
   if (!location || (location.level !== "CITY" && location.level !== "LOCALITY")) {
-    throw new AppError("VALIDATION", "Choose a town or neighbourhood", { locationId: "Choose a town or neighbourhood" });
+    throw new AppError("VALIDATION", "Choose a city or town, and an area if you know it", { locationId: "Choose a city or town, and an area if you know it" });
   }
-  const categoryErrors = validatePropertyForCategory(data, type.category);
+  const categoryErrors = validatePropertyForCategory(data, type.category, type.slug);
   if (categoryErrors.length) {
     throw new AppError("VALIDATION", "Please check the highlighted fields", Object.fromEntries(categoryErrors.map((e) => [e.path, e.message])));
   }
@@ -369,18 +371,20 @@ async function prepareData(input: unknown) {
         }
       : undefined;
   const attributes = type.category === "LAND" ? (data.land ?? {}) : type.category === "COMMERCIAL" ? (data.commercial ?? {}) : {};
+  const noBuilding = type.category === "LAND" && !LAND_WITH_BUILDING_TYPE_SLUGS.includes(type.slug);
   const fields = {
     title: data.title,
     description: data.description,
     propertyTypeId: type.id,
+    propertyTypeOther: type.slug === OTHER_PROPERTY_TYPE_SLUG ? (data.propertyTypeOther ?? null) : null,
     category: type.category,
     purpose: data.purpose,
     priceMinor,
     currency: data.currency,
     rentalPeriod: data.purpose === "SALE" ? null : (data.rentalPeriod ?? null),
     negotiable: data.negotiable,
-    bedrooms: type.category === "LAND" ? null : (data.bedrooms ?? null),
-    bathrooms: type.category === "LAND" ? null : (data.bathrooms ?? null),
+    bedrooms: noBuilding ? null : (data.bedrooms ?? null),
+    bathrooms: noBuilding ? null : (data.bathrooms ?? null),
     floorArea: data.floorArea ?? null,
     floorAreaUnit: data.floorAreaUnit,
     plotSize: data.plotSize ?? null,

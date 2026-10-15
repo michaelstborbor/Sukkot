@@ -7,9 +7,10 @@ export const getCatalog = cache(async () => {
   const [types, amenities, locations] = await Promise.all([
     db.propertyType.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
     db.amenity.findMany({ where: { isActive: true }, orderBy: [{ group: "asc" }, { name: "asc" }] }),
-    db.location.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { id: true, name: true, slug: true, level: true, parentId: true } }),
+    db.location.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }], select: { id: true, name: true, slug: true, level: true, parentId: true, isCity: true, osmId: true } }),
   ]);
-  return { types, amenities, locations };
+  // Places imported from OpenStreetMap must carry its attribution wherever they are listed (ODbL).
+  return { types, amenities, locations, usesOsmData: locations.some((l) => l.osmId !== null) };
 });
 
 export type Catalog = Awaited<ReturnType<typeof getCatalog>>;
