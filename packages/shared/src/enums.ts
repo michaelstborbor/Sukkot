@@ -23,14 +23,20 @@ export const PROPERTY_CATEGORIES = [
   "LAND",
   "COMMERCIAL",
   "SHORT_STAY",
+  "OTHER",
 ] as const;
 export type PropertyCategory = (typeof PROPERTY_CATEGORIES)[number];
+/** The "Other (specify)" property type: the lister must say what the property is. */
+export const OTHER_PROPERTY_TYPE_SLUG = "other";
+/** Land types that may also describe a building on the land (bedrooms, bathrooms, floor area). */
+export const LAND_WITH_BUILDING_TYPE_SLUGS: readonly string[] = ["land-with-property"];
 export const PROPERTY_CATEGORY_LABELS: Record<PropertyCategory, string> = {
   HOUSE: "Houses",
   APARTMENT: "Apartments",
   LAND: "Land",
   COMMERCIAL: "Commercial",
   SHORT_STAY: "Short stays",
+  OTHER: "Other",
 };
 
 export const RENTAL_PERIODS = ["DAY", "WEEK", "MONTH", "QUARTER", "HALF_YEAR", "YEAR"] as const;

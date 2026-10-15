@@ -5,7 +5,9 @@ import {
   CURRENCIES,
   ELECTRICITY,
   FURNISHING,
+  LAND_WITH_BUILDING_TYPE_SLUGS,
   LISTING_PURPOSES,
+  OTHER_PROPERTY_TYPE_SLUG,
   PAYMENT_METHODS,
   PAYMENT_PURPOSES,
   REPORT_TYPES,
@@ -124,6 +126,8 @@ export const propertyInputSchema = z
     title: trimmed(8, 140),
     description: trimmed(40, 6000),
     propertyTypeId: idSchema,
+    /** Required when the type is "Other": what the property actually is. */
+    propertyTypeOther: optionalText(60),
     purpose: z.enum(LISTING_PURPOSES),
     price: amountSchema,
     currency: z.enum(CURRENCIES).default("SLE"),
@@ -172,8 +176,13 @@ export type PropertyParsed = z.output<typeof propertyInputSchema>;
 export function validatePropertyForCategory(
   input: PropertyParsed,
   category: PropertyCategory,
+  typeSlug?: string,
 ): { path: string; message: string }[] {
   const errors: { path: string; message: string }[] = [];
+  const landWithBuilding = typeSlug !== undefined && LAND_WITH_BUILDING_TYPE_SLUGS.includes(typeSlug);
+  if (typeSlug === OTHER_PROPERTY_TYPE_SLUG && (!input.propertyTypeOther || input.propertyTypeOther.length < 3)) {
+    errors.push({ path: "propertyTypeOther", message: "Say what kind of property this is" });
+  }
   if (category === "HOUSE" || category === "APARTMENT" || category === "SHORT_STAY") {
     if (input.bedrooms === undefined) errors.push({ path: "bedrooms", message: "Enter the number of bedrooms" });
     if (input.bathrooms === undefined) errors.push({ path: "bathrooms", message: "Enter the number of bathrooms" });
@@ -181,7 +190,7 @@ export function validatePropertyForCategory(
   if (category === "LAND") {
     if (input.plotSize === undefined) errors.push({ path: "plotSize", message: "Enter the plot size" });
     if (!input.plotUnit) errors.push({ path: "plotUnit", message: "Choose a unit for the plot size" });
-    if (input.bedrooms !== undefined && input.bedrooms > 0)
+    if (!landWithBuilding && input.bedrooms !== undefined && input.bedrooms > 0)
       errors.push({ path: "bedrooms", message: "Land listings should not have bedrooms" });
   }
   if (category === "COMMERCIAL" && input.floorArea === undefined && input.plotSize === undefined) {

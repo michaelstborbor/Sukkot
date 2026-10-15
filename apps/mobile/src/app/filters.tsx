@@ -21,7 +21,16 @@ export default function FiltersScreen() {
   const meta = useMeta();
   const [f, setF] = useState<SearchFilters>(() => parseSearchParams(new URLSearchParams(qs ?? "")));
   const set = (patch: Partial<SearchFilters>) => setF((prev) => ({ ...prev, ...patch }));
-  const districts = useMemo(() => (meta?.locations ?? []).filter((l) => l.level === "DISTRICT"), [meta]);
+  const locations = useMemo(() => [...(meta?.locations ?? [])].sort((a, b) => a.name.localeCompare(b.name)), [meta]);
+  const districts = useMemo(() => locations.filter((l) => l.level === "DISTRICT"), [locations]);
+  const district = districts.find((d) => d.slug === f.district);
+  // Cities first, then towns, within the chosen district.
+  const places = useMemo(
+    () => (district ? locations.filter((l) => l.level === "CITY" && l.parentId === district.id).sort((a, b) => Number(!!b.isCity) - Number(!!a.isCity)) : []),
+    [locations, district],
+  );
+  const place = places.find((p) => p.slug === f.city);
+  const areas = useMemo(() => (place ? locations.filter((l) => l.level === "LOCALITY" && l.parentId === place.id) : []), [locations, place]);
   const num = (v: string) => (v.trim() === "" || Number.isNaN(Number(v)) ? undefined : Number(v));
 
   const apply = (filters: Partial<SearchFilters>) => {
@@ -39,11 +48,21 @@ export default function FiltersScreen() {
       </Field>
       <Field label="District">
         {meta ? (
-          <ChipGroup options={districts.map((d) => ({ value: d.slug, label: d.name }))} value={f.district} onChange={(district) => set({ district })} />
+          <ChipGroup options={districts.map((d) => ({ value: d.slug, label: d.name }))} value={f.district} onChange={(district) => set({ district, city: undefined, locality: undefined })} />
         ) : (
           <Text style={ui.muted}>Loading locations…</Text>
         )}
       </Field>
+      {places.length > 0 && (
+        <Field label="City or town">
+          <ChipGroup options={places.map((p) => ({ value: p.slug, label: p.isCity ? `${p.name} (city)` : p.name }))} value={f.city} onChange={(city) => set({ city, locality: undefined })} />
+        </Field>
+      )}
+      {areas.length > 0 && (
+        <Field label="Area or section">
+          <ChipGroup options={areas.map((a) => ({ value: a.slug, label: a.name }))} value={f.locality} onChange={(locality) => set({ locality })} />
+        </Field>
+      )}
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Field label="Min price">

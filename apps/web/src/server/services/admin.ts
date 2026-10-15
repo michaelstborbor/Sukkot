@@ -70,13 +70,14 @@ export async function searchUsers(q: string | undefined, page = 1) {
 
 const locationSchema = z.object({
   name: z.string().trim().min(2).max(80),
-  level: z.enum(["PROVINCE", "DISTRICT", "CITY", "LOCALITY"]),
+  /** TOWN is stored as a CITY-level place that is not flagged as a city. */
+  level: z.enum(["PROVINCE", "DISTRICT", "CITY", "TOWN", "LOCALITY"]),
   parentId: z.string().min(1),
   latitude: z.coerce.number().min(6.8).max(10.1).optional(),
   longitude: z.coerce.number().min(-13.4).max(-10.2).optional(),
 });
 
-const PARENT_LEVEL: Record<string, LocationLevel> = { PROVINCE: "COUNTRY", DISTRICT: "PROVINCE", CITY: "DISTRICT", LOCALITY: "CITY" };
+const PARENT_LEVEL: Record<string, LocationLevel> = { PROVINCE: "COUNTRY", DISTRICT: "PROVINCE", CITY: "DISTRICT", TOWN: "DISTRICT", LOCALITY: "CITY" };
 
 export async function createLocation(actorIn: Actor | null, input: unknown) {
   const actor = assertPermission(actorIn, "admin:locations.manage");
@@ -85,7 +86,8 @@ export async function createLocation(actorIn: Actor | null, input: unknown) {
   if (!parent || parent.level !== PARENT_LEVEL[data.level]) throw new AppError("VALIDATION", "Choose a valid parent location", { parentId: "Invalid parent" });
   let slug = slugify(data.name);
   if (await db.location.findUnique({ where: { slug } })) slug = slugify(`${data.name}-${parent.name}`);
-  const loc = await db.location.create({ data: { name: data.name, slug, level: data.level, parentId: parent.id, pathIds: [], latitude: data.latitude, longitude: data.longitude } });
+  const level = data.level === "TOWN" ? "CITY" : data.level;
+  const loc = await db.location.create({ data: { name: data.name, slug, level, isCity: data.level === "CITY", parentId: parent.id, pathIds: [], latitude: data.latitude, longitude: data.longitude } });
   await db.location.update({ where: { id: loc.id }, data: { pathIds: [...parent.pathIds, loc.id] } });
   await audit({ actorId: actor.id, action: "location.create", targetType: "Location", targetId: loc.id, metadata: { name: data.name } });
   return loc;

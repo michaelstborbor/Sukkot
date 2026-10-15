@@ -19,7 +19,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "admin:create": "tsx scripts/create-admin.ts",
-    "jobs:expire": "tsx scripts/expire-records.ts"
+    "jobs:expire": "tsx scripts/expire-records.ts",
+    "locations:import-osm": "tsx scripts/import-osm-locations.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -35,6 +35,8 @@ export interface FilterOptions {
   cities: Opt[];
   localities: Opt[];
   amenities: Opt[];
+  /** Some places came from OpenStreetMap, whose licence requires attribution. */
+  osmAttribution?: boolean;
 }
 
 function toggle<T>(arr: T[] | undefined, v: T): T[] {
@@ -92,15 +94,28 @@ function FilterForm({ initial, options, onApply }: { initial: SearchFilters; opt
           <option value="">Any district</option>
           {options.districts.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
         </Select>
-        <Select aria-label="Town or city" value={f.city ?? ""} onChange={(e) => setF((c) => ({ ...c, city: e.target.value || undefined, locality: undefined }))}>
-          <option value="">Any town or city</option>
-          {cities.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+        <Select aria-label="City or town" value={f.city ?? ""} onChange={(e) => setF((c) => ({ ...c, city: e.target.value || undefined, locality: undefined }))}>
+          <option value="">Any city or town</option>
+          {["Cities", "Towns"].map((g) => {
+            const inGroup = cities.filter((c) => c.group === g);
+            return inGroup.length > 0 && (
+              <optgroup key={g} label={g}>
+                {inGroup.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+              </optgroup>
+            );
+          })}
         </Select>
         {localities.length > 0 && (
-          <Select aria-label="Neighbourhood" value={f.locality ?? ""} onChange={(e) => set("locality", e.target.value || undefined)}>
-            <option value="">Any neighbourhood</option>
+          <Select aria-label="Area or section" value={f.locality ?? ""} onChange={(e) => set("locality", e.target.value || undefined)}>
+            <option value="">Any area or section</option>
             {localities.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
           </Select>
+        )}
+        {options.osmAttribution && (
+          <p className="text-xs text-muted">
+            Place names include data ©{" "}
+            <a className="underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>.
+          </p>
         )}
       </fieldset>
 

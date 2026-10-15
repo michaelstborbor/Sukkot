@@ -9,7 +9,7 @@ import { Prisma, PrismaClient, type AreaUnit, type Electricity, type Furnishing,
 import bcrypt from "bcryptjs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { SIERRA_LEONE_LOCATIONS, slugify, DUE_DILIGENCE_TEMPLATE } from "@sukkot/shared";
+import { RETIRED_LOCATIONS, SIERRA_LEONE_LOCATIONS, slugify, DUE_DILIGENCE_TEMPLATE } from "@sukkot/shared";
 import { demoSvg, type DemoKind } from "./demo-art";
 
 const db = new PrismaClient();
@@ -72,40 +72,54 @@ async function seedLocations() {
       const dist = await upsertLoc(d.name, uniqueSlug(d.name, prov.name), "DISTRICT", p.id, p.pathIds, order++);
       for (const t of d.towns) {
         const c = COORDS[t.name];
-        const town = await upsertLoc(t.name, uniqueSlug(t.name, "town"), "CITY", dist.id, dist.pathIds, order++, c);
+        const town = await upsertLoc(t.name, uniqueSlug(t.name, "town"), "CITY", dist.id, dist.pathIds, order++, c, t.city === true);
         for (const l of t.localities ?? []) {
           await upsertLoc(l, uniqueSlug(l, t.name), "LOCALITY", town.id, town.pathIds, order++, c);
         }
       }
     }
   }
+  for (const r of RETIRED_LOCATIONS) {
+    const town = await db.location.findFirst({ where: { name: r.town, level: "CITY", isActive: true, parent: { name: r.district, level: "DISTRICT" } }, include: { _count: { select: { properties: true } } } });
+    if (town && town._count.properties === 0) await db.location.update({ where: { id: town.id }, data: { isActive: false } });
+  }
 }
 
-async function upsertLoc(name: string, slug: string, level: "PROVINCE" | "DISTRICT" | "CITY" | "LOCALITY", parentId: string, parentPath: string[], sortOrder: number, coords?: [number, number]) {
-  const existing = await db.location.findUnique({ where: { slug } });
-  if (existing) return existing;
+/**
+ * Find a place by name under the same parent (so a changed slug never duplicates it), otherwise
+ * create it. Existing rows are left as they are, except that a place the seed marks as a city is
+ * flagged as one.
+ */
+async function upsertLoc(name: string, slug: string, level: "PROVINCE" | "DISTRICT" | "CITY" | "LOCALITY", parentId: string, parentPath: string[], sortOrder: number, coords?: [number, number], isCity = false) {
+  const existing =
+    (await db.location.findFirst({ where: { parentId, level, name: { equals: name, mode: "insensitive" } } })) ??
+    (await db.location.findFirst({ where: { slug, parentId } }));
+  if (existing) {
+    if (isCity && !existing.isCity) return db.location.update({ where: { id: existing.id }, data: { isCity: true } });
+    return existing;
+  }
+  let finalSlug = slug;
+  if (await db.location.findUnique({ where: { slug } })) finalSlug = slugify(`${name}-${parentPath.length}-${parentId.slice(-6)}`);
   const created = await db.location.create({
-    data: { name, slug, level, parentId, pathIds: [], sortOrder, latitude: coords?.[0], longitude: coords?.[1] },
+    data: { name, slug: finalSlug, level, parentId, pathIds: [], sortOrder, latitude: coords?.[0], longitude: coords?.[1], isCity },
   });
   return db.location.update({ where: { id: created.id }, data: { pathIds: [...parentPath, created.id] } });
 }
 
+// Must match the migration that introduced this list (20261015010100_new_property_types).
 const TYPES: { name: string; category: PropertyCategory; description: string }[] = [
-  { name: "House", category: "HOUSE", description: "Detached or semi-detached family homes" },
-  { name: "Bungalow", category: "HOUSE", description: "Single-storey homes" },
-  { name: "Duplex", category: "HOUSE", description: "Two-storey homes" },
-  { name: "New development", category: "HOUSE", description: "Newly built homes and estates" },
-  { name: "Apartment", category: "APARTMENT", description: "Flats in multi-unit buildings" },
-  { name: "Studio", category: "APARTMENT", description: "Self-contained single rooms" },
-  { name: "Residential plot", category: "LAND", description: "Land zoned for homes" },
-  { name: "Commercial plot", category: "LAND", description: "Land for business use" },
-  { name: "Agricultural land", category: "LAND", description: "Farmland and plantations" },
+  { name: "Empty land", category: "LAND", description: "Plots and land with no building on it" },
+  { name: "Land with property", category: "LAND", description: "Land sold or leased with a building on it" },
+  { name: "House", category: "HOUSE", description: "Houses, bungalows and duplexes" },
+  { name: "Apartment", category: "APARTMENT", description: "Flats and self-contained rooms" },
   { name: "Shop", category: "COMMERCIAL", description: "Retail units and stores" },
-  { name: "Office space", category: "COMMERCIAL", description: "Offices and co-working" },
-  { name: "Warehouse", category: "COMMERCIAL", description: "Storage and industrial units" },
-  { name: "Hotel or guesthouse", category: "COMMERCIAL", description: "Hospitality businesses for sale or lease" },
-  { name: "Short-stay apartment", category: "SHORT_STAY", description: "Furnished nightly or weekly stays" },
-  { name: "Guesthouse room", category: "SHORT_STAY", description: "Rooms in guesthouses" },
+  { name: "Office", category: "COMMERCIAL", description: "Offices and co-working space" },
+  { name: "Short stay", category: "SHORT_STAY", description: "Furnished places to stay by the night or week" },
+  { name: "Commercial", category: "COMMERCIAL", description: "Warehouses, workshops and other business premises" },
+  { name: "Hotel", category: "COMMERCIAL", description: "Hotels for sale, lease or rent" },
+  { name: "Guesthouse", category: "COMMERCIAL", description: "Guesthouses for sale, lease or rent" },
+  { name: "Motel", category: "COMMERCIAL", description: "Motels for sale, lease or rent" },
+  { name: "Other", category: "OTHER", description: "Anything else; the lister says what it is" },
 ];
 
 const AMENITIES: [string, string][] = [
@@ -250,18 +264,18 @@ interface DemoListing {
 const LISTINGS: DemoListing[] = [
   { title: "Furnished 2-bedroom apartment in Aberdeen", description: "Bright, fully furnished two-bedroom apartment a short walk from Lumley Beach. Both bedrooms are en suite, the kitchen is fitted, and the compound has a standby generator, water tank and 24-hour security. Suitable for professionals or a small family.", type: "apartment", purpose: "RENT", price: 42_000, period: "MONTH", beds: 2, baths: 2, floor: 110, furnishing: "FURNISHED", water: "GUMA_MAINS", power: "GRID_WITH_BACKUP", parking: 1, location: "aberdeen", lister: "landlord", amenities: ["backup-generator", "water-tank", "security-guard", "air-conditioning", "fitted-kitchen", "parking"], art: "apartment", docsReviewed: true, featured: true, rentalTerms: { advanceRentPeriods: 6, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "LANDLORD", petsAllowed: "ON_REQUEST" }, daysAgo: 2 },
   { title: "4-bedroom villa with sea view, Hill Station", description: "Spacious four-bedroom family villa on the hills above Freetown with panoramic sea views. Large living and dining area, boys' quarters, mature garden and a solar plus inverter system for steady power.", type: "house", purpose: "RENT", price: 85_000, period: "MONTH", beds: 4, baths: 4, floor: 320, furnishing: "SEMI_FURNISHED", water: "BOREHOLE", power: "SOLAR", parking: 3, location: "hill-station", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["sea-view", "solar-power", "inverter", "boys-quarters", "garden", "perimeter-wall", "parking"], art: "house", docsReviewed: true, featured: true, rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "SHARED" }, daysAgo: 5 },
-  { title: "Half town lot with survey plan, Waterloo", description: "Dry, level half town lot in a developing residential area of Waterloo, close to the main road. Survey plan available for inspection. Ideal for a family home.", type: "residential-plot", purpose: "SALE", price: 180_000, negotiable: true, plot: 0.5, plotUnit: "TOWN_LOT", location: "lumpa", lister: "landlord2", amenities: ["tarred-road-access"], art: "land", docsReviewed: true, attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", fenced: false, surveyPlanRef: "DEMO-SP-0042", titleDocumentType: "CONVEYANCE" }, daysAgo: 8 },
+  { title: "Half town lot with survey plan, Waterloo", description: "Dry, level half town lot in a developing residential area of Waterloo, close to the main road. Survey plan available for inspection. Ideal for a family home.", type: "empty-land", purpose: "SALE", price: 180_000, negotiable: true, plot: 0.5, plotUnit: "TOWN_LOT", location: "lumpa", lister: "landlord2", amenities: ["tarred-road-access"], art: "land", docsReviewed: true, attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", fenced: false, surveyPlanRef: "DEMO-SP-0042", titleDocumentType: "CONVEYANCE" }, daysAgo: 8 },
   { title: "Family house near Bo town centre", description: "Well kept five-bedroom family house in New London, Bo, with a fenced compound, borehole and space for a vegetable garden. Walking distance to schools and the market.", type: "house", purpose: "SALE", price: 950_000, negotiable: true, beds: 5, baths: 3, floor: 280, plot: 0.75, plotUnit: "TOWN_LOT", furnishing: "UNFURNISHED", water: "BOREHOLE", power: "EDSA_GRID", parking: 2, location: "new-london", lister: "landlord2", amenities: ["borehole", "perimeter-wall", "near-school", "near-market", "garden"], art: "house", daysAgo: 12 },
   { title: "Ground-floor shop on Azzolini Highway, Makeni", description: "Ground-floor retail unit with roller shutters on a busy stretch of Azzolini Highway. Suitable for a pharmacy, phone shop or mini-mart.", type: "shop", purpose: "LEASE", price: 60_000, period: "YEAR", floor: 45, water: "GUMA_MAINS", power: "EDSA_GRID", location: "azzolini-highway", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["tarred-road-access", "cctv"], art: "commercial", docsReviewed: true, attributes: { permittedUse: "Retail", floors: 1, loadingAccess: true, wheelchairAccessible: true }, daysAgo: 3 },
-  { title: "10 acres of agricultural land, Nongowa", description: "Ten acres of fertile farmland near Kenema, currently partly planted with cassava. Seasonal stream on the eastern boundary. Available on a long lease.", type: "agricultural-land", purpose: "LEASE", price: 25_000, period: "YEAR", plot: 10, plotUnit: "ACRE", location: "nongowa", lister: "landlord", amenities: [], art: "farm", attributes: { landUse: "AGRICULTURAL", accessRoad: "FOOTPATH", titleDocumentType: "CUSTOMARY" }, daysAgo: 20 },
-  { title: "Residential plots in Koidu, Kono District", description: "Two adjoining residential plots in Tankoro, Koidu, on a laterite road with neighbouring homes already connected to the grid. Can be bought together or separately.", type: "residential-plot", purpose: "SALE", price: 120_000, negotiable: true, plot: 1, plotUnit: "TOWN_LOT", location: "tankoro", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: [], art: "land", attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", titleDocumentType: "STATE_GRANT" }, daysAgo: 15 },
-  { title: "Office and warehouse space on Hangha Road, Kenema", description: "Two-storey commercial building with 180 m² of office space upstairs and a 250 m² warehouse at street level with loading bay.", type: "warehouse", purpose: "RENT", price: 30_000, period: "MONTH", floor: 430, water: "BOREHOLE", power: "GENERATOR", parking: 4, location: "hangha-road", lister: "landlord2", amenities: ["parking", "security-guard", "backup-generator"], art: "commercial", attributes: { permittedUse: "Office, storage", floors: 2, loadingAccess: true }, daysAgo: 6 },
-  { title: "Residential plot in Rogbaneh, Makeni", description: "Quarter town lot residential plot in a quiet part of Makeni, fenced on two sides, with access to mains water nearby.", type: "residential-plot", purpose: "SALE", price: 65_000, plot: 0.25, plotUnit: "TOWN_LOT", location: "rogbaneh", lister: "landlord", amenities: [], art: "land", attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", fenced: true, titleDocumentType: "CONVEYANCE" }, daysAgo: 25 },
-  { title: "Modern 3-bedroom duplex in Wilberforce", description: "Newly finished three-bedroom duplex in a gated compound with shared generator and water treatment. Open-plan ground floor and a balcony upstairs.", type: "duplex", purpose: "SALE", price: 220_000, currency: "USD", negotiable: true, beds: 3, baths: 3, floor: 210, furnishing: "UNFURNISHED", water: "MIXED", power: "GRID_WITH_BACKUP", parking: 2, location: "wilberforce", lister: "agent", capacity: "AGENT_FOR_DEVELOPER", amenities: ["gated-compound", "backup-generator", "balcony", "fitted-kitchen", "cctv"], art: "house", featured: true, daysAgo: 1 },
-  { title: "Beachside studio for short stays, Tokeh", description: "Cosy furnished studio steps from Tokeh Beach, ideal for weekend getaways. Wi-Fi, solar power and daily cleaning included.", type: "short-stay-apartment", purpose: "SHORT_STAY", price: 1_200, period: "DAY", beds: 1, baths: 1, floor: 35, furnishing: "FURNISHED", water: "TANKER", power: "SOLAR", parking: 1, location: "tokeh-beach", lister: "landlord", amenities: ["sea-view", "solar-power", "internet-ready", "cleaning-service"], art: "shortstay", daysAgo: 4 },
-  { title: "3-bedroom bungalow for rent in Juba", description: "Comfortable three-bedroom bungalow on a quiet street in Juba with a fenced yard and water tank. Close to Lumley and Wilkinson Road.", type: "bungalow", purpose: "RENT", price: 28_000, period: "MONTH", beds: 3, baths: 2, floor: 160, furnishing: "UNFURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", parking: 1, location: "juba", lister: "landlord2", amenities: ["water-tank", "perimeter-wall", "ceiling-fans"], art: "house", rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "TENANT", petsAllowed: "YES" }, daysAgo: 9 },
-  { title: "Commercial plot on the Bo–Kenema highway", description: "Roadside commercial plot suitable for a filling station, shop or warehouse, with frontage on the highway.", type: "commercial-plot", purpose: "SALE", price: 400_000, negotiable: true, plot: 1.5, plotUnit: "ACRE", location: "tikonko-road", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["tarred-road-access"], art: "land", attributes: { landUse: "COMMERCIAL", accessRoad: "TARRED", titleDocumentType: "CONVEYANCE" }, daysAgo: 30 },
-  { title: "Self-contained studio in Brookfields", description: "Self-contained studio with its own kitchenette and shower, in a well maintained compound close to the stadium.", type: "studio", purpose: "RENT", price: 6_500, period: "MONTH", beds: 1, baths: 1, floor: 28, furnishing: "SEMI_FURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", location: "brookfields", lister: "landlord", amenities: ["ceiling-fans"], art: "apartment", rentalTerms: { advanceRentPeriods: 6, minLeaseMonths: 6, utilitiesPaidBy: "TENANT" }, daysAgo: 11 },
+  { title: "10 acres of agricultural land, Nongowa", description: "Ten acres of fertile farmland near Kenema, currently partly planted with cassava. Seasonal stream on the eastern boundary. Available on a long lease.", type: "empty-land", purpose: "LEASE", price: 25_000, period: "YEAR", plot: 10, plotUnit: "ACRE", location: "nongowa", lister: "landlord", amenities: [], art: "farm", attributes: { landUse: "AGRICULTURAL", accessRoad: "FOOTPATH", titleDocumentType: "CUSTOMARY" }, daysAgo: 20 },
+  { title: "Residential plots in Koidu, Kono District", description: "Two adjoining residential plots in Tankoro, Koidu, on a laterite road with neighbouring homes already connected to the grid. Can be bought together or separately.", type: "empty-land", purpose: "SALE", price: 120_000, negotiable: true, plot: 1, plotUnit: "TOWN_LOT", location: "tankoro", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: [], art: "land", attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", titleDocumentType: "STATE_GRANT" }, daysAgo: 15 },
+  { title: "Office and warehouse space on Hangha Road, Kenema", description: "Two-storey commercial building with 180 m² of office space upstairs and a 250 m² warehouse at street level with loading bay.", type: "commercial", purpose: "RENT", price: 30_000, period: "MONTH", floor: 430, water: "BOREHOLE", power: "GENERATOR", parking: 4, location: "hangha-road", lister: "landlord2", amenities: ["parking", "security-guard", "backup-generator"], art: "commercial", attributes: { permittedUse: "Office, storage", floors: 2, loadingAccess: true }, daysAgo: 6 },
+  { title: "Residential plot in Rogbaneh, Makeni", description: "Quarter town lot residential plot in a quiet part of Makeni, fenced on two sides, with access to mains water nearby.", type: "empty-land", purpose: "SALE", price: 65_000, plot: 0.25, plotUnit: "TOWN_LOT", location: "rogbaneh", lister: "landlord", amenities: [], art: "land", attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", fenced: true, titleDocumentType: "CONVEYANCE" }, daysAgo: 25 },
+  { title: "Modern 3-bedroom duplex in Wilberforce", description: "Newly finished three-bedroom duplex in a gated compound with shared generator and water treatment. Open-plan ground floor and a balcony upstairs.", type: "house", purpose: "SALE", price: 220_000, currency: "USD", negotiable: true, beds: 3, baths: 3, floor: 210, furnishing: "UNFURNISHED", water: "MIXED", power: "GRID_WITH_BACKUP", parking: 2, location: "wilberforce", lister: "agent", capacity: "AGENT_FOR_DEVELOPER", amenities: ["gated-compound", "backup-generator", "balcony", "fitted-kitchen", "cctv"], art: "house", featured: true, daysAgo: 1 },
+  { title: "Beachside studio for short stays, Tokeh", description: "Cosy furnished studio steps from Tokeh Beach, ideal for weekend getaways. Wi-Fi, solar power and daily cleaning included.", type: "short-stay", purpose: "SHORT_STAY", price: 1_200, period: "DAY", beds: 1, baths: 1, floor: 35, furnishing: "FURNISHED", water: "TANKER", power: "SOLAR", parking: 1, location: "tokeh-beach", lister: "landlord", amenities: ["sea-view", "solar-power", "internet-ready", "cleaning-service"], art: "shortstay", daysAgo: 4 },
+  { title: "3-bedroom bungalow for rent in Juba", description: "Comfortable three-bedroom bungalow on a quiet street in Juba with a fenced yard and water tank. Close to Lumley and Wilkinson Road.", type: "house", purpose: "RENT", price: 28_000, period: "MONTH", beds: 3, baths: 2, floor: 160, furnishing: "UNFURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", parking: 1, location: "juba", lister: "landlord2", amenities: ["water-tank", "perimeter-wall", "ceiling-fans"], art: "house", rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "TENANT", petsAllowed: "YES" }, daysAgo: 9 },
+  { title: "Commercial plot on the Bo–Kenema highway", description: "Roadside commercial plot suitable for a filling station, shop or warehouse, with frontage on the highway.", type: "empty-land", purpose: "SALE", price: 400_000, negotiable: true, plot: 1.5, plotUnit: "ACRE", location: "tikonko-road", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["tarred-road-access"], art: "land", attributes: { landUse: "COMMERCIAL", accessRoad: "TARRED", titleDocumentType: "CONVEYANCE" }, daysAgo: 30 },
+  { title: "Self-contained studio in Brookfields", description: "Self-contained studio with its own kitchenette and shower, in a well maintained compound close to the stadium.", type: "apartment", purpose: "RENT", price: 6_500, period: "MONTH", beds: 1, baths: 1, floor: 28, furnishing: "SEMI_FURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", location: "brookfields", lister: "landlord", amenities: ["ceiling-fans"], art: "apartment", rentalTerms: { advanceRentPeriods: 6, minLeaseMonths: 6, utilitiesPaidBy: "TENANT" }, daysAgo: 11 },
 ];
 
 async function seedDemo() {

@@ -17,7 +17,7 @@ Honest list of what is incomplete or needs work before production.
 
 - No map view yet (listing coordinates are stored; approximate locations are supported in the data).
 - No admin editor for content pages; Terms, Privacy and other legal pages are static drafts in code.
-- Property types are added through the database seed or a migration, not from the admin area.
+- Property types are added through a migration, not from the admin area.
   Amenities, locations, plans and site settings are editable in the admin area.
 - Mobile app: listing creation and editing, photo and document upload, verification submission, online
   checkout, lease-terms proposals and payee confirmation of recorded payments are done on the website.
@@ -27,6 +27,13 @@ Honest list of what is incomplete or needs work before production.
 - Pay by transfer relies on finance staff checking the business statement by hand. There is no
   automatic statement import yet.
 - Plan prices are starting guesses, not market research. Set real prices in Admin → Plans.
+- The built-in list of cities, towns and areas is a hand-curated starter list, not OpenStreetMap
+  data, and it is incomplete. The OpenStreetMap import (see Deployment → Locations from
+  OpenStreetMap) has been tested only against a small sample file; it has not yet been run
+  against the live Overpass service. Areas that OpenStreetMap places far from any city or town
+  are reported and skipped, and villages are left out unless asked for.
+- "Other (specify)" listings are searchable under the Other category, not by the lister's own words
+  in the type filter.
 
 ## Operations
 

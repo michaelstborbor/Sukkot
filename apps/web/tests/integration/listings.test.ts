@@ -30,6 +30,26 @@ describe("listings", () => {
     expect(history.map((h) => h.toValue)).toEqual(["DRAFT", "PENDING_REVIEW", "PUBLISHED"]);
   });
 
+  it("keeps the lister's own words for Other, and rooms for land with a property on it", async () => {
+    const owner = await makeUser(["OWNER"]);
+    const [other, landWithProperty, emptyLand] = await Promise.all(
+      ["other", "land-with-property", "empty-land"].map((slug) => db.propertyType.findUniqueOrThrow({ where: { slug } })),
+    );
+    await expect(createProperty(owner, await houseInput({ propertyTypeId: other.id, floorArea: 80 }))).rejects.toMatchObject({
+      fields: expect.objectContaining({ propertyTypeOther: expect.any(String) }),
+    });
+    const fuel = await createProperty(owner, await houseInput({ propertyTypeId: other.id, propertyTypeOther: "Fuel station" }));
+    expect(fuel.category).toBe("OTHER");
+    expect(fuel.propertyTypeOther).toBe("Fuel station");
+
+    const land = { purpose: "SALE", rentalPeriod: undefined, plotSize: 2, plotUnit: "TOWN_LOT", propertyTypeOther: "ignored" };
+    const withHouse = await createProperty(owner, await houseInput({ ...land, propertyTypeId: landWithProperty.id }));
+    expect(withHouse.bedrooms).toBe(3);
+    expect(withHouse.propertyTypeOther).toBeNull();
+    const bare = await createProperty(owner, await houseInput({ ...land, propertyTypeId: emptyLand.id, bedrooms: undefined, bathrooms: undefined }));
+    expect(bare.bedrooms).toBeNull();
+  });
+
   it("enforces category rules and ownership", async () => {
     const owner = await makeUser(["OWNER"]);
     const stranger = await makeUser(["OWNER"]);
