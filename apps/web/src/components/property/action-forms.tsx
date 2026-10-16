@@ -183,8 +183,7 @@ type Modal = "enquiry" | "inspection" | "offer" | "apply" | "report" | null;
 export function PropertyActions({
   propertyId,
   slug,
-  reference,
-  title,
+  whatsappMessage,
   purpose,
   currency,
   signedIn,
@@ -193,8 +192,8 @@ export function PropertyActions({
 }: {
   propertyId: string;
   slug: string;
-  reference: string;
-  title: string;
+  /** What the WhatsApp chat opens with: the property's name, type, location and price. */
+  whatsappMessage: string;
   purpose: ListingPurpose;
   currency: string;
   signedIn: boolean;
@@ -225,7 +224,7 @@ export function PropertyActions({
         <div className="grid grid-cols-2 gap-2">
           <a href={telLink(brand.supportPhone)} className={buttonClasses("outline", "md")}><Phone className="h-4 w-4" /> Call</a>
           <a
-            href={whatsappLink(brand.supportWhatsapp, `Hello ${brand.name}, I am interested in listing ${reference}: ${title}`)}
+            href={whatsappLink(brand.supportWhatsapp, whatsappMessage)}
             target="_blank"
             rel="noopener noreferrer"
             className={buttonClasses("outline", "md")}

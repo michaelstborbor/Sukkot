@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import { router, type Href } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
-import { NOTICES, SUPPORT_CONTACT, telLink, VERIFICATION_BADGES, whatsappLink } from "@sukkot/shared";
+import { GENERAL_ENQUIRY, NOTICES, SUPPORT_CONTACT, telLink, VERIFICATION_BADGES, whatsappLink } from "@sukkot/shared";
 import { absoluteUrl, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { colors } from "@/lib/theme";
@@ -49,7 +49,7 @@ export default function AccountScreen() {
       </Card>
 
       <Card style={{ padding: 0, gap: 0 }}>
-        <ContactRow icon="logo-whatsapp" label="Chat with us on WhatsApp" detail={SUPPORT_CONTACT.phone} url={whatsappLink(SUPPORT_CONTACT.whatsapp)} />
+        <ContactRow icon="logo-whatsapp" label="Chat with us on WhatsApp" detail={SUPPORT_CONTACT.phone} url={whatsappLink(SUPPORT_CONTACT.whatsapp, GENERAL_ENQUIRY)} />
         <ContactRow icon="call-outline" label="Call us" detail={SUPPORT_CONTACT.phone} url={telLink(SUPPORT_CONTACT.phone)} last />
       </Card>
 

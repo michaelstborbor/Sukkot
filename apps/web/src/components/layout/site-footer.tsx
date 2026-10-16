@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone, ShieldAlert } from "lucide-react";
-import { telLink, whatsappLink } from "@sukkot/shared";
+import { GENERAL_ENQUIRY, telLink, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { WhatsAppIcon } from "@/components/layout/whatsapp-icon";
 import { Logo } from "@/components/ui/logo";
@@ -22,7 +22,7 @@ export function SiteFooter() {
             <li className="flex items-center gap-2"><MapPin className="h-4 w-4 text-gold-500" aria-hidden />{brand.address}</li>
             <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-gold-500" aria-hidden /><a href={`mailto:${brand.supportEmail}`} className="hover:text-white">{brand.supportEmail}</a></li>
             <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-gold-500" aria-hidden /><a href={telLink(brand.supportPhone)} className="hover:text-white">{brand.supportPhone}</a></li>
-            <li className="flex items-center gap-2"><WhatsAppIcon className="h-4 w-4 text-gold-500" /><a href={whatsappLink(brand.supportWhatsapp)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Chat on WhatsApp</a></li>
+            <li className="flex items-center gap-2"><WhatsAppIcon className="h-4 w-4 text-gold-500" /><a href={whatsappLink(brand.supportWhatsapp, GENERAL_ENQUIRY)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Chat on WhatsApp</a></li>
           </ul>
         </div>
         {COLS.map((c) => (
