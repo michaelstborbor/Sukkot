@@ -11,6 +11,7 @@ import {
   VERIFICATION_BADGES,
   WATER_SUPPLY_LABELS,
   formatDate,
+  listingEnquiry,
   formatMoney,
   relativeTime,
   type Electricity,
@@ -22,6 +23,7 @@ import { getPropertyDetail, recordView, similarProperties } from "@/server/servi
 import { brand } from "@/config/brand";
 import { Gallery } from "@/components/property/gallery";
 import { PropertyActions } from "@/components/property/action-forms";
+import { LISTING_MESSAGE_ID } from "@/lib/whatsapp";
 import { FavoriteButton } from "@/components/property/favorite-button";
 import { ShareButton } from "@/components/property/share-button";
 import { PropertyCard } from "@/components/property/property-card";
@@ -84,6 +86,7 @@ export default async function PropertyPage({ params }: Props) {
   const similar = await similarProperties({ id: p.id, category: p.category, purpose: p.purpose, district: p.district });
   const isOwn = actor?.id === p.lister.id;
   const available = p.availability === "AVAILABLE" || p.availability === "UNDER_OFFER";
+  const whatsappMessage = listingEnquiry(p, process.env.APP_URL ? `${process.env.APP_URL}/properties/${p.slug}` : undefined);
 
   const specs = [
     p.bedrooms !== null && { icon: BedDouble, label: "Bedrooms", value: p.bedrooms },
@@ -118,6 +121,7 @@ export default async function PropertyPage({ params }: Props) {
   return (
     <div className="container-page py-6 sm:py-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      {!isOwn && <span id={LISTING_MESSAGE_ID} data-message={whatsappMessage} hidden />}
       <nav aria-label="Breadcrumb" className="mb-4 text-sm text-muted">
         <Link href="/" className="hover:text-navy-900">Home</Link> / <Link href={`/properties?purpose=${p.purpose}`} className="hover:text-navy-900">{LISTING_PURPOSE_LABELS[p.purpose]}</Link> / <span className="text-ink">{p.reference}</span>
       </nav>
@@ -283,8 +287,7 @@ export default async function PropertyPage({ params }: Props) {
             <PropertyActions
               propertyId={p.id}
               slug={p.slug}
-              reference={p.reference}
-              title={p.title}
+              whatsappMessage={whatsappMessage}
               purpose={p.purpose}
               currency={p.price.currency}
               signedIn={!!actor}

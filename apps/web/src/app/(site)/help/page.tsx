@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { telLink, whatsappLink } from "@sukkot/shared";
+import { GENERAL_ENQUIRY, telLink, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { getCurrentActor } from "@/server/auth/actor";
 import { ProsePage } from "@/components/layout/prose-page";
@@ -32,7 +32,7 @@ export default async function HelpPage() {
         ))}
       </div>
       <h2 id="report">Contact us or report a problem</h2>
-      <p>For urgent safety issues, contact the police. For everything else, chat with us on WhatsApp at <a href={whatsappLink(brand.supportWhatsapp)} target="_blank" rel="noopener noreferrer">{brand.supportPhone}</a>, call <a href={telLink(brand.supportPhone)}>{brand.supportPhone}</a>, write to {brand.supportEmail}, or send us a message below and we will reply by email.</p>
+      <p>For urgent safety issues, contact the police. For everything else, chat with us on WhatsApp at <a href={whatsappLink(brand.supportWhatsapp, GENERAL_ENQUIRY)} target="_blank" rel="noopener noreferrer">{brand.supportPhone}</a>, call <a href={telLink(brand.supportPhone)}>{brand.supportPhone}</a>, write to {brand.supportEmail}, or send us a message below and we will reply by email.</p>
       <div className="mt-4 rounded-2xl border border-line bg-canvas p-5">
         <SupportForm signedIn={!!actor} />
       </div>

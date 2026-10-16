@@ -11,6 +11,7 @@ import {
   SUPPORT_CONTACT,
   telLink,
   VERIFICATION_BADGES,
+  listingEnquiry,
   whatsappLink,
   type Furnishing,
   type PropertyDetailDTO,
@@ -77,7 +78,7 @@ export default function PropertyScreen() {
     ["Reference", p.reference],
   ];
   const params = { id: p.id, title: p.title };
-  const enquiryText = `Hello Sukkot Salone, I am interested in listing ${p.reference}: ${p.title}`;
+  const enquiryText = listingEnquiry(p, `${API_URL}/properties/${p.slug}`);
 
   return (
     <>
