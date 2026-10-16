@@ -84,4 +84,13 @@ describe("listings", () => {
     expect(detail!.lister.whatsapp).toBeNull();
     expect(JSON.stringify(detail)).not.toContain("76123456");
   });
+
+  it("accepts a short description, but not an empty one", async () => {
+    const owner = await makeUser(["OWNER"]);
+    const p = await createProperty(owner, await houseInput({ description: "Nice house." }));
+    expect(p.description).toBe("Nice house.");
+    await expect(createProperty(owner, await houseInput({ description: "   " }))).rejects.toMatchObject({
+      issues: [expect.objectContaining({ path: ["description"], message: "Describe the property" })],
+    });
+  });
 });

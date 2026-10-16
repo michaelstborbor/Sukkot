@@ -60,6 +60,13 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
         }
       />
 
+      {isManager && ownerActions.includes("submit") && (
+        <Notice tone="info" className="mb-4" title="Finish your listing">
+          Add photos or a video, then review and submit it for approval.{" "}
+          <Link href={`/dashboard/properties/${p.id}/finish`} className="link font-semibold">Continue</Link>
+        </Notice>
+      )}
+
       <nav aria-label="Listing sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
         {TABS.map(([key, label]) => (
           <Link

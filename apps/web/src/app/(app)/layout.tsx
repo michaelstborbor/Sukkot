@@ -4,7 +4,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <main id="main" className="min-h-[70vh]">{children}</main>
+      <main id="main" className="min-h-[70vh] pb-24">{children}</main>
     </>
   );
 }
