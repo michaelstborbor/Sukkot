@@ -8,7 +8,10 @@ import {
   FURNISHING_LABELS,
   LISTING_PURPOSE_LABELS,
   NOTICES,
+  SUPPORT_CONTACT,
+  telLink,
   VERIFICATION_BADGES,
+  whatsappLink,
   type Furnishing,
   type PropertyDetailDTO,
 } from "@sukkot/shared";
@@ -18,6 +21,7 @@ import { humanize, priceLabel } from "@/lib/format";
 import { goSignedIn } from "@/lib/require-auth";
 import { colors } from "@/lib/theme";
 import { Badge, Button, Card, ErrorState, Loading, Notice, styles as ui } from "@/components/ui";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 export default function PropertyScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -73,6 +77,7 @@ export default function PropertyScreen() {
     ["Reference", p.reference],
   ];
   const params = { id: p.id, title: p.title };
+  const enquiryText = `Hello Sukkot Salone, I am interested in listing ${p.reference}: ${p.title}`;
 
   return (
     <>
@@ -91,7 +96,7 @@ export default function PropertyScreen() {
           ),
         }}
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 96 }}>
         {p.images.length ? (
           <View>
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / width))}>
@@ -193,12 +198,13 @@ export default function PropertyScreen() {
               )}
               {p.lister.isDemo ? <Badge label="Demo account" tone="danger" /> : null}
             </View>
-            {!isOwnListing && (p.lister.phone || p.lister.whatsapp) ? (
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {p.lister.phone ? <Button small style={{ flex: 1 }} variant="outline" title="Call" onPress={() => Linking.openURL(`tel:${p.lister.phone}`)} /> : null}
-                {p.lister.whatsapp ? (
-                  <Button small style={{ flex: 1 }} variant="outline" title="WhatsApp" onPress={() => Linking.openURL(`https://wa.me/${p.lister.whatsapp!.replace(/\D/g, "")}`)} />
-                ) : null}
+            {!isOwnListing ? (
+              <View style={{ gap: 6 }}>
+                <Text style={[ui.muted, { fontSize: 12 }]}>Call or chat with the Sukkot Salone team about this property</Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Button small style={{ flex: 1 }} variant="outline" title="Call" onPress={() => Linking.openURL(telLink(SUPPORT_CONTACT.phone))} />
+                  <Button small style={{ flex: 1 }} variant="outline" title="WhatsApp" onPress={() => Linking.openURL(whatsappLink(SUPPORT_CONTACT.whatsapp, enquiryText))} />
+                </View>
               </View>
             ) : null}
             <Text style={[ui.muted, { fontSize: 12 }]}>{NOTICES.verificationLimits}</Text>
@@ -214,6 +220,7 @@ export default function PropertyScreen() {
           ) : null}
         </View>
       </ScrollView>
+      {!isOwnListing ? <WhatsAppButton message={enquiryText} /> : null}
     </>
   );
 }

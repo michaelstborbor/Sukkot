@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <ProsePage eyebrow="Legal" title="Privacy policy" updated="14 October 2026" intro="Draft for legal review. This policy explains what personal information we collect and how we use it.">
       <h2>Who we are</h2>
-      <p>{brand.name} operates an online property marketplace for Sierra Leone. Contact: {brand.supportEmail}.</p>
+      <p>{brand.name} operates an online property marketplace for Sierra Leone. Contact: {brand.supportEmail}, or phone and WhatsApp {brand.supportPhone}.</p>
       <h2>What we collect</h2>
       <ul>
         <li>Account details: name, email, phone number, password (stored only as a secure hash).</li>
@@ -26,11 +26,11 @@ export default function PrivacyPage() {
         <li>To meet legal obligations and resolve disputes.</li>
       </ul>
       <h2>Who can see your information</h2>
-      <p>Your name and listings are public. Your phone number is shown only if you choose. Messages are visible to the participants and, where needed to investigate a report, to authorised staff; such access is logged. We share data with service providers (hosting, email, payment providers) only as needed to run the service.</p>
+      <p>Your name and listings are public. Your phone and WhatsApp numbers are not shown on listings; phone and WhatsApp enquiries go to our team. Messages are visible to the participants and, where needed to investigate a report, to authorised staff; such access is logged. We share data with service providers (hosting, email, payment providers) only as needed to run the service.</p>
       <h2>How long we keep it</h2>
       <p>We keep account data while your account is open. When you close your account, we remove public content and keep records needed for legal, payment or dispute purposes for a limited period.</p>
       <h2>Your choices</h2>
-      <p>You can update your profile, hide your phone number, and close your account from your dashboard. Contact us to request a copy of your data or to correct it.</p>
+      <p>You can update your profile and close your account from your dashboard. Contact us to request a copy of your data or to correct it.</p>
     </ProsePage>
   );
 }

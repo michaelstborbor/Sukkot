@@ -12,7 +12,6 @@ import {
   WATER_SUPPLY_LABELS,
   formatDate,
   formatMoney,
-  formatSlPhone,
   relativeTime,
   type Electricity,
   type Furnishing,
@@ -284,12 +283,12 @@ export default async function PropertyPage({ params }: Props) {
             <PropertyActions
               propertyId={p.id}
               slug={p.slug}
+              reference={p.reference}
+              title={p.title}
               purpose={p.purpose}
               currency={p.price.currency}
               signedIn={!!actor}
               isOwnListing={isOwn}
-              phone={p.lister.phone}
-              whatsapp={p.lister.whatsapp}
               available={available}
             />
           </div>
@@ -314,7 +313,6 @@ export default async function PropertyPage({ params }: Props) {
                 Acting for: {p.listerCapacity === "AGENT_FOR_DEVELOPER" ? "a developer" : p.listerCapacity === "AGENT_FOR_OWNER" ? "the property owner" : "an authorised party"}. Ask to see the owner&apos;s written authority.
               </p>
             )}
-            {p.lister.phone && <p className="mt-3 text-sm">Phone: <a href={`tel:${p.lister.phone}`} className="link">{formatSlPhone(p.lister.phone)}</a></p>}
             {p.lister.kind === "AGENT" && <Link href={`/agents/${p.lister.id}`} className="mt-3 inline-block text-sm link">View agent profile</Link>}
           </div>
           <p className="px-1 text-xs text-muted">

@@ -33,7 +33,6 @@ export default async function SettingsPage() {
             { name: "whatsapp", label: "WhatsApp", type: "tel", optional: true, defaultValue: p?.whatsapp ?? "" },
             { name: "preferredContact", label: "Preferred contact", type: "select", defaultValue: p?.preferredContact ?? "IN_APP", options: CONTACT_METHODS.map((c) => ({ value: c, label: CONTACT_LABELS[c]! })) },
             { name: "bio", label: "About you", type: "textarea", optional: true, defaultValue: p?.bio ?? "" },
-            { name: "showPhone", label: "Show my phone number on my listings", type: "checkbox", defaultValue: p?.showPhone ?? false, wide: true },
           ]}
         />
       </section>

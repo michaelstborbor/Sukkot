@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarClock, FileText, Flag, HandCoins, MessageSquare, Phone } from "lucide-react";
-import { NOTICES, REPORT_TYPES, REPORT_TYPE_LABELS, type ListingPurpose } from "@sukkot/shared";
+import { NOTICES, REPORT_TYPES, REPORT_TYPE_LABELS, telLink, whatsappLink, type ListingPurpose } from "@sukkot/shared";
+import { brand } from "@/config/brand";
+import { WhatsAppIcon } from "@/components/layout/whatsapp-icon";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea, Checkbox } from "@/components/ui/form";
@@ -181,22 +183,22 @@ type Modal = "enquiry" | "inspection" | "offer" | "apply" | "report" | null;
 export function PropertyActions({
   propertyId,
   slug,
+  reference,
+  title,
   purpose,
   currency,
   signedIn,
   isOwnListing,
-  phone,
-  whatsapp,
   available,
 }: {
   propertyId: string;
   slug: string;
+  reference: string;
+  title: string;
   purpose: ListingPurpose;
   currency: string;
   signedIn: boolean;
   isOwnListing: boolean;
-  phone: string | null;
-  whatsapp: string | null;
   available: boolean;
 }) {
   const [modal, setModal] = useState<Modal>(null);
@@ -218,12 +220,20 @@ export function PropertyActions({
       <Button variant="outline" size="lg" className="w-full" onClick={need("inspection")} disabled={!available}><CalendarClock className="h-5 w-5" /> Book an inspection</Button>
       {(purpose === "SALE" || purpose === "LEASE") && <Button variant="primary" size="lg" className="w-full" onClick={need("offer")} disabled={!available}><HandCoins className="h-5 w-5" /> Make an offer</Button>}
       {purpose !== "SALE" && <Button variant="primary" size="lg" className="w-full" onClick={need("apply")} disabled={!available}><FileText className="h-5 w-5" /> Apply to rent</Button>}
-      {(phone || whatsapp) && (
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          {phone && <a href={`tel:${phone}`} className={buttonClasses("outline", "md")}><Phone className="h-4 w-4" /> Call</a>}
-          {whatsapp && <a href={`https://wa.me/${whatsapp.replace("+", "")}`} target="_blank" rel="noopener noreferrer" className={buttonClasses("outline", "md")}>WhatsApp</a>}
+      <div className="pt-1">
+        <p className="mb-1.5 text-center text-xs text-muted">Call or chat with the {brand.name} team about this property</p>
+        <div className="grid grid-cols-2 gap-2">
+          <a href={telLink(brand.supportPhone)} className={buttonClasses("outline", "md")}><Phone className="h-4 w-4" /> Call</a>
+          <a
+            href={whatsappLink(brand.supportWhatsapp, `Hello ${brand.name}, I am interested in listing ${reference}: ${title}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClasses("outline", "md")}
+          >
+            <WhatsAppIcon className="h-4 w-4 text-[#1ebe5b]" /> WhatsApp
+          </a>
         </div>
-      )}
+      </div>
       {!signedIn && <p className="pt-1 text-center text-xs text-muted"><Link href={signInHref} className="link">Sign in</Link> to contact the lister. It&apos;s free.</p>}
       <button type="button" onClick={() => setModal("report")} className="mx-auto mt-2 flex items-center gap-1.5 text-sm text-muted hover:text-danger"><Flag className="h-4 w-4" /> Report listing</button>
 
