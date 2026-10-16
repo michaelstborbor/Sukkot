@@ -43,7 +43,7 @@ const listerSelect = {
     isDemo: true,
     createdAt: true,
     roles: { select: { role: true } },
-    profile: { select: { fullName: true, avatarKey: true, whatsapp: true, showPhone: true } },
+    profile: { select: { fullName: true, avatarKey: true } },
     verificationRequests: {
       where: { status: "VERIFIED", propertyId: null, kind: { in: ["IDENTITY", "AGENT_CREDENTIALS"] } },
       select: { kind: true, expiresAt: true },
@@ -190,8 +190,10 @@ function toDetail(p: DetailRow, opts: { saved: boolean; canSeeExact: boolean }):
       agencyId: p.agency?.id ?? null,
       badges,
       memberSince: p.lister.createdAt.toISOString(),
-      phone: profile?.showPhone ? p.lister.phone : null,
-      whatsapp: profile?.showPhone ? (profile.whatsapp ?? null) : null,
+      // Listings send phone and WhatsApp enquiries to the Sukkot Salone team, so listers' own numbers
+      // are never published. The fields stay (always empty) for older versions of the phone app.
+      phone: null,
+      whatsapp: null,
       isDemo: p.lister.isDemo,
     },
     viewCount: p.viewCount,

@@ -35,7 +35,7 @@ export default function TermsPage() {
       <h2>8. Liability</h2>
       <p>To the extent permitted by law, we are not liable for losses arising from dealings between users. Nothing in these terms limits rights you have under the laws of Sierra Leone.</p>
       <h2>9. Contact</h2>
-      <p>{brand.supportEmail}</p>
+      <p>{brand.supportEmail} · Phone and WhatsApp: {brand.supportPhone}</p>
     </ProsePage>
   );
 }

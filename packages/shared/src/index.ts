@@ -9,3 +9,4 @@ export * from "./locations";
 export * from "./legal";
 export * from "./datetime";
 export * from "./api-types";
+export * from "./contact";

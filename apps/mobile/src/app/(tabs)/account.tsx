@@ -1,9 +1,9 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { router, type Href } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
-import { NOTICES, VERIFICATION_BADGES } from "@sukkot/shared";
+import { NOTICES, SUPPORT_CONTACT, telLink, VERIFICATION_BADGES, whatsappLink } from "@sukkot/shared";
 import { absoluteUrl, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { colors } from "@/lib/theme";
@@ -48,6 +48,11 @@ export default function AccountScreen() {
         <WebRow icon="help-circle-outline" label="Help and safety" path="/safety" last />
       </Card>
 
+      <Card style={{ padding: 0, gap: 0 }}>
+        <ContactRow icon="logo-whatsapp" label="Chat with us on WhatsApp" detail={SUPPORT_CONTACT.phone} url={whatsappLink(SUPPORT_CONTACT.whatsapp)} />
+        <ContactRow icon="call-outline" label="Call us" detail={SUPPORT_CONTACT.phone} url={telLink(SUPPORT_CONTACT.phone)} last />
+      </Card>
+
       <Text style={[ui.muted, { fontSize: 12 }]}>{NOTICES.noEscrow}</Text>
       <Button title="Sign out" variant="outline" onPress={signOut} />
     </ScrollView>
@@ -71,6 +76,16 @@ function WebRow({ icon, label, path, last }: { icon: IconName; label: string; pa
       <Ionicons name={icon} size={20} color={colors.navy900} />
       <Text style={[ui.body, { flex: 1 }]}>{label}</Text>
       <Ionicons name="open-outline" size={16} color={colors.muted} />
+    </Pressable>
+  );
+}
+
+function ContactRow({ icon, label, detail, url, last }: { icon: IconName; label: string; detail: string; url: string; last?: boolean }) {
+  return (
+    <Pressable style={[s.row, !last && s.border]} onPress={() => Linking.openURL(url)} accessibilityRole="link" accessibilityLabel={`${label}, ${detail}`}>
+      <Ionicons name={icon} size={20} color={colors.navy900} />
+      <Text style={[ui.body, { flex: 1 }]}>{label}</Text>
+      <Text style={ui.muted}>{detail}</Text>
     </Pressable>
   );
 }

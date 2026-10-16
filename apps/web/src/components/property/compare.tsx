@@ -65,7 +65,7 @@ export function CompareBar() {
   const ids = useCompare();
   if (ids.length === 0) return null;
   return (
-    <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
+    <div className="fixed inset-x-0 bottom-20 z-30 sm:bottom-4 flex justify-center px-4">
       <div className="flex animate-[fade-up_0.25s_ease-out] items-center gap-3 rounded-full bg-navy-900 py-2 pr-2 pl-5 text-sm text-white shadow-[var(--shadow-pop)]">
         <span>
           {ids.length} selected to compare

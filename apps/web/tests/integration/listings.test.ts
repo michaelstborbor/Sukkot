@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseSearchParams } from "@sukkot/shared";
 import { db } from "@/server/db";
 import { addImages, createProperty, getPropertyDetail, moderateListing, ownerListingAction, searchProperties, updateProperty } from "@/server/services/properties";
-import { houseInput, makeUser, pngFile, refs } from "../support/factory";
+import { houseInput, makeUser, pngFile, publishedListing, refs } from "../support/factory";
 
 describe("listings", () => {
   it("goes draft → review → published, and only then appears in search", async () => {
@@ -73,5 +73,15 @@ describe("listings", () => {
     }
     const none = await searchProperties(parseSearchParams({ minPrice: "999999999" }));
     expect(none.total).toBe(0);
+  });
+
+  it("never publishes the lister's own phone or WhatsApp number", async () => {
+    const owner = await makeUser(["OWNER"]);
+    await db.user.update({ where: { id: owner.id }, data: { phone: "+23276123456", profile: { update: { whatsapp: "+23276123456", showPhone: true } } } });
+    const listing = await publishedListing(owner, await makeUser(["MODERATOR"]));
+    const detail = await getPropertyDetail(listing.slug, null);
+    expect(detail!.lister.phone).toBeNull();
+    expect(detail!.lister.whatsapp).toBeNull();
+    expect(JSON.stringify(detail)).not.toContain("76123456");
   });
 });
