@@ -124,7 +124,7 @@ export const commercialAttributesSchema = z.object({
 export const propertyInputSchema = z
   .object({
     title: trimmed(8, 140),
-    description: trimmed(40, 6000),
+    description: z.string().trim().min(1, "Describe the property").max(6000),
     propertyTypeId: idSchema,
     /** Required when the type is "Other": what the property actually is. */
     propertyTypeOther: optionalText(60),

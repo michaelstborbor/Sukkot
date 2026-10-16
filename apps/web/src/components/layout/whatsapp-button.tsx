@@ -8,8 +8,8 @@ import { WhatsAppIcon } from "./whatsapp-icon";
 /** A "Chat on WhatsApp" button in the corner of every page. On a listing it says which listing. */
 export function WhatsAppButton() {
   const pathname = usePathname();
-  // The message screen has its own send button in that corner.
-  if (pathname.startsWith("/dashboard/messages/")) return null;
+  // These screens keep their own buttons (send, next, submit) in that corner.
+  if (["/dashboard/messages/", "/dashboard/properties/", "/admin"].some((p) => pathname.startsWith(p))) return null;
   const greeting = `Hello ${brand.name}, I have a question.`;
   return (
     <a

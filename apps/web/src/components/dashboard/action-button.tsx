@@ -48,8 +48,9 @@ export function ActionButton({
       await api(path, { method, body: { ...body, ...extra } });
       if (success) toast.success(success);
       setOpen(false);
+      // Refreshing as well would race the navigation and can leave the browser on this page.
       if (redirectTo) router.push(redirectTo);
-      router.refresh();
+      else router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {

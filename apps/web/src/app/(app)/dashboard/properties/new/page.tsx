@@ -13,7 +13,7 @@ export default async function NewPropertyPage() {
   const catalog = await getCatalog();
   return (
     <div className="max-w-4xl">
-      <PageHeader title="Add a property" description="Step 1 of 3: details. Next you add photos, then submit for review." />
+      <PageHeader title="Add a property" description="Fill in the details, add photos or a video, then review and submit for approval." />
       <Notice className="mb-6">{NOTICES.verificationLimits}</Notice>
       <ListingForm catalog={catalog} isAgent={actor.roles.includes("AGENT")} />
     </div>
