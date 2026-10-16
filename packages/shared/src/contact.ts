@@ -18,3 +18,29 @@ export function whatsappLink(number: string, text?: string) {
 export function telLink(number: string) {
   return `tel:${number.replace(/[^\d+]/g, "")}`;
 }
+
+/** The message typed into a WhatsApp chat that is not about a particular listing. */
+export const GENERAL_ENQUIRY = "Hello Sukkot Salone, I have a question.";
+
+/** Where a listing is, as shown on its card: "Aberdeen, Freetown · Western Area Urban". */
+export function listingPlace(p: { locationLabel: string; district: string | null }) {
+  return p.district && !p.locationLabel.includes(p.district) ? `${p.locationLabel} · ${p.district}` : p.locationLabel;
+}
+
+/** The message typed into a WhatsApp chat started from a listing, naming the property so the team knows which one. */
+export function listingEnquiry(
+  p: { title: string; typeName: string; locationLabel: string; district: string | null; price: { formatted: string } },
+  link?: string,
+) {
+  return [
+    `Hello Sukkot Salone, I saw this ${p.typeName.toLowerCase()} and I'd like to know more about it.`,
+    "",
+    p.title,
+    `Type: ${p.typeName}`,
+    `Location: ${listingPlace(p)}`,
+    `Price: ${p.price.formatted}`,
+    ...(link ? [link] : []),
+    "",
+    "Is it still available?",
+  ].join("\n");
+}

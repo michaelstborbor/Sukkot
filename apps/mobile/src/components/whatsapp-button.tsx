@@ -1,9 +1,7 @@
 import { Linking, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { SUPPORT_CONTACT, whatsappLink } from "@sukkot/shared";
-
-const GREETING = "Hello Sukkot Salone, I have a question.";
+import { GENERAL_ENQUIRY, SUPPORT_CONTACT, whatsappLink } from "@sukkot/shared";
 
 /**
  * A round "Chat on WhatsApp" button floating in the bottom-right corner.
@@ -14,7 +12,7 @@ export function WhatsAppButton({ message, aboveTabBar = false }: { message?: str
   const insets = useSafeAreaInsets();
   return (
     <Pressable
-      onPress={() => Linking.openURL(whatsappLink(SUPPORT_CONTACT.whatsapp, message ?? GREETING))}
+      onPress={() => Linking.openURL(whatsappLink(SUPPORT_CONTACT.whatsapp, message ?? GENERAL_ENQUIRY))}
       accessibilityRole="link"
       accessibilityLabel="Chat with Sukkot Salone on WhatsApp"
       style={({ pressed }) => [s.fab, { bottom: insets.bottom + (aboveTabBar ? 49 : 0) + 16, opacity: pressed ? 0.85 : 1 }]}
