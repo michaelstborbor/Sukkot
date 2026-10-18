@@ -4,6 +4,8 @@ import { requirePagePermission } from "@/server/auth/actor";
 import { getSetting } from "@/server/services/settings";
 import { PageHeader } from "@/components/dashboard/shell";
 import { JsonForm } from "@/components/dashboard/json-form";
+import { HeroImageUpload } from "@/components/dashboard/upload-forms";
+import { publicFileUrl } from "@/server/storage";
 import { Notice } from "@/components/ui/misc";
 import { env } from "@/server/env";
 import { clearMobileMoneyConfig, loadMobileMoneyConfig, type CredentialSource } from "@/server/payments/config";
@@ -24,7 +26,7 @@ export const metadata: Metadata = { title: "Site settings" };
 export default async function AdminSettingsPage() {
   await requirePagePermission("admin:settings.manage", "/admin/settings");
   clearMobileMoneyConfig();
-  const [announcement, promo, visit, slot, manual, mobileMoney, mm] = await Promise.all([
+  const [announcement, promo, visit, slot, manual, mobileMoney, mm, hero] = await Promise.all([
     getSetting("site.announcement"),
     getSetting("promotion.featured7d"),
     getSetting("visit.inspection"),
@@ -32,6 +34,7 @@ export default async function AdminSettingsPage() {
     getSetting("billing.manual"),
     getSetting("payments.mobileMoney"),
     loadMobileMoneyConfig(),
+    getSetting("site.heroImage"),
   ]);
   const om = mobileMoney.orangeMoney;
   const am = mobileMoney.afrimoney;
@@ -45,6 +48,13 @@ export default async function AdminSettingsPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader title="Site settings" />
+      <section className="card p-5">
+        <h2 className="mb-1 font-bold text-navy-900">Homepage background photo</h2>
+        <p className="mb-3 text-sm text-muted">
+          A wide landscape photo at least 1280 pixels wide; 2560 pixels or more looks sharpest on large screens. It is resized for phones, laptops and large screens, saved as WebP and shown under a dark tint so the heading stays readable. Location and camera details are removed. Use a photo you own or have permission to use.
+        </p>
+        <HeroImageUpload current={hero ? publicFileUrl(`${hero.baseKey}-${hero.widths.find((w) => w >= 1280) ?? hero.widths[0]}.webp`) : null} currentAlt={hero?.alt ?? ""} />
+      </section>
       <section className="card p-5">
         <h2 className="mb-3 font-bold text-navy-900">Announcement bar</h2>
         <JsonForm

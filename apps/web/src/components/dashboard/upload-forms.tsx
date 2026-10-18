@@ -6,7 +6,8 @@ import { Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Field, Select, Textarea } from "@/components/ui/form";
+import { Field, Input, Select, Textarea } from "@/components/ui/form";
+import { ActionButton } from "@/components/dashboard/action-button";
 import { Notice } from "@/components/ui/misc";
 
 const MAX = 10 * 1024 * 1024;
@@ -109,6 +110,50 @@ export function AvatarUpload({ current }: { current: string | null }) {
       )}
       <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="avatar" onChange={(e) => upload(e.target.files?.[0])} />
       <Button variant="outline" size="sm" loading={busy} onClick={() => ref.current?.click()}>Change photo</Button>
+    </div>
+  );
+}
+
+/** Upload or replace the homepage background photo (Admin → Site settings). */
+export function HeroImageUpload({ current, currentAlt }: { current: string | null; currentAlt: string }) {
+  const router = useRouter();
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [alt, setAlt] = useState(currentAlt);
+  async function upload(file: File | undefined) {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) return toast.error("Photos must be 10 MB or smaller");
+    const form = new FormData();
+    form.append("file", file);
+    form.append("alt", alt);
+    setBusy(true);
+    try {
+      await api("/admin/settings/hero", { form });
+      toast.success("Background photo updated");
+      router.refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setBusy(false);
+      if (ref.current) ref.current.value = "";
+    }
+  }
+  return (
+    <div className="space-y-3">
+      {current ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={current} alt="Current homepage background" className="aspect-[21/9] w-full rounded-xl object-cover" />
+      ) : (
+        <div className="flex aspect-[21/9] w-full items-center justify-center rounded-xl bg-navy-900 text-sm text-white/70">Using the drawn hills and sea</div>
+      )}
+      <Field id="hero-alt" label="Describe the photo" optional hint="Read aloud by screen readers, for example “Freetown from Leicester Peak at sunset”.">
+        <Input id="hero-alt" value={alt} maxLength={200} onChange={(e) => setAlt(e.target.value)} />
+      </Field>
+      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="hero-photo" onChange={(e) => upload(e.target.files?.[0])} />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" loading={busy} onClick={() => ref.current?.click()}>{current ? "Replace photo" : "Upload photo"}</Button>
+        {current && <ActionButton path="/admin/settings/hero" method="DELETE" label="Use the drawn background" variant="ghost" success="Background photo removed" />}
+      </div>
     </div>
   );
 }

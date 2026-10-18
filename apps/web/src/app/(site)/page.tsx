@@ -13,6 +13,8 @@ import { PropertyCard } from "@/components/property/property-card";
 import { CompareBar } from "@/components/property/compare";
 import { SearchPanel } from "@/components/search/search-panel";
 import { HeroArt } from "@/components/home/hero-art";
+import { HeroPhoto } from "@/components/home/hero-photo";
+import { getSetting } from "@/server/services/settings";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { Faq } from "@/components/home/faq";
 import { CategoryGallery } from "@/components/home/category-gallery";
@@ -58,13 +60,14 @@ export default async function HomePage() {
   ]);
   const gallery = GALLERY.map((g, i) => ({ label: g.label, href: g.href, listings: galleryListings[i]! })).filter((g) => g.listings.length > 0);
   const saved = await savedIds(actor?.id, [...featured, ...recent].map((p) => p.id));
+  const hero = await getSetting("site.heroImage");
   const topDistricts = districts.sort((a, b) => b.count - a.count).slice(0, 8);
 
   return (
     <>
       {/* Hero */}
       <section className="relative isolate overflow-hidden bg-navy-900 text-white">
-        <HeroArt />
+        {hero ? <HeroPhoto hero={hero} /> : <HeroArt />}
         <div className="absolute inset-0 bg-gradient-to-b from-navy-950/30 via-transparent to-navy-950/60" aria-hidden />
         <div className="container-page relative pt-16 pb-24 sm:pt-24 sm:pb-32">
           <div className="max-w-3xl animate-[fade-up_0.6s_ease-out_both]">
