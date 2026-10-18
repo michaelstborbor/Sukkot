@@ -8,6 +8,8 @@ import { PageHeader } from "@/components/dashboard/shell";
 import { ActionButton } from "@/components/dashboard/action-button";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Badge, EmptyState } from "@/components/ui/misc";
+import { ButtonLink } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Listing moderation" };
@@ -30,7 +32,8 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
     take: 50,
   });
   const canReviewDocs = can(actor, "admin:verification.review");
-  const tabs: ListingStatus[] = ["PENDING_REVIEW", "PUBLISHED", "CHANGES_REQUESTED", "SUSPENDED", "REJECTED", "PAUSED", "DRAFT"];
+  const canEdit = can(actor, "admin:listings.edit");
+  const tabs: ListingStatus[] = ["PENDING_REVIEW", "PUBLISHED", "CHANGES_REQUESTED", "SUSPENDED", "REJECTED", "PAUSED", "DRAFT", "REMOVED"];
 
   return (
     <>
@@ -99,6 +102,25 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                   {can("reinstate") && <ActionButton path={`/admin/listings/${p.id}`} body={{ action: "reinstate" }} label="Reinstate" reason={{ label: "Note" }} success="Reinstated" />}
                   {p.listingStatus === "PUBLISHED" && (
                     <ActionButton path={`/admin/listings/${p.id}/feature`} body={{ featured: !p.isFeatured }} label={p.isFeatured ? "Unfeature" : "Feature"} variant="ghost" success="Updated" />
+                  )}
+                  {canEdit && p.listingStatus !== "REMOVED" && p.listingStatus !== "SUSPENDED" && (
+                    <ButtonLink href={`/dashboard/properties/${p.id}?tab=details`} variant="outline" size="sm">
+                      <Pencil className="h-4 w-4" /> Edit
+                    </ButtonLink>
+                  )}
+                  {can("remove") && (
+                    <ActionButton path={`/admin/listings/${p.id}`} body={{ action: "remove" }} label="Remove" variant="danger" confirm="The listing comes off the site and the lister is told why. Its record, messages and payments are kept." reason={{ label: "Reason for removal", required: true }} success="Removed" />
+                  )}
+                  {canEdit && (
+                    <ActionButton
+                      path={`/admin/listings/${p.id}`}
+                      method="DELETE"
+                      label="Delete permanently"
+                      variant="danger"
+                      confirm={`This deletes ${p.reference} with its photos, video, documents and enquiries. It cannot be undone. Payment records are kept.`}
+                      reason={{ label: "Reason for deleting", required: true }}
+                      success="Deleted"
+                    />
                   )}
                 </div>
               </li>

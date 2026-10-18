@@ -8,6 +8,7 @@
 import { Prisma, PrismaClient, type AreaUnit, type Electricity, type Furnishing, type ListingPurpose, type ListerCapacity, type PropertyCategory, type RentalPeriod, type WaterSupply } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { promises as fs } from "node:fs";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { RETIRED_LOCATIONS, SIERRA_LEONE_LOCATIONS, slugify, DUE_DILIGENCE_TEMPLATE } from "@sukkot/shared";
 import { demoSvg, type DemoKind } from "./demo-art";
@@ -210,8 +211,9 @@ async function writeDemoImage(key: string, svg: string) {
   await fs.writeFile(file, svg);
 }
 
-async function demoUser(email: string, fullName: string, roles: ("OWNER" | "AGENT" | "SUPER_ADMIN" | "MODERATOR" | "VERIFICATION_OFFICER" | "SUPPORT" | "FINANCE")[], phone: string, extra: { showPhone?: boolean; whatsapp?: string; bio?: string } = {}) {
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+async function demoUser(email: string, fullName: string, roles: ("OWNER" | "AGENT" | "SUPER_ADMIN" | "MODERATOR" | "VERIFICATION_OFFICER" | "SUPPORT" | "FINANCE")[], phone: string, extra: { showPhone?: boolean; whatsapp?: string; bio?: string; loginable?: boolean } = {}) {
+  // Accounts behind demo listings on a live site get a random password nobody knows, so they cannot sign in.
+  const passwordHash = await bcrypt.hash(extra.loginable === false ? randomBytes(32).toString("hex") : DEMO_PASSWORD, 10);
   const user = await db.user.upsert({
     where: { email },
     create: {
@@ -281,39 +283,37 @@ const LISTINGS: DemoListing[] = [
   { title: "3-bedroom bungalow for rent in Juba", description: "Comfortable three-bedroom bungalow on a quiet street in Juba with a fenced yard and water tank. Close to Lumley and Wilkinson Road.", type: "house", purpose: "RENT", price: 28_000, period: "MONTH", beds: 3, baths: 2, floor: 160, furnishing: "UNFURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", parking: 1, location: "juba", lister: "landlord2", amenities: ["water-tank", "perimeter-wall", "ceiling-fans"], art: "house", rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "TENANT", petsAllowed: "YES" }, daysAgo: 9 },
   { title: "Commercial plot on the Bo–Kenema highway", description: "Roadside commercial plot suitable for a filling station, shop or warehouse, with frontage on the highway.", type: "empty-land", purpose: "SALE", price: 400_000, negotiable: true, plot: 1.5, plotUnit: "ACRE", location: "tikonko-road", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["tarred-road-access"], art: "land", attributes: { landUse: "COMMERCIAL", accessRoad: "TARRED", titleDocumentType: "CONVEYANCE" }, daysAgo: 30 },
   { title: "Self-contained studio in Brookfields", description: "Self-contained studio with its own kitchenette and shower, in a well maintained compound close to the stadium.", type: "studio", purpose: "RENT", price: 6_500, period: "MONTH", beds: 1, baths: 1, floor: 28, furnishing: "SEMI_FURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", location: "brookfields", lister: "landlord", amenities: ["ceiling-fans"], art: "apartment", rentalTerms: { advanceRentPeriods: 6, minLeaseMonths: 6, utilitiesPaidBy: "TENANT" }, daysAgo: 11 },
+  { title: "Single room with shared kitchen in Kissy", description: "Clean single room in a family compound in Kissy, with a shared kitchen and bathroom. Water from the compound tank and a prepaid meter for each room. Suits a student or a young worker.", type: "room", purpose: "RENT", price: 2_500, period: "MONTH", beds: 1, baths: 1, floor: 14, furnishing: "UNFURNISHED", water: "MIXED", power: "EDSA_GRID", location: "kissy", lister: "landlord2", amenities: ["water-tank", "perimeter-wall"], art: "apartment", rentalTerms: { advanceRentPeriods: 6, minLeaseMonths: 6, utilitiesPaidBy: "TENANT" }, daysAgo: 7 },
+  { title: "2-bedroom flat for a family, Wellington", description: "Ground-floor two-bedroom flat in Wellington with a sitting room, kitchen and indoor toilet. Close to the main road and the market, with a quiet compound for children.", type: "apartment", purpose: "RENT", price: 12_000, period: "MONTH", beds: 2, baths: 1, floor: 75, furnishing: "UNFURNISHED", water: "GUMA_MAINS", power: "EDSA_GRID", parking: 1, location: "wellington", lister: "landlord2", amenities: ["water-tank", "near-market", "ceiling-fans"], art: "apartment", rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "LANDLORD" }, daysAgo: 13 },
+  { title: "Furnished office suite on Tower Hill", description: "Three furnished offices and a small meeting room on the second floor of a secure building on Tower Hill, minutes from the central business district. Shared reception and standby power.", type: "office", purpose: "RENT", price: 18_000, period: "MONTH", floor: 95, furnishing: "FURNISHED", water: "GUMA_MAINS", power: "GRID_WITH_BACKUP", parking: 2, location: "tower-hill", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["backup-generator", "air-conditioning", "security-guard", "internet-ready", "parking"], art: "commercial", attributes: { permittedUse: "Office", floors: 1, wheelchairAccessible: false }, daysAgo: 5 },
+  { title: "Warehouse near the port, Cline Town", description: "Single-storey warehouse of about 600 m² close to the Queen Elizabeth II Quay, with a high roof, a loading bay for trucks and a small office at the front.", type: "commercial", purpose: "RENT", price: 35_000, period: "MONTH", floor: 600, water: "BOREHOLE", power: "GENERATOR", parking: 6, location: "cline-town", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["security-guard", "cctv", "tarred-road-access"], art: "commercial", attributes: { permittedUse: "Storage, distribution", floors: 1, loadingAccess: true }, daysAgo: 16 },
+  { title: "12-room beach hotel for sale, Lakka", description: "Operating 12-room hotel a short walk from Lakka Beach, with a restaurant, bar terrace and staff quarters. Sold with furniture and equipment; trading figures available to serious buyers.", type: "hotel", purpose: "SALE", price: 450_000, currency: "USD", negotiable: true, beds: 12, baths: 13, floor: 900, plot: 1, plotUnit: "TOWN_LOT", furnishing: "FURNISHED", water: "BOREHOLE", power: "GRID_WITH_BACKUP", parking: 10, location: "lakka", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["sea-view", "backup-generator", "security-guard", "parking", "air-conditioning"], art: "shortstay", featured: true, daysAgo: 10 },
+  { title: "6-room guesthouse on a long lease, Makeni", description: "Six en-suite guest rooms with a reception, small kitchen and courtyard in a busy part of Makeni. Available on a five-year lease to an operator.", type: "guesthouse", purpose: "LEASE", price: 90_000, period: "YEAR", beds: 6, baths: 6, floor: 320, furnishing: "SEMI_FURNISHED", water: "BOREHOLE", power: "SOLAR", parking: 4, location: "makeni", lister: "landlord", amenities: ["solar-power", "water-tank", "parking", "perimeter-wall"], art: "shortstay", daysAgo: 18 },
+  { title: "Roadside motel at Mile 91", description: "Ten-room motel on the Freetown–Bo highway at Mile 91, popular with drivers and traders, with a canteen and secure parking for lorries.", type: "motel", purpose: "SALE", price: 1_200_000, negotiable: true, beds: 10, baths: 10, floor: 520, plot: 1.5, plotUnit: "TOWN_LOT", furnishing: "FURNISHED", water: "BOREHOLE", power: "GENERATOR", parking: 12, location: "mile-91", lister: "landlord2", amenities: ["parking", "security-guard", "tarred-road-access"], art: "commercial", daysAgo: 22 },
+  { title: "Plot with an unfinished 3-bedroom house, Regent", description: "Half town lot in Regent with a three-bedroom house built to roof level. Walls, roof and window openings are done; it needs plastering, doors and fittings. Cool hillside location.", type: "land-with-property", purpose: "SALE", price: 300_000, negotiable: true, beds: 3, baths: 2, floor: 140, plot: 0.5, plotUnit: "TOWN_LOT", location: "regent", lister: "landlord", amenities: ["perimeter-wall"], art: "house", attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", fenced: true, titleDocumentType: "CONVEYANCE" }, daysAgo: 14 },
+  { title: "Sea-view apartment for short stays, Lumley", description: "Furnished one-bedroom apartment near Lumley Beach for nightly or weekly stays, with air conditioning, Wi-Fi, standby power and a balcony facing the sea.", type: "short-stay", purpose: "SHORT_STAY", price: 1_800, period: "DAY", beds: 1, baths: 1, floor: 60, furnishing: "FURNISHED", water: "GUMA_MAINS", power: "GRID_WITH_BACKUP", parking: 1, location: "lumley", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["sea-view", "air-conditioning", "internet-ready", "backup-generator", "balcony"], art: "shortstay", daysAgo: 3 },
+  { title: "4-bedroom house with a garden, Bo", description: "Four-bedroom family house in Bo with a large garden, a borehole and a fenced compound, close to schools. Available to rent by the year.", type: "house", purpose: "RENT", price: 20_000, period: "MONTH", beds: 4, baths: 2, floor: 190, furnishing: "UNFURNISHED", water: "BOREHOLE", power: "EDSA_GRID", parking: 2, location: "bo", lister: "landlord2", amenities: ["borehole", "garden", "perimeter-wall", "near-school"], art: "house", rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "SHARED" }, daysAgo: 19 },
 ];
 
-async function seedDemo() {
-  const admin = await demoUser("admin@demo.sukkot.sl", "Demo Administrator", ["SUPER_ADMIN"], "+23276000001");
-  await demoUser("moderator@demo.sukkot.sl", "Demo Moderator", ["MODERATOR"], "+23276000002");
-  await demoUser("verifier@demo.sukkot.sl", "Demo Verification Officer", ["VERIFICATION_OFFICER"], "+23276000003");
-  await demoUser("finance@demo.sukkot.sl", "Demo Finance Officer", ["FINANCE"], "+23276000004");
-  const landlord = await demoUser("landlord@demo.sukkot.sl", "Aminata Conteh (Demo)", ["OWNER"], "+23276100100", { showPhone: true, whatsapp: "+23276100100", bio: "Fictional demo landlord with apartments in Freetown." });
-  const landlord2 = await demoUser("landlord2@demo.sukkot.sl", "Ibrahim Sesay (Demo)", ["OWNER"], "+23277200200", { bio: "Fictional demo owner with property in Bo, Kenema and Freetown." });
-  const agent = await demoUser("agent@demo.sukkot.sl", "Fatmata Bangura (Demo)", ["AGENT"], "+23230300300", { showPhone: true, whatsapp: "+23230300300", bio: "Fictional demo agent at Lion Mountain Realty (Demo)." });
-  const tenant = await demoUser("tenant@demo.sukkot.sl", "Mohamed Kamara (Demo)", [], "+23278400400");
-  const buyer = await demoUser("buyer@demo.sukkot.sl", "Hawa Koroma (Demo)", [], "+23233500500");
-
-  // Demo plans so the paid features can be tried: the landlord and agent are on Pro, landlord2 stays
-  // on the free plan (and is over its limit, which shows the upgrade prompt).
-  for (const [userId, code] of [[landlord.id, "landlord-pro"], [agent.id, "agent-pro"]] as const) {
-    if (await db.subscription.count({ where: { userId } })) continue;
-    const plan = await db.subscriptionPlan.findUniqueOrThrow({ where: { code } });
-    await db.subscription.create({ data: { userId, planId: plan.id, status: "ACTIVE", startsAt: new Date(), endsAt: new Date(Date.now() + plan.periodDays * 86400_000) } });
-  }
-
+/** The fictional landlords and agent who list the demo properties, and the agent's agency. */
+async function seedDemoListers(loginable: boolean) {
+  const landlord = await demoUser("landlord@demo.sukkot.sl", "Aminata Conteh (Demo)", ["OWNER"], "+23276100100", { showPhone: true, whatsapp: "+23276100100", bio: "Fictional demo landlord with apartments in Freetown.", loginable });
+  const landlord2 = await demoUser("landlord2@demo.sukkot.sl", "Ibrahim Sesay (Demo)", ["OWNER"], "+23277200200", { bio: "Fictional demo owner with property in Bo, Kenema and Freetown.", loginable });
+  const agent = await demoUser("agent@demo.sukkot.sl", "Fatmata Bangura (Demo)", ["AGENT"], "+23230300300", { showPhone: true, whatsapp: "+23230300300", bio: "Fictional demo agent at Lion Mountain Realty (Demo).", loginable });
   const agency = await db.agency.upsert({
     where: { slug: "lion-mountain-realty-demo" },
     create: { name: "Lion Mountain Realty (Demo)", slug: "lion-mountain-realty-demo", description: "Fictional demonstration agency.", phone: "+23230300300", email: "agency@demo.sukkot.sl", address: "Siaka Stevens Street, Freetown (fictional)", isDemo: true },
     update: {},
   });
   await db.agencyMember.upsert({ where: { agencyId_userId: { agencyId: agency.id, userId: agent.id } }, create: { agencyId: agency.id, userId: agent.id, role: "OWNER", title: "Principal agent" }, update: {} });
+  return { landlord, landlord2, agent, agency };
+}
 
-  await verify(landlord.id, "IDENTITY", admin.id);
-  await verify(agent.id, "IDENTITY", admin.id);
-  await verify(agent.id, "AGENT_CREDENTIALS", admin.id);
-
-  const listers = { landlord, landlord2, agent };
+/**
+ * Create each demo listing that does not exist yet (matched by its DEMO reference). `reviewed` marks the
+ * documents of some as reviewed; it is false on a live site, where nobody has reviewed anything.
+ */
+async function seedDemoListings(listers: Record<DemoListing["lister"], { id: string }>, agencyId: string, opts: { reviewed: boolean; approverId?: string }) {
   const types = await db.propertyType.findMany();
   const amenities = await db.amenity.findMany();
   const created: Record<string, string> = {};
@@ -324,8 +324,12 @@ async function seedDemo() {
       created[l.title] = existing.id;
       continue;
     }
-    const type = types.find((t) => t.slug === l.type)!;
-    const loc = await db.location.findUniqueOrThrow({ where: { slug: l.location } });
+    const type = types.find((t) => t.slug === l.type);
+    const loc = await db.location.findUnique({ where: { slug: l.location } });
+    if (!type || !loc) {
+      console.warn(`Skipped demo listing "${l.title}": property type "${l.type}" or location "${l.location}" is missing.`);
+      continue;
+    }
     const lister = listers[l.lister];
     const publishedAt = new Date(Date.now() - l.daysAgo * 86400_000);
     const p = await db.property.create({
@@ -334,7 +338,7 @@ async function seedDemo() {
         slug: `${slugify(l.title).slice(0, 60)}-${reference.toLowerCase()}`,
         ownerId: lister.id,
         listerId: lister.id,
-        agencyId: l.lister === "agent" ? agency.id : null,
+        agencyId: l.lister === "agent" ? agencyId : null,
         listerCapacity: l.capacity ?? "OWNER",
         title: l.title,
         description: `${l.description}\n\nThis is a fictional demonstration listing.`,
@@ -359,14 +363,14 @@ async function seedDemo() {
         attributes: (l.attributes ?? {}) as Prisma.InputJsonValue,
         rentalTerms: (l.rentalTerms as Prisma.InputJsonValue | undefined) ?? undefined,
         listingStatus: "PUBLISHED",
-        documentsStatus: l.docsReviewed ? "VERIFIED" : "NOT_SUBMITTED",
+        documentsStatus: l.docsReviewed && opts.reviewed ? "VERIFIED" : "NOT_SUBMITTED",
         isFeatured: !!l.featured,
         isDemo: true,
         viewCount: 20 + ((i * 37) % 180),
         publishedAt,
         createdAt: publishedAt,
         amenities: { create: l.amenities.map((slug) => amenities.find((a) => a.slug === slug)).filter(Boolean).map((a) => ({ amenityId: a!.id })) },
-        statusHistory: { create: [{ field: "listingStatus", fromValue: "PENDING_REVIEW", toValue: "PUBLISHED", reason: "Demo data", actorId: admin.id }] },
+        statusHistory: { create: [{ field: "listingStatus", fromValue: "PENDING_REVIEW", toValue: "PUBLISHED", reason: "Demo data", actorId: opts.approverId ?? null }] },
       },
     });
     for (let k = 0; k < 3; k++) {
@@ -376,6 +380,32 @@ async function seedDemo() {
     }
     created[l.title] = p.id;
   }
+  return created;
+}
+
+async function seedDemo() {
+  const admin = await demoUser("admin@demo.sukkot.sl", "Demo Administrator", ["SUPER_ADMIN"], "+23276000001");
+  await demoUser("moderator@demo.sukkot.sl", "Demo Moderator", ["MODERATOR"], "+23276000002");
+  await demoUser("verifier@demo.sukkot.sl", "Demo Verification Officer", ["VERIFICATION_OFFICER"], "+23276000003");
+  await demoUser("finance@demo.sukkot.sl", "Demo Finance Officer", ["FINANCE"], "+23276000004");
+  const { landlord, landlord2, agent, agency } = await seedDemoListers(true);
+  const tenant = await demoUser("tenant@demo.sukkot.sl", "Mohamed Kamara (Demo)", [], "+23278400400");
+  const buyer = await demoUser("buyer@demo.sukkot.sl", "Hawa Koroma (Demo)", [], "+23233500500");
+
+  // Demo plans so the paid features can be tried: the landlord and agent are on Pro, landlord2 stays
+  // on the free plan (and is over its limit, which shows the upgrade prompt).
+  for (const [userId, code] of [[landlord.id, "landlord-pro"], [agent.id, "agent-pro"]] as const) {
+    if (await db.subscription.count({ where: { userId } })) continue;
+    const plan = await db.subscriptionPlan.findUniqueOrThrow({ where: { code } });
+    await db.subscription.create({ data: { userId, planId: plan.id, status: "ACTIVE", startsAt: new Date(), endsAt: new Date(Date.now() + plan.periodDays * 86400_000) } });
+  }
+
+
+  await verify(landlord.id, "IDENTITY", admin.id);
+  await verify(agent.id, "IDENTITY", admin.id);
+  await verify(agent.id, "AGENT_CREDENTIALS", admin.id);
+
+  const created = await seedDemoListings({ landlord, landlord2, agent }, agency.id, { reviewed: true, approverId: admin.id });
 
   // A sample enquiry thread, inspection, rental application and offer negotiation.
   const aberdeen = created[LISTINGS[0]!.title]!;
@@ -436,9 +466,17 @@ async function seedDemo() {
 }
 
 async function main() {
-  await seedLocations();
-  await seedCatalog();
-  if (withDemo) {
+  if (process.env.SEED_DEMO_LISTINGS_ONLY !== "true") {
+    await seedLocations();
+    await seedCatalog();
+  }
+  if (process.env.SEED_DEMO_LISTINGS_ONLY === "true") {
+    // For a live site in demo mode: labelled demo listings only, with no staff accounts, no known
+    // passwords and nothing marked verified or reviewed.
+    const { landlord, landlord2, agent, agency } = await seedDemoListers(false);
+    const created = await seedDemoListings({ landlord, landlord2, agent }, agency.id, { reviewed: false });
+    console.log(`Demo listings ready (${Object.keys(created).length}). Their accounts cannot sign in.`);
+  } else if (withDemo) {
     await seedDemo();
     console.log(`Seeded demo data. Demo accounts (local development only) use the password "${DEMO_PASSWORD}":`);
     console.log("  admin@demo.sukkot.sl, moderator@demo.sukkot.sl, verifier@demo.sukkot.sl, finance@demo.sukkot.sl,");

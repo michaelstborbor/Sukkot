@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { AVAILABILITY, AVAILABILITY_LABELS, formatDate, formatDateTime, formatMoney, INSPECTED_BADGE, inspectionStillValid, listingMachine, LISTING_STATUS_LABELS, SITE_VISIT_STATUS_LABELS } from "@sukkot/shared";
-import { requirePageActor } from "@/server/auth/actor";
+import { can, requirePageActor } from "@/server/auth/actor";
 import { AppError } from "@/server/errors";
 import { getCatalog } from "@/server/services/catalog";
 import { getManagedProperty } from "@/server/services/properties";
@@ -46,6 +46,9 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
     throw e;
   });
   const isManager = p.listerId === actor.id || p.ownerId === actor.id;
+  // Super administrators can correct any listing's details and photos; the lister is told.
+  const staffEdit = !isManager && can(actor, "admin:listings.edit");
+  const canEdit = isManager || staffEdit;
   const latestModeration = p.statusHistory.find((h) => h.field === "listingStatus" && h.reason);
   const ownerActions = (["submit", "pause", "resume", "remove"] as const).filter((a) => listingMachine.can(p.listingStatus, a, "OWNER"));
   const canBookVisit = isManager && ["DRAFT", "PENDING_REVIEW", "CHANGES_REQUESTED", "PUBLISHED", "PAUSED"].includes(p.listingStatus);
@@ -200,8 +203,9 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
 
       {tab === "details" && (
         <div className="max-w-4xl">
-          {isManager ? (
-            <DetailsTab id={p.id} values={listingFormValues(p)} isAgent={actor.roles.includes("AGENT")} />
+          {staffEdit && <Notice tone="warning" className="mb-4">You are editing someone else&apos;s listing as an administrator. The lister is told when you save.</Notice>}
+          {canEdit ? (
+            <DetailsTab id={p.id} values={listingFormValues(p)} isAgent={isManager ? actor.roles.includes("AGENT") : p.listerCapacity !== "OWNER"} />
           ) : (
             <Notice>Only the lister can edit this listing.</Notice>
           )}
@@ -209,7 +213,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
       )}
 
       {tab === "photos" &&
-        (isManager ? (
+        (canEdit ? (
           <PhotoManager
             key={p.images.map((i) => i.id).join(",")}
             propertyId={p.id}
@@ -234,7 +238,9 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
           {p.statusHistory.map((h) => (
             <li key={h.id} className="p-4 text-sm">
               <p className="font-medium">
-                {h.field === "price"
+                {h.field === "details"
+                  ? "Details edited by Sukkot Salone staff"
+                  : h.field === "price"
                   ? `Price changed from ${formatMoney(BigInt(h.fromValue ?? "0"), p.currency)} to ${formatMoney(BigInt(h.toValue), p.currency)}`
                   : `${h.field === "availability" ? "Availability" : "Status"}: ${h.fromValue ? `${h.fromValue.replace(/_/g, " ").toLowerCase()} → ` : ""}${h.toValue.replace(/_/g, " ").toLowerCase()}`}
               </p>

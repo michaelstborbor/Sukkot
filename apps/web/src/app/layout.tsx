@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import { brand } from "@/config/brand";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
+import { HelpChat } from "@/components/layout/help-chat";
 import "./globals.css";
 
 // Fonts are bundled from src/fonts (SIL Open Font License) so builds never depend on Google Fonts being reachable.
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en-SL" className={`${jakarta.variable} ${fraunces.variable}`}>
       <body>
         {children}
+        <HelpChat />
         <WhatsAppButton />
         <Toaster position="top-center" richColors closeButton toastOptions={{ duration: 4500 }} />
       </body>

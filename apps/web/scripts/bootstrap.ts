@@ -6,7 +6,8 @@
  *   aside), that account is created or promoted. Once one exists the variables are ignored, so delete
  *   ADMIN_PASSWORD from the host's settings after the first sign-in.
  * - listing photos uploaded before photos were watermarked get the Sukkot Salone mark;
- * - illustrative demo artwork whose file was lost is drawn again.
+ * - illustrative demo artwork whose file was lost is drawn again;
+ * - in demo mode (DEMO_MODE=true), the labelled demo listings are added once, under accounts that cannot sign in.
  * The password is never printed.
  */
 import { spawnSync } from "node:child_process";
@@ -29,6 +30,14 @@ async function main() {
       if (marked) console.log(`[bootstrap] Added the Sukkot Salone mark to ${marked} older photo${marked === 1 ? "" : "s"}.`);
     } catch (e) {
       console.error(`[bootstrap] Watermarking older photos skipped: ${e instanceof Error ? e.message : e}`);
+    }
+
+    // A site in demo mode gets the labelled demo listings once. Ones staff delete later stay deleted.
+    if (process.env.DEMO_MODE === "true" && !(await db.systemSetting.findUnique({ where: { key: "demo.listingsLoaded" } }))) {
+      console.log("[bootstrap] Demo mode: adding the labelled demo listings.");
+      const demo = spawnSync("npx", ["tsx", path.join(__dirname, "../prisma/seed.ts")], { stdio: "inherit", env: { ...process.env, SEED_DEMO_LISTINGS_ONLY: "true" } });
+      if (demo.status === 0) await db.systemSetting.create({ data: { key: "demo.listingsLoaded", value: true } });
+      else console.error("[bootstrap] Adding demo listings failed; see the log above. It will be tried again on the next start.");
     }
 
     try {

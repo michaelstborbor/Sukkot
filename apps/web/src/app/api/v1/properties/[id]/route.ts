@@ -11,7 +11,7 @@ export const GET = handler<{ id: string }>(async (ctx) => {
 });
 
 export const PATCH = handler<{ id: string }>(async (ctx) => {
-  const p = await updateProperty(ctx.actor, ctx.params.id, await ctx.req.json().catch(() => ({})));
+  const p = await updateProperty(ctx.actor, ctx.params.id, await ctx.req.json().catch(() => ({})), ctx.ipHash);
   refreshPublicPages();
   return { id: p.id, slug: p.slug };
 });

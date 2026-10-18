@@ -90,6 +90,12 @@ Do not turn the test site into the live one by editing it. Create the live site 
 `ALLOW_SANDBOX_IN_PRODUCTION`, remove `SANDBOX` from `PAYMENT_METHODS_ENABLED`, and delete the demo
 data.
 
+While `DEMO_MODE` is `true`, the first start adds the labelled demo listings (about two dozen, across
+houses, flats, rooms, land, shops, offices, hotels and short stays). They belong to demo accounts that
+cannot sign in, and nothing on them is marked verified or reviewed. They are added only once: a demo
+listing a super administrator deletes under **Admin → Listing moderation → Delete permanently** stays
+deleted.
+
 ## Recommended setup: Render (Frankfurt)
 
 The repository includes a Render Blueprint (`render.yaml`) that creates:
