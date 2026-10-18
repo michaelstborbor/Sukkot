@@ -74,8 +74,14 @@ and, while there is no super administrator yet, creates one from two environment
 If the start command shown under **Settings** does not include `bootstrap`, set it to the
 `startCommand` in `render.free.yaml`. Demo accounts do not count as an administrator here.
 
-To test real file uploads or real email, add the R2 or Resend settings from `render.yaml` under the
-service's **Environment** tab and change `STORAGE_DRIVER` to `s3` or `EMAIL_DRIVER` to `resend`.
+Uploaded photos, videos and documents are kept in the database (`STORAGE_DRIVER=database`), because
+the free plan wipes the service's own disk on every restart and deploy. Files uploaded while the
+setting was `local` are gone and have to be uploaded again; listings show a placeholder until then,
+and the lister's dashboard marks each missing photo. Check that **Environment** shows
+`STORAGE_DRIVER=database`: a value set there earlier is not always replaced by the Blueprint.
+Neon's free database holds about 0.5 GB, so before it fills up add the R2 settings from `render.yaml`
+and change `STORAGE_DRIVER` to `s3`. For real email, add the Resend settings and change
+`EMAIL_DRIVER` to `resend`.
 
 ### Before real users arrive
 

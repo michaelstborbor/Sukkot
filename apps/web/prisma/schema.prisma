@@ -1374,3 +1374,17 @@ model RateLimitBucket {
 
   @@map("rate_limit_buckets")
 }
+
+/// Uploaded files kept in the database itself (STORAGE_DRIVER=database), for hosts whose disk is wiped
+/// on every restart and where no object storage such as Cloudflare R2 is set up yet.
+model StoredFile {
+  visibility  String
+  key         String
+  contentType String
+  size        Int
+  body        Bytes
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([visibility, key])
+  @@map("stored_files")
+}

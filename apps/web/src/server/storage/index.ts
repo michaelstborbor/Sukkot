@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { env } from "../env";
+import { db } from "../db";
 import { hmac, safeEqual } from "../crypto";
 
 export type Visibility = "public" | "private";
@@ -112,6 +113,36 @@ class S3Driver implements StorageDriver {
   }
 }
 
+/**
+ * Keeps files in Postgres. Meant for free hosting whose disk is wiped on every restart: photos and
+ * videos survive restarts and deploys with no extra account to set up. Object storage (the S3 driver
+ * with Cloudflare R2) is still the better choice once the site has real traffic.
+ */
+export class DatabaseDriver implements StorageDriver {
+  async put(key: string, body: Buffer, contentType: string, visibility: Visibility) {
+    assertSafeKey(key);
+    const bytes = new Uint8Array(body);
+    await db.storedFile.upsert({
+      where: { visibility_key: { visibility, key } },
+      create: { visibility, key, contentType, size: body.length, body: bytes },
+      update: { contentType, size: body.length, body: bytes },
+    });
+  }
+  async get(key: string, visibility: Visibility) {
+    assertSafeKey(key);
+    const row = await db.storedFile.findUnique({ where: { visibility_key: { visibility, key } }, select: { body: true, contentType: true } });
+    return row ? { body: Buffer.from(row.body), contentType: row.contentType } : null;
+  }
+  async delete(key: string, visibility: Visibility) {
+    assertSafeKey(key);
+    await db.storedFile.deleteMany({ where: { visibility, key } });
+  }
+  async signedUrl(key: string, ttlSeconds: number) {
+    const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
+    return `/api/v1/files/private/${key}?exp=${exp}&sig=${signPrivate(key, exp)}`;
+  }
+}
+
 export function signPrivate(key: string, exp: number) {
   return hmac(`private:${key}:${exp}`).slice(0, 40);
 }
@@ -123,7 +154,7 @@ export function verifyPrivateSignature(key: string, exp: number, sig: string) {
 
 let driver: StorageDriver | null = null;
 export function storage(): StorageDriver {
-  driver ??= env.storageDriver === "s3" ? new S3Driver() : new LocalDriver();
+  driver ??= env.storageDriver === "s3" ? new S3Driver() : env.storageDriver === "database" ? new DatabaseDriver() : new LocalDriver();
   return driver;
 }
 

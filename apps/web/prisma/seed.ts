@@ -200,6 +200,11 @@ async function writeDemoImage(key: string, svg: string) {
     await client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: `public/${key}`, Body: svg, ContentType: "image/svg+xml" }));
     return;
   }
+  if (process.env.STORAGE_DRIVER === "database") {
+    const body = new Uint8Array(Buffer.from(svg));
+    await db.storedFile.upsert({ where: { visibility_key: { visibility: "public", key } }, create: { visibility: "public", key, contentType: "image/svg+xml", size: body.length, body }, update: { contentType: "image/svg+xml", size: body.length, body } });
+    return;
+  }
   const file = path.resolve(process.cwd(), process.env.STORAGE_LOCAL_DIR || "./storage", "public", key);
   await fs.mkdir(path.dirname(file), { recursive: true });
   await fs.writeFile(file, svg);

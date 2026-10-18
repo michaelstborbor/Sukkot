@@ -5,7 +5,8 @@
  * - when ADMIN_EMAIL and ADMIN_PASSWORD are set and there is no super administrator yet (demo accounts
  *   aside), that account is created or promoted. Once one exists the variables are ignored, so delete
  *   ADMIN_PASSWORD from the host's settings after the first sign-in.
- * - listing photos uploaded before photos were watermarked get the Sukkot Salone mark.
+ * - listing photos uploaded before photos were watermarked get the Sukkot Salone mark;
+ * - illustrative demo artwork whose file was lost is drawn again.
  * The password is never printed.
  */
 import { spawnSync } from "node:child_process";
@@ -28,6 +29,14 @@ async function main() {
       if (marked) console.log(`[bootstrap] Added the Sukkot Salone mark to ${marked} older photo${marked === 1 ? "" : "s"}.`);
     } catch (e) {
       console.error(`[bootstrap] Watermarking older photos skipped: ${e instanceof Error ? e.message : e}`);
+    }
+
+    try {
+      const { restoreDemoArtwork } = await import("../src/server/demo-art-restore");
+      const redrawn = await restoreDemoArtwork();
+      if (redrawn) console.log(`[bootstrap] Redrew ${redrawn} missing demo artwork image${redrawn === 1 ? "" : "s"}.`);
+    } catch (e) {
+      console.error(`[bootstrap] Redrawing demo artwork skipped: ${e instanceof Error ? e.message : e}`);
     }
 
     const { ADMIN_EMAIL: email, ADMIN_PASSWORD: password, ADMIN_NAME: name } = process.env;
