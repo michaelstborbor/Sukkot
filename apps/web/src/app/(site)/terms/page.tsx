@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { NOTICES } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { ProsePage } from "@/components/layout/prose-page";
@@ -30,8 +31,8 @@ export default function TermsPage() {
         <li>Harassment, discrimination or abusive messages.</li>
         <li>Scraping, spamming or interfering with the platform.</li>
       </ul>
-      <h2>7. Plans and promotions</h2>
-      <p>Paid plans and promotions start when the payment provider confirms payment. Prices are shown before you pay.</p>
+      <h2>7. Plans, promotions, visits and listing slots</h2>
+      <p>Paid plans, featured listings, inspection visits and extra listing slots start when the payment provider, or our finance team for a transfer, confirms payment. Prices are shown before you pay. Our <Link href="/refunds">refund policy</Link> says when you get your money back.</p>
       <h2>8. Liability</h2>
       <p>To the extent permitted by law, we are not liable for losses arising from dealings between users. Nothing in these terms limits rights you have under the laws of Sierra Leone.</p>
       <h2>9. Contact</h2>

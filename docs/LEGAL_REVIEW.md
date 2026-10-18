@@ -5,7 +5,8 @@ qualified in Sierra Leone before the platform takes real users or money.
 
 ## Pages and notices
 
-- `/terms` and `/privacy` are **drafts** and are labelled as such on the site.
+- `/terms`, `/privacy` and `/refunds` are **drafts** and are labelled as such on the site. `/takedown`
+  describes the takedown process and the review times we aim for (2 working days).
 - Shared notices in `packages/shared/src/legal.ts` (offer not a legal transfer, verification limits,
   viewing safety, payment honesty, no escrow, rental terms, demo content).
 - Due-diligence checklist template (`DUE_DILIGENCE_TEMPLATE` in the same file): confirm it reflects
@@ -30,5 +31,7 @@ qualified in Sierra Leone before the platform takes real users or money.
    liability adequately.
 7. **Content moderation and disputes**: notice-and-takedown process, ownership disputes, and law
    enforcement requests.
-8. **Consumer protection**: refunds for subscriptions and promotions.
+8. **Consumer protection**: refunds for subscriptions, promotions, inspection visits and extra listing
+   slots, as set out in the draft `/refunds` page (including the 14-day visit promise and 7 working
+   days to pay a refund back).
 9. **Tax**: whether platform fees attract GST and how receipts must be issued.

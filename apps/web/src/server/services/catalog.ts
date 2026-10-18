@@ -16,7 +16,7 @@ export const getCatalog = cache(async () => {
 export type Catalog = Awaited<ReturnType<typeof getCatalog>>;
 
 /** Locations with the number of published listings under them (for "Explore locations"). */
-export async function locationsWithCounts(level: "DISTRICT" | "CITY") {
+export async function locationsWithCounts(level: "DISTRICT" | "CITY" | "LOCALITY") {
   const locs = await db.location.findMany({ where: { level, isActive: true }, orderBy: { sortOrder: "asc" } });
   const counts = await db.$queryRaw<{ id: string; n: bigint }[]>`
     SELECT l.id, COUNT(p.id)::bigint AS n
@@ -34,4 +34,24 @@ export async function locationPath(id: string) {
   if (!loc) return [];
   const rows = await db.location.findMany({ where: { id: { in: loc.pathIds } } });
   return loc.pathIds.map((pid) => rows.find((r) => r.id === pid)!).filter((r) => r && r.level !== "COUNTRY");
+}
+
+/** Well-known neighbourhoods offered as shortcuts before there are enough listings to rank areas. */
+const WELL_KNOWN_AREAS = ["aberdeen", "lumley", "hill-station", "wilberforce", "murray-town", "goderich", "spur-road", "juba", "congo-cross", "kissy", "wellington", "regent"];
+
+/**
+ * Neighbourhood shortcuts for the home page: the areas with the most live listings first, then
+ * well-known Freetown neighbourhoods to fill the row. Each comes with its live listing count.
+ */
+export async function popularAreas(take = 10) {
+  const areas = await locationsWithCounts("LOCALITY");
+  const known = (slug: string) => {
+    const i = WELL_KNOWN_AREAS.indexOf(slug);
+    return i === -1 ? WELL_KNOWN_AREAS.length : i;
+  };
+  return areas
+    .filter((a) => a.count > 0 || WELL_KNOWN_AREAS.includes(a.slug))
+    .sort((a, b) => b.count - a.count || known(a.slug) - known(b.slug))
+    .slice(0, take)
+    .map((a) => ({ name: a.name, slug: a.slug, count: a.count }));
 }

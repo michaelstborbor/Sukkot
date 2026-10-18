@@ -12,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db.location.findMany({ where: { isActive: true, level: { in: ["DISTRICT", "CITY", "LOCALITY"] } }, select: { slug: true } }),
     db.user.findMany({ where: { status: "ACTIVE", isDemo: false, roles: { some: { role: "AGENT" } } }, select: { id: true, updatedAt: true }, take: 2000 }),
   ]);
-  const staticPaths = ["", "/properties", "/locations", "/agents", "/list-your-property", "/verification", "/safety", "/help", "/about", "/privacy", "/terms"];
+  const staticPaths = ["", "/properties", "/locations", "/agents", "/list-your-property", "/verification", "/safety", "/help", "/about", "/privacy", "/terms", "/refunds", "/takedown", "/get-the-app"];
   return [
     ...staticPaths.map((p) => ({ url: `${base}${p}`, changeFrequency: "daily" as const, priority: p === "" ? 1 : 0.6 })),
     ...properties.map((p) => ({ url: `${base}/properties/${p.slug}`, lastModified: p.updatedAt, changeFrequency: "weekly" as const, priority: 0.8 })),

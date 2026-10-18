@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApiForm } from "@/hooks/use-api-form";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export interface JsonField {
   name: string;
   label: string;
-  type?: "text" | "email" | "tel" | "url" | "number" | "date" | "textarea" | "select" | "checkbox" | "list";
+  type?: "text" | "email" | "tel" | "url" | "number" | "date" | "datetime-local" | "textarea" | "select" | "checkbox" | "list";
   options?: { value: string; label: string }[];
   optional?: boolean;
   hint?: string;
@@ -41,6 +41,8 @@ export function JsonForm({
   columns?: 1 | 2;
 }) {
   const router = useRouter();
+  // Unique per form, so two forms posting to the same path never share field ids.
+  const formId = useId();
   const initial = () => Object.fromEntries(fields.map((f) => [f.name, f.defaultValue ?? (f.type === "checkbox" ? false : "")]));
   const [v, setV] = useState<Record<string, string | boolean>>(initial);
   const { submit, pending, errors, formError } = useApiForm(path, {
@@ -63,6 +65,8 @@ export function JsonForm({
           let out: unknown = val;
           if (f.type === "checkbox") out = val === true;
           else if (f.type === "number") out = val === "" ? undefined : Number(val);
+          // Sent as an exact moment, read in the browser's own time zone.
+          else if (f.type === "datetime-local") out = val === "" ? undefined : new Date(String(val)).toISOString();
           else if (f.type === "list") out = String(val).split("\n").map((s) => s.trim()).filter(Boolean);
           // "a.b" names build nested objects.
           const path = f.name.split(".");
@@ -76,7 +80,7 @@ export function JsonForm({
       {formError && <Notice tone="danger">{formError}</Notice>}
       <div className={cn("grid gap-4", columns === 2 && "sm:grid-cols-2")}>
         {fields.map((f) => {
-          const id = `jf-${path.replace(/\W/g, "")}-${f.name}`;
+          const id = `jf${formId.replace(/\W/g, "")}-${f.name.replace(/\W/g, "-")}`;
           const common = { id, "aria-invalid": !!errors[f.name] };
           const val = v[f.name];
           if (f.type === "checkbox")

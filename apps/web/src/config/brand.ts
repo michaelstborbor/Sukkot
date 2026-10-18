@@ -12,6 +12,9 @@ export const brand = {
   /** The number people chat with on WhatsApp (the floating button, help pages, listings without a lister number). */
   supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || SUPPORT_CONTACT.whatsapp,
   address: "Freetown, Sierra Leone",
+  /** Store pages for the phone app. Leave unset until the app is published; the Get the app page then offers the web app. */
+  androidAppUrl: process.env.NEXT_PUBLIC_ANDROID_APP_URL || "",
+  iosAppUrl: process.env.NEXT_PUBLIC_IOS_APP_URL || "",
   social: {
     facebook: process.env.NEXT_PUBLIC_FACEBOOK_URL || "",
     instagram: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "",

@@ -16,7 +16,7 @@ export function SaveSearchButton({ query, defaultName }: { query: string; defaul
         setPending(true);
         try {
           await api("/saved-searches", { body: { name: defaultName, queryString: query } });
-          toast.success("Search saved. Find it in your dashboard.");
+          toast.success("Search saved. We will notify you when a new listing matches it.");
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Could not save search");
         } finally {

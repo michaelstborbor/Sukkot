@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Heart, Search } from "lucide-react";
+import { Bell, BellOff, Heart, Search } from "lucide-react";
 import { formatDate } from "@sukkot/shared";
 import { requirePageActor } from "@/server/auth/actor";
 import { db } from "@/server/db";
+import { env } from "@/server/env";
 import { listFavorites } from "@/server/services/favorites";
 import { PageHeader } from "@/components/dashboard/shell";
 import { ActionButton } from "@/components/dashboard/action-button";
@@ -21,11 +22,11 @@ export default async function SavedPage() {
   ]);
   return (
     <>
-      <PageHeader title="Saved" description="Properties you have saved and searches you want to come back to." />
+      <PageHeader title="Saved" description="Properties you have saved, and searches that tell you when a matching listing goes live." />
       <section className="mb-10">
         <h2 className="mb-3 font-bold text-navy-900">Saved searches</h2>
         {searches.length === 0 ? (
-          <p className="text-sm text-muted">Use &ldquo;Save search&rdquo; on the search page to keep a set of filters.</p>
+          <p className="text-sm text-muted">Use &ldquo;Save search&rdquo; on the search page to keep a set of filters. We will tell you in your notifications{env.emailDriver === "resend" ? " and by email" : ""} when a new listing matches it.</p>
         ) : (
           <ul className="card divide-y divide-line">
             {searches.map((s) => (
@@ -33,9 +34,22 @@ export default async function SavedPage() {
                 <Link href={`/properties?${s.queryString}`} className="flex min-w-0 items-center gap-2 font-medium hover:underline">
                   <Search className="h-4 w-4 shrink-0 text-muted" />
                   <span className="truncate">{s.name}</span>
-                  <span className="hidden text-xs text-muted sm:inline">saved {formatDate(s.createdAt)}</span>
+                  <span className="hidden text-xs text-muted sm:inline">
+                    saved {formatDate(s.createdAt)}
+                    {s.lastAlertAt && ` · last match ${formatDate(s.lastAlertAt)}`}
+                  </span>
                 </Link>
-                <ActionButton path={`/saved-searches?id=${s.id}`} method="DELETE" label="Delete" variant="ghost" success="Search deleted" />
+                <div className="flex shrink-0 items-center gap-1">
+                  <ActionButton
+                    path="/saved-searches"
+                    method="PATCH"
+                    body={{ id: s.id, alertsOn: !s.alertsOn }}
+                    label={s.alertsOn ? <><Bell className="h-4 w-4" aria-hidden /> Alerts on</> : <><BellOff className="h-4 w-4" aria-hidden /> Alerts off</>}
+                    variant={s.alertsOn ? "outline" : "ghost"}
+                    success={s.alertsOn ? "Alerts switched off" : "We will tell you about new matches"}
+                  />
+                  <ActionButton path={`/saved-searches?id=${s.id}`} method="DELETE" label="Delete" variant="ghost" success="Search deleted" />
+                </div>
               </li>
             ))}
           </ul>

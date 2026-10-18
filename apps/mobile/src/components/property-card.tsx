@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { AVAILABILITY_LABELS, LISTING_PURPOSE_LABELS, type PropertySummaryDTO } from "@sukkot/shared";
+import { AVAILABILITY_LABELS, formatDate, LISTING_PURPOSE_LABELS, type PropertySummaryDTO } from "@sukkot/shared";
 import { absoluteUrl } from "@/lib/api";
 import { priceLabel } from "@/lib/format";
 import { colors, radius } from "@/lib/theme";
@@ -47,6 +47,7 @@ export function PropertyCard({ p }: { p: PropertySummaryDTO }) {
           {facts.length ? <Text style={s.muted}>{facts.join(" · ")}</Text> : null}
           <View style={s.badges}>
             {p.availability !== "AVAILABLE" ? <Badge label={AVAILABILITY_LABELS[p.availability]} tone="warning" /> : null}
+            {p.inspectedAt ? <Badge label={`Inspected ${formatDate(p.inspectedAt)}`} tone="success" /> : null}
             {p.listerVerified ? <Badge label="Verified lister" tone="success" /> : null}
             {p.documentsReviewed ? <Badge label="Documents reviewed" tone="info" /> : null}
           </View>

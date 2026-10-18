@@ -52,3 +52,11 @@ export async function deleteSavedSearch(actorIn: Actor | null, id: string) {
   const actor = assertActor(actorIn);
   await db.savedSearch.deleteMany({ where: { id, userId: actor.id } });
 }
+
+/** Switch the new-listing alerts for one of your saved searches on or off. */
+export async function setSearchAlerts(actorIn: Actor | null, id: string, alertsOn: boolean) {
+  const actor = assertActor(actorIn);
+  const { count } = await db.savedSearch.updateMany({ where: { id, userId: actor.id }, data: { alertsOn } });
+  if (!count) throw notFound("Saved search");
+  return { alertsOn };
+}

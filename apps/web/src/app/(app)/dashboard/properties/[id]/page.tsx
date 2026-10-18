@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { AVAILABILITY, AVAILABILITY_LABELS, formatDateTime, formatMoney, listingMachine, LISTING_STATUS_LABELS } from "@sukkot/shared";
+import { AVAILABILITY, AVAILABILITY_LABELS, formatDate, formatDateTime, formatMoney, INSPECTED_BADGE, inspectionStillValid, listingMachine, LISTING_STATUS_LABELS, SITE_VISIT_STATUS_LABELS } from "@sukkot/shared";
 import { requirePageActor } from "@/server/auth/actor";
 import { AppError } from "@/server/errors";
 import { getCatalog } from "@/server/services/catalog";
 import { getManagedProperty } from "@/server/services/properties";
 import { publicImageUrl } from "@/server/storage";
 import { getListingVideo, videoDto } from "@/server/services/video";
+import { visitsForListing } from "@/server/services/site-visits";
+import { getSetting } from "@/server/services/settings";
+import { transferDetails } from "@/server/services/billing";
+import { availableOnlineMethods } from "@/server/payments";
+import { CheckoutButton } from "@/components/dashboard/checkout";
+import { InspectedBadge } from "@/components/property/badges";
 import { listingFormValues } from "@/server/listing-form-values";
 import { PageHeader } from "@/components/dashboard/shell";
 import { ListingForm } from "@/components/dashboard/listing-form";
@@ -42,6 +48,10 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
   const isManager = p.listerId === actor.id || p.ownerId === actor.id;
   const latestModeration = p.statusHistory.find((h) => h.field === "listingStatus" && h.reason);
   const ownerActions = (["submit", "pause", "resume", "remove"] as const).filter((a) => listingMachine.can(p.listingStatus, a, "OWNER"));
+  const canBookVisit = isManager && ["DRAFT", "PENDING_REVIEW", "CHANGES_REQUESTED", "PUBLISHED", "PAUSED"].includes(p.listingStatus);
+  const [visits, visitPrice, transfer] = tab === "overview" && canBookVisit ? await Promise.all([visitsForListing(actor, p.id), getSetting("visit.inspection"), transferDetails()]) : [[], null, null];
+  const openVisit = visits.find((v) => v.status === "REQUESTED" || v.status === "SCHEDULED");
+  const inspected = inspectionStillValid(p.inspectedAt);
 
   return (
     <>
@@ -136,6 +146,45 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
               <h2 className="font-bold text-navy-900">Promote this listing</h2>
               <p className="text-sm text-muted">Featured listings appear in the homepage carousel and at the top of matching searches. Promotion never changes verification status.</p>
               {p.isFeatured ? <StatusBadge status="ACTIVE" /> : <ButtonLink href={`/dashboard/billing?promote=${p.id}`} variant="accent" size="sm">Feature for 7 days</ButtonLink>}
+            </section>
+          )}
+
+          {canBookVisit && (
+            <section className="card space-y-3 p-5">
+              <h2 className="font-bold text-navy-900">{INSPECTED_BADGE.label}</h2>
+              {inspected && (
+                <p className="flex flex-wrap items-center gap-2 text-sm">
+                  <InspectedBadge date={p.inspectedAt!.toISOString()} /> Visited {formatDate(p.inspectedAt!)}. The badge shows for a year from the visit.
+                </p>
+              )}
+              {openVisit ? (
+                <Notice tone="info" title={SITE_VISIT_STATUS_LABELS[openVisit.status]}>
+                  {openVisit.status === "SCHEDULED" && openVisit.scheduledAt
+                    ? `Our staff will visit on ${formatDateTime(openVisit.scheduledAt)}.${openVisit.staffNote ? ` ${openVisit.staffNote}` : ""}`
+                    : "We have your payment and will contact you to agree a date for the visit."}
+                </Notice>
+              ) : (
+                <>
+                  <p className="text-sm text-muted">
+                    Our staff visit the property, check it matches your listing, and take the photos and video for you. Renters see a dated &ldquo;{INSPECTED_BADGE.label}&rdquo; badge on the listing. {INSPECTED_BADGE.doesNotMean}
+                  </p>
+                  {visitPrice ? (
+                    <CheckoutButton
+                      label={`${inspected ? "Book a new visit" : "Book a visit"} for ${formatMoney(BigInt(visitPrice.priceMinor), visitPrice.currency)}`}
+                      title="Book an inspection visit"
+                      amountLabel={formatMoney(BigInt(visitPrice.priceMinor), visitPrice.currency)}
+                      methods={availableOnlineMethods()}
+                      transfer={transfer}
+                      purpose="INSPECTION_VISIT"
+                      propertyId={p.id}
+                      variant="secondary"
+                    />
+                  ) : (
+                    <p className="text-sm text-muted">Inspection visits are not on sale yet.</p>
+                  )}
+                  <p className="text-xs text-muted">If we cannot make the visit, you get your money back. See the <Link href="/refunds" className="link">refund policy</Link>.</p>
+                </>
+              )}
             </section>
           )}
 

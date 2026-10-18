@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Plans and billing" };
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ promote?: string }> }) {
   const actor = await requirePagePermission("listing:create", "/dashboard/billing");
   const { promote } = await searchParams;
-  const [plans, subs, promoPrice, promoProperty, ent, transfer, myPlatformPayments] = await Promise.all([
+  const [plans, subs, promoPrice, promoProperty, ent, transfer, myPlatformPayments, slotPrice] = await Promise.all([
     db.subscriptionPlan.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     db.subscription.findMany({ where: { userId: actor.id }, include: { plan: true }, orderBy: { createdAt: "desc" }, take: 10 }),
     getSetting("promotion.featured7d"),
@@ -25,6 +25,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     getEntitlements(actor.id),
     transferDetails(),
     db.paymentTransaction.findMany({ where: { payerId: actor.id, payeeId: null, status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 10 }),
+    getSetting("listing.extraSlot"),
   ]);
   const methods = availableOnlineMethods();
   const active = ent.subscription;
@@ -34,7 +35,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Plans and billing" description="Plans and promotions are the only payments Sukkot Salone collects. Rent and sale money always goes directly between the parties." />
+      <PageHeader title="Plans and billing" description="Plans, promotions, inspection visits and extra listing slots are the only payments Sukkot Salone collects. Rent and sale money always goes directly between the parties." />
       {methods.length === 0 && !transfer && <Notice tone="warning" className="mb-6">Payments are not switched on for this site yet. An administrator needs to add Sukkot Salone&apos;s payment details or configure Orange Money or Afrimoney.</Notice>}
 
       <section className="card mb-6 grid gap-4 p-5 sm:grid-cols-3">
@@ -50,7 +51,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {ent.activeListings}
             {ent.maxListings !== null && <span className="text-sm font-normal text-muted"> of {ent.maxListings}</span>}
           </p>
-          {ent.maxListings !== null && ent.activeListings >= ent.maxListings && <p className="text-sm text-amber-800">Limit reached. Upgrade to list more.</p>}
+          {ent.extraSlots > 0 && <p className="text-sm text-muted">Includes {ent.extraSlots} extra slot{ent.extraSlots === 1 ? "" : "s"} you bought</p>}
+          {ent.maxListings !== null && ent.activeListings >= ent.maxListings && <p className="text-sm text-amber-800">Limit reached. Upgrade, or buy one extra slot below.</p>}
         </div>
         <div>
           <p className="text-xs font-bold tracking-wider text-muted uppercase">Included featured listings</p>
@@ -70,6 +72,24 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             ))}
           </ul>
         </Notice>
+      )}
+
+      {ent.maxListings !== null && slotPrice && (
+        <section className="card mb-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-bold text-navy-900">Need just one more listing?</h2>
+            <p className="text-sm text-muted">Buy one extra listing slot for a one-off {formatMoney(BigInt(slotPrice.priceMinor), slotPrice.currency)}. It stays on your account and never expires, whatever plan you are on.</p>
+          </div>
+          <CheckoutButton
+            label={`Buy a slot for ${formatMoney(BigInt(slotPrice.priceMinor), slotPrice.currency)}`}
+            title="One extra listing slot"
+            amountLabel={formatMoney(BigInt(slotPrice.priceMinor), slotPrice.currency)}
+            methods={methods}
+            transfer={transfer}
+            purpose="LISTING_SLOT"
+            variant="outline"
+          />
+        </section>
       )}
 
       {promoProperty && (

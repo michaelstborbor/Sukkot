@@ -6,6 +6,7 @@ import { can, requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
 import { availableOnlineMethods, isAwaitingFinance, manualChannelOf } from "@/server/payments";
 import { ActionButton } from "@/components/dashboard/action-button";
+import { JsonForm } from "@/components/dashboard/json-form";
 import { PageHeader } from "@/components/dashboard/shell";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Badge, EmptyState, Notice } from "@/components/ui/misc";
@@ -45,7 +46,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
       </Notice>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <nav className="flex flex-wrap gap-1">
-          {[undefined, "AWAITING", "PENDING", "SUCCEEDED", "RECORDED", "FAILED", "DISPUTED"].map((s) => (
+          {[undefined, "AWAITING", "PENDING", "SUCCEEDED", "RECORDED", "REFUNDED", "FAILED", "DISPUTED"].map((s) => (
             <Link key={s ?? "all"} href={s ? `?status=${s}` : "?"} className={cn("rounded-full px-3 py-1 text-sm font-medium", s === (awaitingOnly ? "AWAITING" : status) ? "bg-navy-900 text-white" : "bg-white ring-1 ring-line")}>
               {s === "AWAITING" ? `Transfers to check (${awaitingCount})` : s ? s.charAt(0) + s.slice(1).toLowerCase() : "All"}
             </Link>
@@ -84,6 +85,23 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                     </div>
                   )}
                 </div>
+              )}
+              {canManage && p.payeeId === null && PLATFORM_COLLECTED_PURPOSES.includes(p.purpose) && (p.status === "SUCCEEDED" || p.status === "RECORDED") && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-semibold text-emerald-700">Record a refund</summary>
+                  <div className="mt-2 rounded-xl bg-navy-50 p-3">
+                    <p className="mb-2 text-muted">Send {formatMoney(p.amountMinor, p.currency)} back to the wallet or account it came from first, then record it here. The customer is told.</p>
+                    <JsonForm
+                      path={`/admin/payments/${p.id}/refund`}
+                      submitLabel="Record refund"
+                      success="Refund recorded"
+                      fields={[
+                        { name: "externalReference", label: "Refund transaction ID", placeholder: "From the SMS or bank receipt" },
+                        { name: "reason", label: "Reason (the customer sees this)", placeholder: "Inspection visit cancelled" },
+                      ]}
+                    />
+                  </div>
+                </details>
               )}
               <details className="mt-2">
                 <summary className="cursor-pointer text-xs font-semibold text-emerald-700">{p.events.length} events</summary>

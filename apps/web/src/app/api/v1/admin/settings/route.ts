@@ -5,9 +5,19 @@ import { assertPermission } from "@/server/auth/actor";
 import { audit } from "@/server/audit";
 import { setSetting } from "@/server/services/settings";
 
+const price = z.object({ amount: z.string().max(20), currency: z.enum(["SLE", "USD"]) }).nullable().optional();
+
+/** An empty amount switches the item off (not on sale). */
+function toPrice(input: z.infer<typeof price>) {
+  const minor = input ? parseMajorToMinor(input.amount, input.currency) : null;
+  return minor ? { priceMinor: minor.toString(), currency: input!.currency } : null;
+}
+
 const schema = z.object({
   announcement: z.object({ text: z.string().trim().max(200), link: z.string().max(200).optional(), enabled: z.boolean() }).optional(),
-  promotionPrice: z.object({ amount: z.string().max(20), currency: z.enum(["SLE", "USD"]) }).nullable().optional(),
+  promotionPrice: price,
+  visitPrice: price,
+  slotPrice: price,
   billingManual: z
     .object({
       enabled: z.boolean(),
@@ -25,10 +35,9 @@ export const POST = handler(async (ctx) => {
   const actor = assertPermission(ctx.actor, "admin:settings.manage");
   const input = await ctx.body(schema);
   if (input.announcement) await setSetting("site.announcement", input.announcement);
-  if (input.promotionPrice !== undefined) {
-    const minor = input.promotionPrice ? parseMajorToMinor(input.promotionPrice.amount, input.promotionPrice.currency) : null;
-    await setSetting("promotion.featured7d", minor ? { priceMinor: minor.toString(), currency: input.promotionPrice!.currency } : null);
-  }
+  if (input.promotionPrice !== undefined) await setSetting("promotion.featured7d", toPrice(input.promotionPrice));
+  if (input.visitPrice !== undefined) await setSetting("visit.inspection", toPrice(input.visitPrice));
+  if (input.slotPrice !== undefined) await setSetting("listing.extraSlot", toPrice(input.slotPrice));
   if (input.billingManual) await setSetting("billing.manual", input.billingManual);
   await audit({ actorId: actor.id, action: "settings.update", metadata: JSON.parse(JSON.stringify(input)), ipHash: ctx.ipHash });
   return { ok: true };

@@ -9,7 +9,18 @@ export const metadata: Metadata = { title: "Site settings" };
 
 export default async function AdminSettingsPage() {
   await requirePagePermission("admin:settings.manage", "/admin/settings");
-  const [announcement, promo, manual] = await Promise.all([getSetting("site.announcement"), getSetting("promotion.featured7d"), getSetting("billing.manual")]);
+  const [announcement, promo, visit, slot, manual] = await Promise.all([
+    getSetting("site.announcement"),
+    getSetting("promotion.featured7d"),
+    getSetting("visit.inspection"),
+    getSetting("listing.extraSlot"),
+    getSetting("billing.manual"),
+  ]);
+  const prices = [
+    { key: "promotionPrice", title: "Featured listing price (7 days)", hint: "Leave the amount empty to stop selling promotions.", value: promo },
+    { key: "visitPrice", title: "Inspection visit price", hint: "What a lister pays for staff to visit, check and photograph a property, earning the dated \u201cInspected by Sukkot\u201d badge. Leave empty to stop selling visits.", value: visit },
+    { key: "slotPrice", title: "Extra listing slot price", hint: "A one-off payment for one more active listing on top of the plan's allowance. The slot never expires. Leave empty to stop selling slots.", value: slot },
+  ];
   return (
     <div className="max-w-3xl space-y-6">
       <PageHeader title="Site settings" />
@@ -24,17 +35,19 @@ export default async function AdminSettingsPage() {
           ]}
         />
       </section>
-      <section className="card p-5">
-        <h2 className="mb-1 font-bold text-navy-900">Featured listing price (7 days)</h2>
-        <p className="mb-3 text-sm text-muted">Leave the amount empty to stop selling promotions.</p>
-        <JsonForm
-          path="/admin/settings"
-          fields={[
-            { name: "promotionPrice.amount", label: "Amount", optional: true, defaultValue: promo ? minorToMajorString(promo.priceMinor, promo.currency) : "" },
-            { name: "promotionPrice.currency", label: "Currency", type: "select", defaultValue: promo?.currency ?? "SLE", options: [{ value: "SLE", label: "SLE" }, { value: "USD", label: "USD" }] },
-          ]}
-        />
-      </section>
+      {prices.map((p) => (
+        <section key={p.key} className="card p-5">
+          <h2 className="mb-1 font-bold text-navy-900">{p.title}</h2>
+          <p className="mb-3 text-sm text-muted">{p.hint}</p>
+          <JsonForm
+            path="/admin/settings"
+            fields={[
+              { name: `${p.key}.amount`, label: "Amount", optional: true, defaultValue: p.value ? minorToMajorString(p.value.priceMinor, p.value.currency) : "" },
+              { name: `${p.key}.currency`, label: "Currency", type: "select", defaultValue: p.value?.currency ?? "SLE", options: [{ value: "SLE", label: "SLE" }, { value: "USD", label: "USD" }] },
+            ]}
+          />
+        </section>
+      ))}
       <section className="card p-5">
         <h2 className="mb-1 font-bold text-navy-900">Pay by transfer</h2>
         <p className="mb-3 text-sm text-muted">

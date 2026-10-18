@@ -11,6 +11,8 @@ import {
   SUPPORT_CONTACT,
   telLink,
   VERIFICATION_BADGES,
+  INSPECTED_BADGE,
+  formatDate,
   listingEnquiry,
   whatsappLink,
   type Furnishing,
@@ -125,6 +127,7 @@ export default function PropertyScreen() {
               <Badge label={LISTING_PURPOSE_LABELS[p.purpose]} tone="dark" />
               {p.availability !== "AVAILABLE" ? <Badge label={AVAILABILITY_LABELS[p.availability]} tone="warning" /> : null}
               {p.negotiable ? <Badge label="Negotiable" /> : null}
+              {p.inspectedAt ? <Badge label={`${INSPECTED_BADGE.label} · ${formatDate(p.inspectedAt)}`} tone="success" /> : null}
             </View>
             <Text style={s.price}>{priceLabel(p.price, p.rentalPeriod)}</Text>
             <Text style={ui.h1}>{p.title}</Text>

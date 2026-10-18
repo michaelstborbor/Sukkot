@@ -335,6 +335,10 @@ export const reportSchema = z
 
 /* ------------------------------------------------------------- Payments */
 
+/** What a customer can buy from Sukkot Salone at checkout. Everything else is paid between users. */
+export const PLATFORM_CHECKOUT_PURPOSES = ["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION", "INSPECTION_VISIT", "LISTING_SLOT"] as const;
+export type PlatformCheckoutPurpose = (typeof PLATFORM_CHECKOUT_PURPOSES)[number];
+
 export const paymentInitiateSchema = z.object({
   method: z.enum(PAYMENT_METHODS),
   purpose: z.enum(PAYMENT_PURPOSES),
@@ -361,7 +365,7 @@ export type ManualPlatformChannel = (typeof MANUAL_PLATFORM_CHANNELS)[number];
  * finance staff check against the statement before anything is activated.
  */
 export const manualPlatformPaymentSchema = z.object({
-  purpose: z.enum(["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION"]),
+  purpose: z.enum(PLATFORM_CHECKOUT_PURPOSES),
   subscriptionPlanId: idSchema.optional(),
   propertyId: idSchema.optional(),
   channel: z.enum(MANUAL_PLATFORM_CHANNELS),
