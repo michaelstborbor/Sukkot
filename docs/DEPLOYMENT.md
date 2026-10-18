@@ -135,12 +135,19 @@ pnpm --filter @sukkot/web admin:create     # asks for the admin's email, name an
 
 ### Turn on mobile money (later)
 
-When Orange Money or Afrimoney gives you merchant credentials:
+When Orange Money or Afrimoney gives you merchant credentials, a super administrator can set them up
+without touching the server:
 
-1. Fill in their values on `sukkot-web` > **Environment**.
-2. Register the callback URLs listed under "Payment providers" below.
-3. Test in the provider's sandbox first, then add `ORANGE_MONEY` and/or `AFRIMONEY` to
-   `PAYMENT_METHODS_ENABLED`.
+1. Open **Admin → Site settings** and fill in the Orange Money or Afrimoney checkout section. Keys are
+   stored encrypted with `APP_SECRET` and are never shown again; leave a key field empty to keep the
+   saved one. If `APP_SECRET` changes, enter the keys again.
+2. Register the callback URL shown in that section with the provider.
+3. Test in the provider's sandbox first (put the sandbox address in **API address**), then tick
+   **Offer … at checkout**. A method cannot be switched on until all its details are filled in.
+
+Alternatively, set the `ORANGE_MONEY_*` or `AFRIMONEY_*` values on `sukkot-web` > **Environment** and add
+`ORANGE_MONEY` and/or `AFRIMONEY` to `PAYMENT_METHODS_ENABLED`. Values set there take precedence over
+Site settings.
 
 ### Notes
 

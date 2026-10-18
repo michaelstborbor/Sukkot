@@ -173,7 +173,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
                       label={`${inspected ? "Book a new visit" : "Book a visit"} for ${formatMoney(BigInt(visitPrice.priceMinor), visitPrice.currency)}`}
                       title="Book an inspection visit"
                       amountLabel={formatMoney(BigInt(visitPrice.priceMinor), visitPrice.currency)}
-                      methods={availableOnlineMethods()}
+                      methods={await availableOnlineMethods()}
                       transfer={transfer}
                       purpose="INSPECTION_VISIT"
                       propertyId={p.id}

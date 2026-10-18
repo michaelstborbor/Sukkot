@@ -9,6 +9,6 @@ export const GET = handler(async () => {
     types: types.map((t) => ({ id: t.id, name: t.name, slug: t.slug, category: t.category })),
     amenities: amenities.map((a) => ({ id: a.id, name: a.name, slug: a.slug, group: a.group })),
     locations,
-    paymentMethods: availableOnlineMethods(),
+    paymentMethods: await availableOnlineMethods(),
   };
 });
