@@ -37,7 +37,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
     orderBy: { createdAt: "desc" },
     take: 100,
   });
-  const methods = availableOnlineMethods();
+  const methods = await availableOnlineMethods();
   return (
     <>
       <PageHeader title="Payments" description="Every payment with its event history. Statuses change only through verified provider callbacks, the parties' own records, or a finance check of a transfer to Sukkot Salone." />
