@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { ArrowRight, BadgeCheck, Building2, Eye, FileCheck2, Hotel, Home as HomeIcon, Landmark, MessagesSquare, ShieldCheck, Trees, UserCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Eye, FileCheck2, Hotel, Home as HomeIcon, Landmark, MapPin, MessagesSquare, ShieldCheck, Trees, UserCheck } from "lucide-react";
 import { VERIFICATION_BADGES } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { getCurrentActor } from "@/server/auth/actor";
 import { listProperties } from "@/server/services/properties";
-import { locationsWithCounts } from "@/server/services/catalog";
+import { locationsWithCounts, popularAreas } from "@/server/services/catalog";
 import { searchOptions } from "@/server/services/search-options";
 import { savedIds } from "@/server/services/favorites";
 import { db } from "@/server/db";
@@ -25,7 +25,7 @@ export const revalidate = 60;
 
 const CATEGORIES = [
   { href: "/properties?category=HOUSE", label: "Houses", icon: HomeIcon, blurb: "Family homes and bungalows" },
-  { href: "/properties?category=APARTMENT", label: "Apartments", icon: Building2, blurb: "Flats and studios" },
+  { href: "/properties?category=APARTMENT", label: "Apartments", icon: Building2, blurb: "Flats, rooms and studios" },
   { href: "/properties?category=LAND", label: "Land", icon: Trees, blurb: "Plots and farmland" },
   { href: "/properties?category=COMMERCIAL", label: "Commercial", icon: Landmark, blurb: "Shops, offices, warehouses" },
   { href: "/properties?purpose=SHORT_STAY", label: "Short stays", icon: Hotel, blurb: "Nightly and weekly" },
@@ -43,7 +43,7 @@ const GALLERY = [
 
 export default async function HomePage() {
   const actor = await getCurrentActor();
-  const [featured, recent, districts, options, agents, galleryListings] = await Promise.all([
+  const [featured, recent, districts, options, agents, galleryListings, areas] = await Promise.all([
     listProperties({ isFeatured: true }, 6, [{ publishedAt: "desc" }]),
     listProperties({}, 8, [{ publishedAt: "desc" }]),
     locationsWithCounts("DISTRICT"),
@@ -54,6 +54,7 @@ export default async function HomePage() {
       take: 4,
     }),
     Promise.all(GALLERY.map((g) => listProperties({ ...g.where, images: { some: {} } }, 4, [{ publishedAt: "desc" }]))),
+    popularAreas(),
   ]);
   const gallery = GALLERY.map((g, i) => ({ label: g.label, href: g.href, listings: galleryListings[i]! })).filter((g) => g.listings.length > 0);
   const saved = await savedIds(actor?.id, [...featured, ...recent].map((p) => p.id));
@@ -93,6 +94,29 @@ export default async function HomePage() {
           ))}
         </ul>
       </section>
+
+      {/* Area shortcuts */}
+      {areas.length > 0 && (
+        <nav aria-labelledby="popular-areas" className="container-page mt-8">
+          <h2 id="popular-areas" className="mb-2 text-xs font-bold tracking-wider text-muted uppercase">Popular areas</h2>
+          <ul className="flex flex-wrap gap-2">
+            {areas.map((a) => (
+              <li key={a.slug}>
+                <Link href={`/properties?locality=${a.slug}`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-navy-900 ring-1 ring-line transition hover:bg-navy-50 hover:ring-emerald-600/40">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-700" aria-hidden />
+                  {a.name}
+                  {a.count > 0 && <span className="text-xs text-muted">{a.count}</span>}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href="/locations" className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-emerald-700 hover:underline">
+                All areas <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      )}
 
       {/* Photos by category */}
       {gallery.length > 0 && (

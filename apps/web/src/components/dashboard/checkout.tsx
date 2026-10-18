@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Landmark, Smartphone } from "lucide-react";
-import { NOTICES, PAYMENT_METHOD_LABELS, type ManualPlatformChannel, type PaymentDTO, type PaymentMethod } from "@sukkot/shared";
+import { NOTICES, PAYMENT_METHOD_LABELS, type ManualPlatformChannel, type PaymentDTO, type PaymentMethod, type PlatformCheckoutPurpose } from "@sukkot/shared";
 import { useApiForm } from "@/hooks/use-api-form";
 import { newIdempotencyKey } from "@/lib/api";
 import { Button, type ButtonVariant } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export interface TransferDetails {
 type Mode = "online" | "transfer";
 
 /**
- * Checkout for platform-collected items only (plans, promotions). The amount shown is
+ * Checkout for platform-collected items only (plans, promotions, inspection visits, listing slots). The amount shown is
  * informational: the server computes the charge from the plan or price setting.
  * Two ways to pay: online through a mobile money provider (activates when the provider confirms),
  * or by transfer to Sukkot Salone's own wallet or bank account (activates when finance confirms).
@@ -42,7 +42,7 @@ export function CheckoutButton({
   amountLabel: string;
   methods: PaymentMethod[];
   transfer?: TransferDetails | null;
-  purpose: "PLATFORM_SUBSCRIPTION" | "LISTING_PROMOTION";
+  purpose: PlatformCheckoutPurpose;
   subscriptionPlanId?: string;
   propertyId?: string;
   variant?: ButtonVariant;
@@ -91,7 +91,7 @@ export function CheckoutButton({
         {result?.mode === "online" ? (
           <div className="space-y-3 text-sm">
             <Notice tone="info" title="Approve the payment on your phone">
-              {result.payment.nextAction?.type === "USSD_PROMPT" ? result.payment.nextAction.message : "Follow the prompt from your mobile money provider."} Your plan or promotion starts only after the provider confirms the payment.
+              {result.payment.nextAction?.type === "USSD_PROMPT" ? result.payment.nextAction.message : "Follow the prompt from your mobile money provider."} What you bought starts only after the provider confirms the payment.
             </Notice>
             <p>Reference: <span className="font-mono">{result.payment.reference}</span></p>
             <Button onClick={() => router.push(`/dashboard/payments?ref=${result.payment.reference}`)}>Check payment status</Button>
@@ -99,7 +99,7 @@ export function CheckoutButton({
         ) : result?.mode === "transfer" ? (
           <div className="space-y-3 text-sm">
             <Notice tone="success" title="Thank you, we have your transaction ID">
-              Our finance team will match it against our statement. Your plan or promotion starts as soon as they confirm it, and we will notify you.
+              Our finance team will match it against our statement. What you bought starts as soon as they confirm it, and we will notify you.
             </Notice>
             <p>Reference: <span className="font-mono">{result.payment.reference}</span></p>
           </div>

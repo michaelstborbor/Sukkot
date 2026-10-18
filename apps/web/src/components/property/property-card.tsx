@@ -3,7 +3,7 @@ import { Bath, BedDouble, MapPin, Ruler } from "lucide-react";
 import { AVAILABILITY_LABELS, LISTING_PURPOSE_LABELS, relativeTime, type PropertySummaryDTO } from "@sukkot/shared";
 import { Badge } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
-import { FeaturedBadge, VerificationBadge } from "./badges";
+import { FeaturedBadge, InspectedBadge, VerificationBadge } from "./badges";
 import { FavoriteButton } from "./favorite-button";
 import { CompareToggle } from "./compare";
 import { PropertyImage } from "./property-image";
@@ -54,6 +54,7 @@ export function PropertyCard({ p, saved = false, layout = "grid", priority = fal
             {p.negotiable && <span className="ml-1.5 text-xs font-medium text-muted">negotiable</span>}
           </p>
           <div className="relative z-10 flex flex-wrap gap-1">
+            {p.inspectedAt && <InspectedBadge date={p.inspectedAt} compact />}
             {p.documentsReviewed && <VerificationBadge kind="PROPERTY_DOCUMENTS" compact />}
             {p.listerVerified && <VerificationBadge kind="IDENTITY" compact />}
           </div>

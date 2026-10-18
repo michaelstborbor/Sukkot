@@ -256,6 +256,8 @@ enum PaymentPurpose {
   PLATFORM_SUBSCRIPTION
   LISTING_PROMOTION
   PLATFORM_FEE
+  INSPECTION_VISIT
+  LISTING_SLOT
   REFUND
   OTHER
 }
@@ -314,6 +316,8 @@ model User {
   lastLoginAt      DateTime?     @db.Timestamptz(3)
   failedLoginCount Int           @default(0)
   lockedUntil      DateTime?     @db.Timestamptz(3)
+  /// One-off listing slots bought on top of the plan's allowance. They never expire.
+  extraListingSlots Int          @default(0)
   createdAt        DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
 
@@ -356,6 +360,8 @@ model User {
   dueDiligenceUpdates  DueDiligenceItem[]
   statusChanges        PropertyStatusHistory[]
   appEvents            ApplicationEvent[]
+  siteVisitsRequested  SiteVisit[]                @relation("SiteVisitRequester")
+  siteVisitsHandled    SiteVisit[]                @relation("SiteVisitStaff")
 
   @@index([status])
   @@map("users")
@@ -616,6 +622,8 @@ model Property {
   documentsStatus    VerificationStatus @default(NOT_SUBMITTED)
   authorityStatus    VerificationStatus @default(NOT_SUBMITTED)
   isFeatured         Boolean          @default(false)
+  /// When Sukkot Salone staff last visited and checked the property in person (paid inspection visit).
+  inspectedAt        DateTime?        @db.Timestamptz(3)
   isDemo             Boolean          @default(false)
   viewCount          Int              @default(0)
   saveCount          Int              @default(0)
@@ -643,6 +651,7 @@ model Property {
   verifications     VerificationRequest[]
   payments          PaymentTransaction[]
   dailyViews        PropertyViewDaily[]
+  siteVisits        SiteVisit[]
 
   @@index([listingStatus, purpose, category])
   @@index([listingStatus, publishedAt])
@@ -916,6 +925,42 @@ model Inspection {
 }
 
 /// Weekly availability the landlord/agent offers for inspections, in Africa/Freetown local time.
+enum SiteVisitStatus {
+  REQUESTED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+/// A paid visit by Sukkot Salone staff to check a property in person and take photos and video.
+/// Completing one gives the listing a dated "Inspected by Sukkot Salone" badge. Not to be confused
+/// with Inspection, which is a viewing booked by a would-be tenant or buyer.
+model SiteVisit {
+  id           String          @id @default(cuid())
+  propertyId   String
+  property     Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  requesterId  String
+  requester    User            @relation("SiteVisitRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  status       SiteVisitStatus @default(REQUESTED)
+  /// The verified or finance-confirmed payment that paid for the visit.
+  paymentId    String?         @unique
+  payment      PaymentTransaction? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  contactPhone String?
+  scheduledAt  DateTime?       @db.Timestamptz(3)
+  staffId      String?
+  staff        User?           @relation("SiteVisitStaff", fields: [staffId], references: [id], onDelete: SetNull)
+  /// What staff found, shown to the lister.
+  staffNote    String?
+  cancelReason String?
+  completedAt  DateTime?       @db.Timestamptz(3)
+  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@index([propertyId])
+  @@map("site_visits")
+}
+
 model AvailabilityWindow {
   id            String    @id @default(cuid())
   userId        String
@@ -1133,6 +1178,7 @@ model PaymentTransaction {
   updatedAt           DateTime        @updatedAt @db.Timestamptz(3)
   events              PaymentEvent[]
   refunds             Refund[]
+  siteVisit           SiteVisit?
 
   @@unique([idempotencyKey, payerId])
   @@unique([method, providerReference])

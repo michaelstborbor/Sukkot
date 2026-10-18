@@ -7,6 +7,10 @@ import { db } from "../db";
 export interface SettingTypes {
   "site.announcement": { text: string; link?: string; enabled: boolean };
   "promotion.featured7d": { priceMinor: string; currency: Currency } | null;
+  /** Price of a visit by Sukkot Salone staff that earns the "Inspected by Sukkot" badge. Null: not on sale. */
+  "visit.inspection": { priceMinor: string; currency: Currency } | null;
+  /** Price of one extra listing slot on top of the plan's allowance. Null: not on sale. */
+  "listing.extraSlot": { priceMinor: string; currency: Currency } | null;
   "listing.autoExpireDays": number;
   "inspection.maxPerDay": number;
   /** Sukkot Salone's own wallet numbers and bank account, shown to customers who pay by transfer. */
@@ -28,6 +32,8 @@ export const SETTING_DEFAULTS: SettingTypes = {
     enabled: true,
   },
   "promotion.featured7d": null,
+  "visit.inspection": null,
+  "listing.extraSlot": null,
   "listing.autoExpireDays": 90,
   "inspection.maxPerDay": 8,
   "billing.manual": { enabled: false, accountName: "", orangeMoneyNumber: "", afrimoneyNumber: "", bankDetails: "" },

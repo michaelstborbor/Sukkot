@@ -6,6 +6,7 @@ import {
   LAND_WITH_BUILDING_TYPE_SLUGS,
   OTHER_PROPERTY_TYPE_SLUG,
   formatMoney,
+  inspectionStillValid,
   listingMachine,
   parseMajorToMinor,
   propertyInputSchema,
@@ -28,6 +29,8 @@ import { audit } from "../audit";
 import { notify } from "../notify";
 import { publicFileUrl, publicImageUrl, storage } from "../storage";
 import { assertListingCapacity } from "./billing";
+import { alertMatchingSearches } from "./search-alerts";
+import { assertCanEditMedia } from "./media-access";
 import { storeImage, storePrivateDocument } from "../uploads";
 
 /* ------------------------------------------------------------ Includes */
@@ -133,6 +136,7 @@ export function toSummary(p: SummaryRow & { isFeatured: boolean }): PropertySumm
     availability: p.availability,
     documentsReviewed: p.documentsStatus === "VERIFIED",
     listerVerified: badges.length > 0,
+    inspectedAt: inspectionStillValid(p.inspectedAt) ? p.inspectedAt!.toISOString() : null,
     featured: p.isFeatured,
     isDemo: p.isDemo,
     publishedAt: p.publishedAt?.toISOString() ?? null,
@@ -515,10 +519,12 @@ export async function moderateListing(
   if (LISTING_ACTIONS_REQUIRING_REASON.includes(input.action) || input.action === "remove") {
     if (!input.reason || input.reason.trim().length < 5) throw new AppError("VALIDATION", "Give a reason for this decision", { reason: "Required" });
   }
-  return db.$transaction(async (tx) => {
+  let firstPublish = false;
+  const result = await db.$transaction(async (tx) => {
     const p = await tx.property.findUnique({ where: { id } });
     if (!p) throw notFound("Listing");
     const next = listingMachine.next(p.listingStatus, input.action, "MODERATOR");
+    firstPublish = next === "PUBLISHED" && !p.publishedAt;
     const data: Prisma.PropertyUpdateInput = { listingStatus: next };
     if (next === "PUBLISHED" && !p.publishedAt) data.publishedAt = new Date();
     if (input.markDocumentsReviewed !== undefined && can(actor, "admin:verification.review")) {
@@ -547,6 +553,11 @@ export async function moderateListing(
     );
     return updated;
   });
+  if (firstPublish) {
+    // The decision stands even if alerts fail; the failure is logged for staff to look at.
+    await alertMatchingSearches(id).catch((e) => console.error("[search-alerts] failed for", id, e));
+  }
+  return result;
 }
 
 export async function setAvailability(actorIn: Actor | null, id: string, availability: Availability) {
@@ -564,8 +575,7 @@ export async function setAvailability(actorIn: Actor | null, id: string, availab
 /* ---------------------------------------------------------------- Media */
 
 export async function addImages(actorIn: Actor | null, id: string, files: File[]) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  const p = await loadManaged(actor, id);
+  const { property: p } = await assertCanEditMedia(actorIn, id);
   const existing = await db.propertyImage.count({ where: { propertyId: id } });
   if (existing + files.length > 30) throw new AppError("VALIDATION", "A listing can have up to 30 photos");
   const created = [];
@@ -581,8 +591,7 @@ export async function addImages(actorIn: Actor | null, id: string, files: File[]
 }
 
 export async function removeImage(actorIn: Actor | null, id: string, imageId: string) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  await loadManaged(actor, id);
+  await assertCanEditMedia(actorIn, id);
   const img = await db.propertyImage.findFirst({ where: { id: imageId, propertyId: id } });
   if (!img) throw notFound("Image");
   await db.propertyImage.delete({ where: { id: imageId } });
@@ -592,8 +601,7 @@ export async function removeImage(actorIn: Actor | null, id: string, imageId: st
 }
 
 export async function reorderImages(actorIn: Actor | null, id: string, order: string[]) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  await loadManaged(actor, id);
+  await assertCanEditMedia(actorIn, id);
   await db.$transaction(order.map((imageId, i) => db.propertyImage.updateMany({ where: { id: imageId, propertyId: id }, data: { sortOrder: i } })));
 }
 

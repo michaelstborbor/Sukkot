@@ -16,6 +16,7 @@ import {
 } from "@sukkot/shared";
 import { Prisma, type Currency, type PaymentPurpose, type PaymentStatus, type PaymentTransaction } from "@prisma/client";
 import { randomBytes } from "node:crypto";
+import { z } from "zod";
 import { db, type Tx } from "../db";
 import { AppError, forbidden, notFound } from "../errors";
 import type { Actor } from "../auth/session";
@@ -24,7 +25,7 @@ import { audit } from "../audit";
 import { notify } from "../notify";
 import { env } from "../env";
 import { getSetting } from "../services/settings";
-import { FEATURED_PERIOD_DAYS, featuredStart, renewalStart } from "../services/billing";
+import { FEATURED_PERIOD_DAYS, featuredStart, getEntitlements, renewalStart } from "../services/billing";
 import { afrimoneyProvider } from "./providers/afrimoney";
 import { orangeMoneyProvider } from "./providers/orange-money";
 import { sandboxProvider } from "./providers/sandbox";
@@ -107,8 +108,28 @@ async function pricePlatformItem(
     if (!price) throw new AppError("NOT_CONFIGURED", "Listing promotion is not on sale yet");
     return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: `Featured listing ${property.reference}`, propertyId: property.id };
   }
+  if (purpose === "INSPECTION_VISIT") {
+    const property = ids.propertyId ? await db.property.findUnique({ where: { id: ids.propertyId }, select: { id: true, reference: true, listerId: true, ownerId: true, listingStatus: true } }) : null;
+    if (!property || (property.listerId !== userId && property.ownerId !== userId)) throw notFound("Listing");
+    if (!SITE_VISIT_LISTING_STATUSES.includes(property.listingStatus)) throw new AppError("CONFLICT", "This listing cannot be inspected while it is closed, rejected or removed");
+    const open = await db.siteVisit.findFirst({ where: { propertyId: property.id, status: { in: ["REQUESTED", "SCHEDULED"] } }, select: { id: true } });
+    if (open) throw new AppError("CONFLICT", "An inspection visit is already booked for this listing");
+    const price = await getSetting("visit.inspection");
+    if (!price) throw new AppError("NOT_CONFIGURED", "Inspection visits are not on sale yet");
+    return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: `Inspection visit for ${property.reference}`, propertyId: property.id };
+  }
+  if (purpose === "LISTING_SLOT") {
+    const ent = await getEntitlements(userId);
+    if (ent.maxListings === null) throw new AppError("CONFLICT", "Your plan has no listing limit, so you do not need extra slots");
+    const price = await getSetting("listing.extraSlot");
+    if (!price) throw new AppError("NOT_CONFIGURED", "Extra listing slots are not on sale yet");
+    return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: "One extra listing slot" };
+  }
   throw new AppError("NOT_CONFIGURED", "Platform fees are not enabled");
 }
+
+/** Listing states in which a lister can book an inspection visit. */
+const SITE_VISIT_LISTING_STATUSES: string[] = ["DRAFT", "PENDING_REVIEW", "CHANGES_REQUESTED", "PUBLISHED", "PAUSED"];
 
 /**
  * Start an online payment for something the platform itself sells (subscription, promotion, fee).
@@ -205,6 +226,17 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
     const startsAt = await featuredStart(p.propertyId, tx);
     await tx.featuredListing.create({ data: { propertyId: p.propertyId, startsAt, endsAt: new Date(startsAt.getTime() + FEATURED_PERIOD_DAYS * 86400_000), source: `payment:${p.reference}` } });
     await tx.property.update({ where: { id: p.propertyId }, data: { isFeatured: true } });
+  }
+  if (p.purpose === "INSPECTION_VISIT" && p.propertyId && p.payerId) {
+    const already = await tx.siteVisit.findUnique({ where: { paymentId: p.id }, select: { id: true } });
+    if (!already) {
+      await tx.siteVisit.create({ data: { propertyId: p.propertyId, requesterId: p.payerId, paymentId: p.id, contactPhone: p.payerPhone } });
+      const staff = await tx.userRoleAssignment.findMany({ where: { role: { in: ["MODERATOR", "SUPER_ADMIN"] }, user: { status: "ACTIVE" } }, select: { userId: true }, distinct: ["userId"] });
+      await notify(staff.map((s) => ({ userId: s.userId, type: "visit.requested", title: "Inspection visit to arrange", body: "A lister has paid for an inspection visit. Agree a date with them.", link: "/admin/visits" })), tx);
+    }
+  }
+  if (p.purpose === "LISTING_SLOT" && p.payerId) {
+    await tx.user.update({ where: { id: p.payerId }, data: { extraListingSlots: { increment: 1 } } });
   }
   if (p.payerId) {
     await notify([{ userId: p.payerId, type: "payment.succeeded", title: "Payment confirmed", body: `${formatMoney(p.amountMinor, p.currency)} for ${PAYMENT_PURPOSE_LABELS[p.purpose]} was confirmed${p.providerVerified ? " by the provider" : " by Sukkot Salone finance"}.`, link: "/dashboard/payments" }], tx);
@@ -542,3 +574,36 @@ export async function getPaymentByReference(actorIn: Actor | null, reference: st
   if (!p || (p.payerId !== actor.id && !can(actor, "admin:payments.view"))) throw forbidden();
   return p;
 }
+
+/**
+ * Finance staff record that they have sent a customer's money back for a plan, promotion, visit or
+ * slot (for example when an inspection visit was cancelled). The money goes back outside the
+ * platform, to the wallet or account it came from; this records it against the payment.
+ */
+export async function recordPlatformRefund(actorIn: Actor | null, id: string, input: unknown, ipHash?: string | null) {
+  const actor = assertPermission(actorIn, "admin:payments.manage");
+  const { reason, externalReference } = platformRefundSchema.parse(input);
+  return db.$transaction(async (tx) => {
+    const p = await tx.paymentTransaction.findUnique({ where: { id } });
+    if (!p || p.payeeId !== null || !PLATFORM_COLLECTED_PURPOSES.includes(p.purpose)) throw notFound("Payment");
+    if (!canMovePayment(p.status, "REFUNDED") || (p.status !== "SUCCEEDED" && p.status !== "RECORDED")) throw new AppError("CONFLICT", "Only a confirmed payment can be refunded");
+    const updated = await tx.paymentTransaction.update({
+      where: { id, status: p.status },
+      data: {
+        status: "REFUNDED",
+        refunds: { create: { amountMinor: p.amountMinor, currency: p.currency, reason, status: "RECORDED" } },
+        events: { create: { type: "refund_recorded", source: "finance", statusBefore: p.status, statusAfter: "REFUNDED", payload: { by: actor.id, reason, externalReference } } },
+      },
+    });
+    if (p.payerId) {
+      await notify([{ userId: p.payerId, type: "payment.refunded", title: "Refund sent", body: `We sent back ${formatMoney(p.amountMinor, p.currency)} for ${PAYMENT_PURPOSE_LABELS[p.purpose]} (refund transaction ${externalReference}). ${reason}`, link: "/dashboard/payments", email: true }], tx);
+    }
+    await audit({ actorId: actor.id, action: "payment.refund_record", targetType: "PaymentTransaction", targetId: id, metadata: { reference: p.reference, reason, externalReference }, ipHash }, tx);
+    return toPaymentDto(updated);
+  });
+}
+
+const platformRefundSchema = z.object({
+  reason: z.string().trim().min(5, "Say why the money is refunded").max(500),
+  externalReference: z.string().trim().min(4, "Enter the refund transaction ID").max(60),
+});

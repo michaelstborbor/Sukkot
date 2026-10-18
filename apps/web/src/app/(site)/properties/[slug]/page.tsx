@@ -9,6 +9,7 @@ import {
   LISTING_PURPOSE_LABELS,
   NOTICES,
   VERIFICATION_BADGES,
+  INSPECTED_BADGE,
   WATER_SUPPLY_LABELS,
   formatDate,
   listingEnquiry,
@@ -27,7 +28,7 @@ import { LISTING_MESSAGE_ID } from "@/lib/whatsapp";
 import { FavoriteButton } from "@/components/property/favorite-button";
 import { ShareButton } from "@/components/property/share-button";
 import { PropertyCard } from "@/components/property/property-card";
-import { FeaturedBadge, VerificationBadge } from "@/components/property/badges";
+import { FeaturedBadge, InspectedBadge, VerificationBadge } from "@/components/property/badges";
 import { Avatar, Badge, Notice } from "@/components/ui/misc";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -139,6 +140,7 @@ export default async function PropertyPage({ params }: Props) {
             <Badge tone="neutral">{LISTING_PURPOSE_LABELS[p.purpose]}</Badge>
             <Badge tone="neutral">{p.typeName}</Badge>
             {p.featured && <FeaturedBadge />}
+            {p.inspectedAt && <InspectedBadge date={p.inspectedAt} />}
             {p.documentsReviewed && <VerificationBadge kind="PROPERTY_DOCUMENTS" />}
             <Badge tone={p.availability === "AVAILABLE" ? "verified" : "warning"}>{AVAILABILITY_LABELS[p.availability]}</Badge>
           </div>
@@ -319,6 +321,7 @@ export default async function PropertyPage({ params }: Props) {
             {p.lister.kind === "AGENT" && <Link href={`/agents/${p.lister.id}`} className="mt-3 inline-block text-sm link">View agent profile</Link>}
           </div>
           <p className="px-1 text-xs text-muted">
+            {p.inspectedAt ? `${INSPECTED_BADGE.label} on ${formatDate(p.inspectedAt)}: ${INSPECTED_BADGE.means} ` : ""}
             {VERIFICATION_BADGES.PROPERTY_DOCUMENTS.label}: {p.documentsReviewed ? "yes" : "not yet"}. {brand.name} does not hold deposits or rent.
           </p>
         </aside>

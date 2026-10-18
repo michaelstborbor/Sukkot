@@ -59,8 +59,9 @@ export async function featuredStart(propertyId: string, client: Client = db, now
 export interface Entitlements {
   subscription: ActiveSubscription | null;
   plan: SubscriptionPlan | null;
-  /** null means no limit. */
+  /** null means no limit. Includes any extra slots bought one at a time. */
   maxListings: number | null;
+  extraSlots: number;
   activeListings: number;
   featuredSlots: number;
   featuredUsed: number;
@@ -69,14 +70,18 @@ export interface Entitlements {
 export async function getEntitlements(userId: string, client: Client = db): Promise<Entitlements> {
   const subscription = await activeSubscription(userId, client);
   const plan = subscription?.plan ?? (await freePlan(client));
-  const [activeListings, featuredUsed] = await Promise.all([
+  const [activeListings, featuredUsed, user] = await Promise.all([
     client.property.count({ where: { listerId: userId, listingStatus: { in: [...COUNTED_LISTING_STATUSES] } } }),
     subscription ? client.featuredListing.count({ where: { source: `plan:${subscription.id}` } }) : 0,
+    client.user.findUnique({ where: { id: userId }, select: { extraListingSlots: true } }),
   ]);
+  const extraSlots = user?.extraListingSlots ?? 0;
+  const base = plan?.maxListings ?? null;
   return {
     subscription,
     plan,
-    maxListings: plan?.maxListings ?? null,
+    maxListings: base === null ? null : base + extraSlots,
+    extraSlots,
     activeListings,
     featuredSlots: subscription?.plan.featuredSlots ?? 0,
     featuredUsed,
@@ -97,7 +102,7 @@ export async function assertListingCapacity(client: Client, listerId: string, pr
     const planName = e.plan?.name ?? "current";
     throw new AppError(
       "CONFLICT",
-      `Your ${planName} plan allows ${e.maxListings} active listing${e.maxListings === 1 ? "" : "s"}. Upgrade your plan in Plans and billing, or pause another listing first.`,
+      `Your ${planName} plan${e.extraSlots ? ` and extra slots allow` : " allows"} ${e.maxListings} active listing${e.maxListings === 1 ? "" : "s"}. Upgrade your plan or buy an extra slot in Plans and billing, or pause another listing first.`,
     );
   }
 }

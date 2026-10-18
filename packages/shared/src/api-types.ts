@@ -94,6 +94,8 @@ export interface PropertySummaryDTO {
   availability: Availability;
   documentsReviewed: boolean;
   listerVerified: boolean;
+  /** Date of the Sukkot Salone staff visit, only while the "Inspected by Sukkot" badge is still valid. */
+  inspectedAt: string | null;
   featured: boolean;
   isDemo: boolean;
   publishedAt: string | null;

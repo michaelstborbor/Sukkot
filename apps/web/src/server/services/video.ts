@@ -2,9 +2,9 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { PropertyVideo } from "@prisma/client";
 import { db } from "../db";
-import { AppError, forbidden, notFound } from "../errors";
+import { AppError } from "../errors";
 import type { Actor } from "../auth/session";
-import { assertPermission } from "../auth/actor";
+import { assertCanEditMedia } from "./media-access";
 import { audit } from "../audit";
 import { publicFileUrl, storage } from "../storage";
 import { convertVideo, MAX_VIDEO_BYTES, sniffVideo } from "../video";
@@ -36,21 +36,13 @@ export function videoDto(v: PropertyVideo | null) {
 }
 export type VideoDTO = NonNullable<ReturnType<typeof videoDto>>;
 
-async function loadOwn(actor: Actor, propertyId: string) {
-  const p = await db.property.findUnique({ where: { id: propertyId }, select: { id: true, listerId: true, ownerId: true } });
-  if (!p) throw notFound("Listing");
-  if (actor.id !== p.listerId && actor.id !== p.ownerId) throw forbidden("You can only manage your own listings");
-  return p;
-}
-
 async function deleteFiles(storageKey: string) {
   await Promise.all([`${storageKey}.mp4`, `${storageKey}-poster.webp`].map((k) => storage().delete(k, "public").catch(() => undefined)));
 }
 
 /** The lister's view of their listing video. A conversion cut off by a restart is reported as failed. */
 export async function getOwnListingVideo(actorIn: Actor | null, propertyId: string) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  await loadOwn(actor, propertyId);
+  await assertCanEditMedia(actorIn, propertyId);
   return getListingVideo(propertyId);
 }
 
@@ -67,8 +59,7 @@ export async function getListingVideo(propertyId: string) {
  * runs in the background and the video shows on the listing once it is ready.
  */
 export async function uploadListingVideo(actorIn: Actor | null, propertyId: string, file: File) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  await loadOwn(actor, propertyId);
+  const { actor } = await assertCanEditMedia(actorIn, propertyId);
   if (file.size > MAX_VIDEO_BYTES) throw new AppError("VALIDATION", `Videos can be up to ${MAX_VIDEO_BYTES / 1024 / 1024} MB`);
   const buf = Buffer.from(await file.arrayBuffer());
   if (!sniffVideo(buf)) throw new AppError("VALIDATION", "Upload an MP4, MOV or WebM video");
@@ -109,8 +100,7 @@ export async function uploadListingVideo(actorIn: Actor | null, propertyId: stri
 }
 
 export async function removeListingVideo(actorIn: Actor | null, propertyId: string) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  await loadOwn(actor, propertyId);
+  const { actor } = await assertCanEditMedia(actorIn, propertyId);
   const v = await db.propertyVideo.findUnique({ where: { propertyId } });
   if (!v) return;
   await db.propertyVideo.delete({ where: { id: v.id } });

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { CheckCircle2 } from "lucide-react";
+import { Camera, CheckCircle2 } from "lucide-react";
+import { formatMoney, INSPECTED_BADGE } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { getCurrentActor } from "@/server/auth/actor";
+import { getSetting } from "@/server/services/settings";
 import { ButtonLink } from "@/components/ui/button";
 import { SectionHeading } from "@/components/ui/misc";
 
@@ -15,7 +17,7 @@ const STEPS = [
 ];
 
 export default async function ListYourPropertyPage() {
-  const actor = await getCurrentActor();
+  const [actor, visitPrice] = await Promise.all([getCurrentActor(), getSetting("visit.inspection")]);
   const href = actor ? "/dashboard/properties/new" : "/auth/sign-up?type=OWNER&next=/dashboard/properties/new";
   return (
     <>
@@ -41,6 +43,17 @@ export default async function ListYourPropertyPage() {
             </li>
           ))}
         </ol>
+        {visitPrice && (
+          <div className="mt-12 flex flex-col gap-4 rounded-3xl bg-emerald-50 p-6 sm:flex-row sm:items-center">
+            <Camera className="h-10 w-10 shrink-0 text-emerald-700" aria-hidden />
+            <div>
+              <h3 className="font-bold text-navy-900">Let us inspect and photograph it for you</h3>
+              <p className="mt-1 text-sm text-muted">
+                For {formatMoney(BigInt(visitPrice.priceMinor), visitPrice.currency)}, our staff visit the property, check it matches your listing and take the photos and video. Renters see a dated &ldquo;{INSPECTED_BADGE.label}&rdquo; badge. Book it from your listing&apos;s page in the dashboard.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           <div className="card p-6">
             <h3 className="font-bold text-navy-900">What you need</h3>

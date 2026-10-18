@@ -162,6 +162,32 @@ export const VERIFICATION_BADGES: Record<VerificationKind, { label: string; mean
   },
 };
 
+/**
+ * The badge a listing earns when Sukkot Salone staff visit it in person (a paid inspection visit).
+ * It always shows the visit date and drops off once the visit is older than INSPECTION_BADGE_DAYS.
+ */
+export const INSPECTED_BADGE = {
+  label: "Inspected by Sukkot",
+  means: "Sukkot Salone staff visited this property in person, checked it matches the listing and took the photos.",
+  doesNotMean: "It is not a legal title search and the property may have changed since the visit date.",
+};
+export const INSPECTION_BADGE_DAYS = 365;
+
+/** Whether a visit date still earns the badge. */
+export function inspectionStillValid(inspectedAt: Date | string | null | undefined, now = new Date()) {
+  if (!inspectedAt) return false;
+  return now.getTime() - new Date(inspectedAt).getTime() < INSPECTION_BADGE_DAYS * 86400_000;
+}
+
+export const SITE_VISIT_STATUSES = ["REQUESTED", "SCHEDULED", "COMPLETED", "CANCELLED"] as const;
+export type SiteVisitStatus = (typeof SITE_VISIT_STATUSES)[number];
+export const SITE_VISIT_STATUS_LABELS: Record<SiteVisitStatus, string> = {
+  REQUESTED: "Paid, waiting for a date",
+  SCHEDULED: "Visit booked",
+  COMPLETED: "Inspected",
+  CANCELLED: "Cancelled",
+};
+
 export const ROLES = [
   "USER",
   "OWNER",
@@ -269,6 +295,8 @@ export const PAYMENT_PURPOSES = [
   "PLATFORM_SUBSCRIPTION",
   "LISTING_PROMOTION",
   "PLATFORM_FEE",
+  "INSPECTION_VISIT",
+  "LISTING_SLOT",
   "REFUND",
   "OTHER",
 ] as const;
@@ -283,6 +311,8 @@ export const PAYMENT_PURPOSE_LABELS: Record<PaymentPurpose, string> = {
   PLATFORM_SUBSCRIPTION: "Platform subscription",
   LISTING_PROMOTION: "Listing promotion",
   PLATFORM_FEE: "Platform fee",
+  INSPECTION_VISIT: "Inspection visit",
+  LISTING_SLOT: "Extra listing slot",
   REFUND: "Refund",
   OTHER: "Other",
 };
@@ -291,6 +321,8 @@ export const PLATFORM_COLLECTED_PURPOSES: readonly PaymentPurpose[] = [
   "PLATFORM_SUBSCRIPTION",
   "LISTING_PROMOTION",
   "PLATFORM_FEE",
+  "INSPECTION_VISIT",
+  "LISTING_SLOT",
 ];
 
 export const REPORT_TYPES = [

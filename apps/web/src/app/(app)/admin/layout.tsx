@@ -1,4 +1,4 @@
-import { BadgeCheck, Building2, ClipboardList, CreditCard, Flag, LayoutDashboard, ListChecks, MapPin, Settings, Shapes, Users, Briefcase } from "lucide-react";
+import { BadgeCheck, Building2, Camera, ClipboardList, CreditCard, Flag, LayoutDashboard, ListChecks, MapPin, Settings, Shapes, Users, Briefcase } from "lucide-react";
 import { hasPermission, type Permission } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const actor = await requirePagePermission("admin:access", "/admin");
-  const [pending, verif, reports] = await Promise.all([
+  const [pending, visits, verif, reports] = await Promise.all([
     db.property.count({ where: { listingStatus: "PENDING_REVIEW" } }),
+    db.siteVisit.count({ where: { status: "REQUESTED" } }),
     db.verificationRequest.count({ where: { status: "PENDING_REVIEW" } }),
     db.report.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
   ]);
@@ -17,6 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const all: (NavItem & { perm: Permission })[] = [
     { href: "/admin", label: "Overview", icon: icon(LayoutDashboard), perm: "admin:access" },
     { href: "/admin/listings", label: "Listing moderation", icon: icon(Building2), perm: "admin:listings.moderate", badge: pending },
+    { href: "/admin/visits", label: "Inspection visits", icon: icon(Camera), perm: "admin:listings.moderate", badge: visits },
     { href: "/admin/verification", label: "Verification queue", icon: icon(BadgeCheck), perm: "admin:verification.review", badge: verif },
     { href: "/admin/reports", label: "Reports", icon: icon(Flag), perm: "admin:reports.handle", badge: reports },
     { href: "/admin/users", label: "Users", icon: icon(Users), perm: "admin:users.manage" },
