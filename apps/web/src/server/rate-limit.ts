@@ -36,4 +36,7 @@ export const LIMITS = {
   webhook: { limit: 600, window: 60 },
   /** Transfers waiting for finance; each one notifies staff. */
   manualPayment: { limit: 10, window: 60 * 60 },
+  /** AI assistant questions: a short burst limit and a daily cap, since each one costs money. */
+  assistant: { limit: 15, window: 10 * 60 },
+  assistantDaily: { limit: 80, window: 24 * 60 * 60 },
 } as const;
