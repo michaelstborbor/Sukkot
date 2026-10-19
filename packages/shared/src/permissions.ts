@@ -11,6 +11,8 @@ export const PERMISSIONS = [
   "agency:manage",
   "admin:access",
   "admin:listings.moderate",
+  /** Edit any listing's details and photos, and delete listings permanently. Super administrators only. */
+  "admin:listings.edit",
   "admin:verification.review",
   "admin:reports.handle",
   "admin:users.manage",

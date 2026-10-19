@@ -27,7 +27,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
     db.paymentTransaction.findMany({ where: { payerId: actor.id, payeeId: null, status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 10 }),
     getSetting("listing.extraSlot"),
   ]);
-  const methods = availableOnlineMethods();
+  const methods = await availableOnlineMethods();
   const active = ent.subscription;
   const awaiting = myPlatformPayments.filter(isAwaitingFinance);
   const slotsLeft = Math.max(0, ent.featuredSlots - ent.featuredUsed);

@@ -15,6 +15,24 @@ export interface SettingTypes {
   "inspection.maxPerDay": number;
   /** Sukkot Salone's own wallet numbers and bank account, shown to customers who pay by transfer. */
   "billing.manual": ManualBillingSettings;
+  /** Online mobile money checkout. Secret fields are stored encrypted (see `encryptSecret`). */
+  "payments.mobileMoney": MobileMoneySettings;
+  /** Background photo of the homepage hero, stored at several widths. Null: the drawn panorama. */
+  "site.heroImage": HeroImageSettings | null;
+}
+
+export interface HeroImageSettings {
+  baseKey: string;
+  width: number;
+  height: number;
+  widths: number[];
+  placeholder: string;
+  alt: string;
+}
+
+export interface MobileMoneySettings {
+  orangeMoney: { enabled: boolean; apiBase: string; country: string; clientId: string; clientSecret: string; merchantKey: string };
+  afrimoney: { enabled: boolean; apiBase: string; merchantId: string; apiKey: string; webhookSecret: string };
 }
 
 export interface ManualBillingSettings {
@@ -37,6 +55,11 @@ export const SETTING_DEFAULTS: SettingTypes = {
   "listing.autoExpireDays": 90,
   "inspection.maxPerDay": 8,
   "billing.manual": { enabled: false, accountName: "", orangeMoneyNumber: "", afrimoneyNumber: "", bankDetails: "" },
+  "site.heroImage": null,
+  "payments.mobileMoney": {
+    orangeMoney: { enabled: false, apiBase: "", country: "", clientId: "", clientSecret: "", merchantKey: "" },
+    afrimoney: { enabled: false, apiBase: "", merchantId: "", apiKey: "", webhookSecret: "" },
+  },
 };
 
 export async function getSetting<K extends keyof SettingTypes>(key: K): Promise<SettingTypes[K]> {

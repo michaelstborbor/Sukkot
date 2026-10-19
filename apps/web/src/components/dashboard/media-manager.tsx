@@ -28,6 +28,21 @@ export interface ListingVideo {
   error: string | null;
 }
 
+/** A photo thumbnail that says so plainly when its file has gone missing, so the lister can replace it. */
+function Thumb({ src, alt }: { src: string; alt: string }) {
+  const ref = useRef<HTMLImageElement>(null);
+  const [lost, setLost] = useState(false);
+  useEffect(() => {
+    const img = ref.current;
+    if (img && img.complete && img.naturalWidth === 0) setLost(true);
+  }, []);
+  if (lost) {
+    return <p className="flex h-full items-center justify-center p-3 text-center text-xs text-amber-800">This photo&apos;s file is missing. Delete it and upload it again.</p>;
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img ref={ref} src={src} alt={alt} className="h-full w-full object-cover" loading="lazy" onError={() => setLost(true)} />;
+}
+
 export function PhotoManager({ propertyId, images, video }: { propertyId: string; images: Img[]; video: ListingVideo | null }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
@@ -102,8 +117,7 @@ export function PhotoManager({ propertyId, images, video }: { propertyId: string
           {list.map((img, i) => (
             <li key={img.id} className="card overflow-hidden">
               <div className="relative aspect-[4/3] bg-navy-50">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.thumbUrl} alt={img.alt} className="h-full w-full object-cover" loading="lazy" />
+                <Thumb src={img.thumbUrl} alt={img.alt} />
                 {i === 0 && <Badge tone="dark" className="absolute top-2 left-2">Cover</Badge>}
                 {img.illustrative && <Badge tone="warning" className="absolute top-2 right-2">Illustrative</Badge>}
               </div>

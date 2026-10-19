@@ -48,10 +48,11 @@ services:
         value: "true"
       - key: PAYMENT_METHODS_ENABLED
         value: SANDBOX,BANK_TRANSFER,CASH,MANUAL
-      # Uploaded files go on the service's own disk, which the free plan wipes on every restart or
-      # deploy. Fine for clicking through; switch to Cloudflare R2 (see render.yaml) to keep them.
+      # The free plan wipes the service's own disk on every restart and deploy, so uploaded photos,
+      # videos and documents are kept in the database instead. Neon's free database holds 0.5 GB,
+      # roughly 2,000 photos; switch to Cloudflare R2 (see render.yaml) before that fills up.
       - key: STORAGE_DRIVER
-        value: local
+        value: database
       # Emails (verification links, password resets) are written to the service's Logs tab instead of
       # being sent. Switch to Resend (see render.yaml) to send real email.
       - key: EMAIL_DRIVER

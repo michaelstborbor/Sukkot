@@ -17,7 +17,7 @@ export const env = {
     if (isProd && s.length < 32) throw new Error("APP_SECRET must be at least 32 characters in production");
     return s;
   },
-  storageDriver: read("STORAGE_DRIVER", "local") as "local" | "s3",
+  storageDriver: read("STORAGE_DRIVER", "local") as "local" | "s3" | "database",
   storageLocalDir: read("STORAGE_LOCAL_DIR", "./storage"),
   storagePublicBaseUrl: process.env.STORAGE_PUBLIC_BASE_URL || "",
   emailDriver: read("EMAIL_DRIVER", "console") as "console" | "resend",

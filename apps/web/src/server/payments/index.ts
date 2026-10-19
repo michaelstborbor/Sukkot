@@ -26,6 +26,7 @@ import { notify } from "../notify";
 import { env } from "../env";
 import { getSetting } from "../services/settings";
 import { FEATURED_PERIOD_DAYS, featuredStart, getEntitlements, renewalStart } from "../services/billing";
+import { loadMobileMoneyConfig } from "./config";
 import { afrimoneyProvider } from "./providers/afrimoney";
 import { orangeMoneyProvider } from "./providers/orange-money";
 import { sandboxProvider } from "./providers/sandbox";
@@ -42,10 +43,10 @@ export function providerFor(method: PaymentMethod) {
 }
 
 /** Online methods that are switched on AND have credentials. Shown at checkout. */
-export function availableOnlineMethods(): PaymentMethod[] {
-  return (Object.keys(PROVIDERS) as PaymentMethod[]).filter(
-    (m) => env.paymentMethodsEnabled.includes(m) && PROVIDERS[m]!.isConfigured(),
-  );
+export async function availableOnlineMethods(): Promise<PaymentMethod[]> {
+  const mm = await loadMobileMoneyConfig();
+  const on: Partial<Record<PaymentMethod, boolean>> = { ORANGE_MONEY: mm.orangeMoney.enabled, AFRIMONEY: mm.afrimoney.enabled, SANDBOX: env.paymentMethodsEnabled.includes("SANDBOX") };
+  return (Object.keys(PROVIDERS) as PaymentMethod[]).filter((m) => on[m] && PROVIDERS[m]!.isConfigured());
 }
 
 function newReference() {
@@ -149,7 +150,7 @@ export async function initiatePayment(actorIn: Actor | null, input: unknown) {
     throw new AppError("BAD_REQUEST", "Rent, deposits and sale payments are paid directly to the other party and recorded here. Sukkot Salone does not hold client funds.");
   }
   const provider = providerFor(data.method);
-  if (!provider || !availableOnlineMethods().includes(data.method)) {
+  if (!provider || !(await availableOnlineMethods()).includes(data.method)) {
     throw new AppError("NOT_CONFIGURED", `${data.method.replace("_", " ")} payments are not available yet`);
   }
   if ((data.method === "AFRIMONEY" || data.method === "ORANGE_MONEY") && !data.payerPhone) {
@@ -253,6 +254,7 @@ function toStored(p: PaymentTransaction): StoredTransaction {
  * where the provider supports it — a direct status query agrees.
  */
 export async function handleWebhook(method: PaymentMethod, req: { headers: Headers; rawBody: string; url: string }) {
+  await loadMobileMoneyConfig();
   const provider = providerFor(method);
   if (!provider || !provider.isConfigured()) throw new AppError("NOT_FOUND", "Unknown payment provider");
   let result;
@@ -333,6 +335,7 @@ export async function refreshPaymentStatus(actorIn: Actor | null, id: string) {
   const actor = assertActor(actorIn);
   const p = await db.paymentTransaction.findUnique({ where: { id } });
   if (!p || (p.payerId !== actor.id && !can(actor, "admin:payments.manage"))) throw notFound("Payment");
+  await loadMobileMoneyConfig();
   const provider = providerFor(p.method);
   if (!provider?.queryStatus || !["CREATED", "PENDING"].includes(p.status)) return toPaymentDto(p);
   const status = await provider.queryStatus(toStored(p));

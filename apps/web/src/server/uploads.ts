@@ -84,6 +84,38 @@ export async function storeImage(file: File, prefix: string, opts: { watermark?:
   };
 }
 
+/** Widths of the homepage background photo: phones, tablets, laptops, large and high-density screens. */
+export const HERO_WIDTHS = [768, 1280, 1920, 2560] as const;
+
+/**
+ * Store a wide background photo for the homepage hero as WebP at each of HERO_WIDTHS (never enlarged),
+ * with location and camera data removed. Quality is a little lower than listing photos because the
+ * photo sits under a dark overlay and text.
+ */
+export async function storeHeroImage(file: File, prefix: string) {
+  const buf = await readFile(file, MAX_IMAGE_BYTES);
+  const mime = sniffMime(buf);
+  if (!mime || mime === "application/pdf") throw new AppError("VALIDATION", "Upload a JPEG, PNG or WebP image");
+  const img = sharp(buf, { failOn: "error" }).rotate();
+  const meta = await img.metadata();
+  const rotated = (meta.orientation ?? 1) >= 5;
+  const width = (rotated ? meta.height : meta.width) ?? 0;
+  const height = (rotated ? meta.width : meta.height) ?? 0;
+  if (width < 1280) throw new AppError("VALIDATION", "Use a photo at least 1280 pixels wide, so it stays sharp on large screens");
+  if (width < height) throw new AppError("VALIDATION", "Use a landscape (wide) photo");
+  const baseKey = `${prefix}/${randomUUID()}`;
+  const widths = HERO_WIDTHS.filter((w) => w <= width);
+  if (widths[widths.length - 1] !== width && width < HERO_WIDTHS[HERO_WIDTHS.length - 1]) widths.push(width as (typeof HERO_WIDTHS)[number]);
+  await Promise.all(
+    widths.map(async (w) => {
+      const out = await img.clone().resize({ width: w }).webp({ quality: 72, smartSubsample: true, effort: 5 }).toBuffer();
+      await storage().put(`${baseKey}-${w}.webp`, out, "image/webp", "public");
+    }),
+  );
+  const tiny = await img.clone().resize({ width: 32 }).blur(1).webp({ quality: 40 }).toBuffer();
+  return { baseKey, width, height, widths: [...widths], placeholder: `data:image/webp;base64,${tiny.toString("base64")}` };
+}
+
 /** Store a private document (ID, title deed, survey plan). Never publicly addressable. */
 export async function storePrivateDocument(file: File, prefix: string) {
   const buf = await readFile(file, MAX_DOCUMENT_BYTES);

@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac } from "node:crypto";
 import { minorToMajorString } from "@sukkot/shared";
 import { safeEqual } from "../../crypto";
+import { mobileMoneyConfig } from "../config";
 import { WebhookSignatureError, type PaymentProvider, type ProviderStatus } from "../types";
 
 /**
@@ -9,18 +10,17 @@ import { WebhookSignatureError, type PaymentProvider, type ProviderStatus } from
  *
  * Africell does not publish a public merchant API; the request/response field names below follow
  * the common "collect → callback → status query" pattern and are isolated in this file so they can
- * be aligned with the API pack Africell issues during merchant onboarding. Until AFRIMONEY_* settings
+ * be aligned with the API pack Africell issues during merchant onboarding. Until its settings
  * are present the method stays disabled and is never offered at checkout.
  *
  * Security: callbacks must carry an HMAC-SHA256 signature of the raw body (header
  * `x-afrimoney-signature`), and success is re-confirmed with a status query before fulfilment.
  */
-const cfg = () => ({
-  base: (process.env.AFRIMONEY_API_BASE || "").replace(/\/$/, ""),
-  merchantId: process.env.AFRIMONEY_MERCHANT_ID || "",
-  apiKey: process.env.AFRIMONEY_API_KEY || "",
-  webhookSecret: process.env.AFRIMONEY_WEBHOOK_SECRET || "",
-});
+/** Credentials from the server's environment or Admin → Site settings (see ../config). */
+const cfg = () => {
+  const c = mobileMoneyConfig()?.afrimoney;
+  return { base: c?.base ?? "", merchantId: c?.merchantId ?? "", apiKey: c?.apiKey ?? "", webhookSecret: c?.webhookSecret ?? "" };
+};
 
 function mapStatus(s: string | undefined): ProviderStatus {
   switch ((s ?? "").toUpperCase()) {

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export interface JsonField {
   name: string;
   label: string;
-  type?: "text" | "email" | "tel" | "url" | "number" | "date" | "datetime-local" | "textarea" | "select" | "checkbox" | "list";
+  type?: "text" | "password" | "email" | "tel" | "url" | "number" | "date" | "datetime-local" | "textarea" | "select" | "checkbox" | "list";
   options?: { value: string; label: string }[];
   optional?: boolean;
   hint?: string;

@@ -74,8 +74,14 @@ and, while there is no super administrator yet, creates one from two environment
 If the start command shown under **Settings** does not include `bootstrap`, set it to the
 `startCommand` in `render.free.yaml`. Demo accounts do not count as an administrator here.
 
-To test real file uploads or real email, add the R2 or Resend settings from `render.yaml` under the
-service's **Environment** tab and change `STORAGE_DRIVER` to `s3` or `EMAIL_DRIVER` to `resend`.
+Uploaded photos, videos and documents are kept in the database (`STORAGE_DRIVER=database`), because
+the free plan wipes the service's own disk on every restart and deploy. Files uploaded while the
+setting was `local` are gone and have to be uploaded again; listings show a placeholder until then,
+and the lister's dashboard marks each missing photo. Check that **Environment** shows
+`STORAGE_DRIVER=database`: a value set there earlier is not always replaced by the Blueprint.
+Neon's free database holds about 0.5 GB, so before it fills up add the R2 settings from `render.yaml`
+and change `STORAGE_DRIVER` to `s3`. For real email, add the Resend settings and change
+`EMAIL_DRIVER` to `resend`.
 
 ### Before real users arrive
 
@@ -83,6 +89,12 @@ Do not turn the test site into the live one by editing it. Create the live site 
 (next section) instead. If you do reuse anything, first remove `DEMO_MODE` and
 `ALLOW_SANDBOX_IN_PRODUCTION`, remove `SANDBOX` from `PAYMENT_METHODS_ENABLED`, and delete the demo
 data.
+
+While `DEMO_MODE` is `true`, the first start adds the labelled demo listings (about two dozen, across
+houses, flats, rooms, land, shops, offices, hotels and short stays). They belong to demo accounts that
+cannot sign in, and nothing on them is marked verified or reviewed. They are added only once: a demo
+listing a super administrator deletes under **Admin → Listing moderation → Delete permanently** stays
+deleted.
 
 ## Recommended setup: Render (Frankfurt)
 
@@ -135,12 +147,19 @@ pnpm --filter @sukkot/web admin:create     # asks for the admin's email, name an
 
 ### Turn on mobile money (later)
 
-When Orange Money or Afrimoney gives you merchant credentials:
+When Orange Money or Afrimoney gives you merchant credentials, a super administrator can set them up
+without touching the server:
 
-1. Fill in their values on `sukkot-web` > **Environment**.
-2. Register the callback URLs listed under "Payment providers" below.
-3. Test in the provider's sandbox first, then add `ORANGE_MONEY` and/or `AFRIMONEY` to
-   `PAYMENT_METHODS_ENABLED`.
+1. Open **Admin → Site settings** and fill in the Orange Money or Afrimoney checkout section. Keys are
+   stored encrypted with `APP_SECRET` and are never shown again; leave a key field empty to keep the
+   saved one. If `APP_SECRET` changes, enter the keys again.
+2. Register the callback URL shown in that section with the provider.
+3. Test in the provider's sandbox first (put the sandbox address in **API address**), then tick
+   **Offer … at checkout**. A method cannot be switched on until all its details are filled in.
+
+Alternatively, set the `ORANGE_MONEY_*` or `AFRIMONEY_*` values on `sukkot-web` > **Environment** and add
+`ORANGE_MONEY` and/or `AFRIMONEY` to `PAYMENT_METHODS_ENABLED`. Values set there take precedence over
+Site settings.
 
 ### Notes
 

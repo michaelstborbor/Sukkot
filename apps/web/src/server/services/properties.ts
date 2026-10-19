@@ -24,7 +24,7 @@ import {
 import { db, type Tx } from "../db";
 import { AppError, forbidden, notFound } from "../errors";
 import type { Actor } from "../auth/session";
-import { actorIsStaff, assertPermission, can } from "../auth/actor";
+import { actorIsStaff, assertActor, assertPermission, can } from "../auth/actor";
 import { audit } from "../audit";
 import { notify } from "../notify";
 import { publicFileUrl, publicImageUrl, storage } from "../storage";
@@ -466,9 +466,13 @@ async function loadManaged(actor: Actor, id: string, tx: Tx | typeof db = db) {
   return p;
 }
 
-export async function updateProperty(actorIn: Actor | null, id: string, input: unknown) {
-  const actor = assertPermission(actorIn, "listing:manage_own");
-  const existing = await loadManaged(actor, id);
+export async function updateProperty(actorIn: Actor | null, id: string, input: unknown, ipHash?: string | null) {
+  const actor = assertActor(actorIn);
+  const existing = await db.property.findUnique({ where: { id } });
+  if (!existing) throw notFound("Listing");
+  const ownListing = isManager(actor, existing) && can(actor, "listing:manage_own");
+  const byStaff = !ownListing && can(actor, "admin:listings.edit");
+  if (!ownListing && !byStaff) throw forbidden("You can only manage your own listings");
   if (existing.listingStatus === "REMOVED" || existing.listingStatus === "SUSPENDED") {
     throw new AppError("CONFLICT", "This listing can no longer be edited");
   }
@@ -483,6 +487,15 @@ export async function updateProperty(actorIn: Actor | null, id: string, input: u
       await tx.propertyStatusHistory.create({
         data: { propertyId: id, field: "price", fromValue: existing.priceMinor.toString(), toValue: updated.priceMinor.toString(), actorId: actor.id },
       });
+    }
+    if (byStaff) {
+      // Staff edits are recorded on the listing's history and the lister is told, so nothing changes silently.
+      await tx.propertyStatusHistory.create({ data: { propertyId: id, field: "details", toValue: "edited by Sukkot Salone staff", actorId: actor.id } });
+      await audit({ actorId: actor.id, action: "listing.staff_edit", targetType: "Property", targetId: id, ipHash }, tx);
+      await notify(
+        [{ userId: existing.listerId, type: "listing.staff_edit", title: `Listing ${existing.reference} was edited`, body: `Sukkot Salone staff updated the details of ${updated.title}. Check them and contact us if anything is wrong.`, link: `/dashboard/properties/${id}?tab=details` }],
+        tx,
+      );
     }
     return updated;
   });
@@ -570,6 +583,37 @@ export async function setAvailability(actorIn: Actor | null, id: string, availab
     });
     return updated;
   });
+}
+
+/**
+ * Delete a listing and everything attached to it (photos, video, documents, enquiries) for good.
+ * Payment records are kept, unlinked from the listing. A listing with a tenancy cannot be deleted,
+ * because the tenancy and its rent records must stay; remove it instead.
+ */
+export async function deleteListingPermanently(actorIn: Actor | null, id: string, reason: string | undefined, ipHash?: string | null) {
+  const actor = assertPermission(actorIn, "admin:listings.edit");
+  if (!reason || reason.trim().length < 5) throw new AppError("VALIDATION", "Say why the listing is being deleted", { reason: "Required" });
+  const p = await db.property.findUnique({ where: { id }, include: { images: { select: { storageKey: true } }, video: { select: { storageKey: true } }, documents: { select: { storageKey: true } } } });
+  if (!p) throw notFound("Listing");
+  if (await db.tenancy.count({ where: { propertyId: id } })) {
+    throw new AppError("CONFLICT", "This listing has a tenancy on record, so it cannot be deleted. Remove it instead.");
+  }
+  await db.$transaction(async (tx) => {
+    await tx.property.delete({ where: { id } });
+    await audit({ actorId: actor.id, action: "listing.delete", targetType: "Property", targetId: id, metadata: { reference: p.reference, title: p.title, reason: reason.trim(), isDemo: p.isDemo }, ipHash }, tx);
+    if (!p.isDemo && p.listerId !== actor.id) {
+      await notify([{ userId: p.listerId, type: "listing.deleted", title: `Listing ${p.reference} was deleted`, body: `Sukkot Salone deleted your listing ${p.title}: ${reason.trim()}`, link: "/dashboard/properties", email: true }], tx);
+    }
+  });
+  // Files go after the database rows, so a failed file delete never leaves a listing pointing at nothing.
+  const keys: [string, "public" | "private"][] = [
+    ...p.images.filter((i) => !i.storageKey.endsWith(".svg")).flatMap((i) => [480, 960, 1600].map((w) => [`${i.storageKey}-${w}.webp`, "public"] as [string, "public"])),
+    ...p.images.filter((i) => i.storageKey.endsWith(".svg")).map((i) => [i.storageKey, "public"] as [string, "public"]),
+    ...(p.video ? [[`${p.video.storageKey}.mp4`, "public"], [`${p.video.storageKey}-poster.webp`, "public"]] as [string, "public"][] : []),
+    ...p.documents.map((d) => [d.storageKey, "private"] as [string, "private"]),
+  ];
+  await Promise.all(keys.map(([k, v]) => storage().delete(k, v).catch(() => undefined)));
+  return { id, reference: p.reference };
 }
 
 /* ---------------------------------------------------------------- Media */

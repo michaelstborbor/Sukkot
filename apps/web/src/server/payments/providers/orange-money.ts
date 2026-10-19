@@ -1,6 +1,7 @@
 import "server-only";
 import { minorToMajorString } from "@sukkot/shared";
 import { safeEqual } from "../../crypto";
+import { mobileMoneyConfig } from "../config";
 import { WebhookSignatureError, type PaymentProvider, type ProviderStatus, type StoredTransaction } from "../types";
 
 /**
@@ -14,19 +15,17 @@ import { WebhookSignatureError, type PaymentProvider, type ProviderStatus, type 
  * Requires merchant onboarding with Orange Sierra Leone. Endpoint paths, the country segment and
  * currency code must be confirmed against the credentials pack issued to the merchant.
  */
-const cfg = () => ({
-  base: (process.env.ORANGE_MONEY_API_BASE || "https://api.orange.com").replace(/\/$/, ""),
-  clientId: process.env.ORANGE_MONEY_CLIENT_ID || "",
-  clientSecret: process.env.ORANGE_MONEY_CLIENT_SECRET || "",
-  merchantKey: process.env.ORANGE_MONEY_MERCHANT_KEY || "",
-  country: process.env.ORANGE_MONEY_COUNTRY || "sl",
-});
+/** Credentials from the server's environment or Admin → Site settings (see ../config). */
+const cfg = () => {
+  const c = mobileMoneyConfig()?.orangeMoney;
+  return { base: c?.base ?? "", clientId: c?.clientId ?? "", clientSecret: c?.clientSecret ?? "", merchantKey: c?.merchantKey ?? "", country: c?.country ?? "sl" };
+};
 
-let cachedToken: { value: string; expiresAt: number } | null = null;
+let cachedToken: { value: string; expiresAt: number; clientId: string } | null = null;
 
 async function accessToken(): Promise<string> {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
   const c = cfg();
+  if (cachedToken && cachedToken.clientId === c.clientId && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
   const res = await fetch(`${c.base}/oauth/v3/token`, {
     method: "POST",
     headers: {
@@ -39,7 +38,7 @@ async function accessToken(): Promise<string> {
   });
   if (!res.ok) throw new Error(`Orange Money token request failed (${res.status})`);
   const body = (await res.json()) as { access_token: string; expires_in: number };
-  cachedToken = { value: body.access_token, expiresAt: Date.now() + body.expires_in * 1000 };
+  cachedToken = { value: body.access_token, expiresAt: Date.now() + body.expires_in * 1000, clientId: c.clientId };
   return body.access_token;
 }
 

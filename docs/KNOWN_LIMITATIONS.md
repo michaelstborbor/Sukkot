@@ -58,3 +58,6 @@ Honest list of what is incomplete or needs work before production.
 - Messaging uses polling (every 8 seconds while a thread is open) rather than websockets.
 - The mobile app has been type-checked, bundled for Android and iOS, and exercised in a browser build
   against the API. It has **not** yet been run on a physical Android or iOS device.
+- The free test site keeps uploaded files in the database (`STORAGE_DRIVER=database`). That fits
+  roughly 2,000 photos in Neon's free 0.5 GB, and every photo request goes through the app. Use
+  Cloudflare R2 (`STORAGE_DRIVER=s3`) for the live site.
