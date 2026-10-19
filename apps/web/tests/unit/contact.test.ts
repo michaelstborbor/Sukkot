@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GENERAL_ENQUIRY, listingEnquiry, SUPPORT_CONTACT, telLink, whatsappLink } from "@sukkot/shared";
+import { GENERAL_ENQUIRY, HIDDEN_NUMBER, hidePhoneNumbers, listingEnquiry, SUPPORT_CONTACT, telLink, whatsappLink } from "@sukkot/shared";
 
 describe("Sukkot Salone contact links", () => {
   it("opens a WhatsApp chat with the team's number, with the message typed in", () => {
@@ -32,5 +32,25 @@ describe("Sukkot Salone contact links", () => {
       ].join("\n"),
     );
     expect(listingEnquiry({ ...listing, district: "Aberdeen" })).not.toContain("·");
+  });
+});
+
+describe("hiding listers' phone numbers", () => {
+  it.each([
+    "Call me on +232 76 123 456",
+    "Call me on +23276123456",
+    "Call me on 00232-78-604-374",
+    "Call me on 232 77 123456",
+    "Call me on 076 123 456",
+    "Call me on 076-123-456",
+    "Call me on 76123456",
+    "Call me on 88 123 456",
+  ])("hides the number in %j", (text) => {
+    expect(hidePhoneNumbers(text)).toBe(`Call me on ${HIDDEN_NUMBER}`);
+  });
+
+  it("leaves prices, sizes and dates alone", () => {
+    const text = "Rent Le 30 000 000 a year, SLE 25,000,000 to buy. Plot 1200 sqm, 3 bedrooms, built 2019, ref SS-24-AB12CD.";
+    expect(hidePhoneNumbers(text)).toBe(text);
   });
 });

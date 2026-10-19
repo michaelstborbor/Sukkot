@@ -215,24 +215,25 @@ export function PropertyActions({
   const need = (m: Modal) => () => (signedIn ? setModal(m) : router.push(signInHref));
   return (
     <div className="space-y-2.5">
-      <Button variant="secondary" size="lg" className="w-full" onClick={need("enquiry")}><MessageSquare className="h-5 w-5" /> Send enquiry</Button>
-      <Button variant="outline" size="lg" className="w-full" onClick={need("inspection")} disabled={!available}><CalendarClock className="h-5 w-5" /> Book an inspection</Button>
-      {(purpose === "SALE" || purpose === "LEASE") && <Button variant="primary" size="lg" className="w-full" onClick={need("offer")} disabled={!available}><HandCoins className="h-5 w-5" /> Make an offer</Button>}
-      {purpose !== "SALE" && <Button variant="primary" size="lg" className="w-full" onClick={need("apply")} disabled={!available}><FileText className="h-5 w-5" /> Apply to rent</Button>}
-      <div className="pt-1">
-        <p className="mb-1.5 text-center text-xs text-muted">Call or chat with the {brand.name} team about this property</p>
+      <div>
+        <p className="mb-1.5 text-center text-xs text-muted">Call or WhatsApp the {brand.name} team about this property</p>
         <div className="grid grid-cols-2 gap-2">
-          <a href={telLink(brand.supportPhone)} className={buttonClasses("outline", "md")}><Phone className="h-4 w-4" /> Call</a>
+          <a href={telLink(brand.supportPhone)} className={buttonClasses("primary", "lg")}><Phone className="h-5 w-5" /> Call</a>
           <a
             href={whatsappLink(brand.supportWhatsapp, whatsappMessage)}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonClasses("outline", "md")}
+            className={buttonClasses("primary", "lg", "bg-[#1ebe5b] hover:bg-[#19a64f]")}
           >
-            <WhatsAppIcon className="h-4 w-4 text-[#1ebe5b]" /> WhatsApp
+            <WhatsAppIcon className="h-5 w-5" /> WhatsApp
           </a>
         </div>
+        <p className="mt-1.5 text-center text-sm font-medium text-ink">{brand.supportPhone}</p>
       </div>
+      <Button variant="secondary" size="lg" className="w-full" onClick={need("enquiry")}><MessageSquare className="h-5 w-5" /> Send enquiry</Button>
+      <Button variant="outline" size="lg" className="w-full" onClick={need("inspection")} disabled={!available}><CalendarClock className="h-5 w-5" /> Book an inspection</Button>
+      {(purpose === "SALE" || purpose === "LEASE") && <Button variant="outline" size="lg" className="w-full" onClick={need("offer")} disabled={!available}><HandCoins className="h-5 w-5" /> Make an offer</Button>}
+      {purpose !== "SALE" && <Button variant="outline" size="lg" className="w-full" onClick={need("apply")} disabled={!available}><FileText className="h-5 w-5" /> Apply to rent</Button>}
       {!signedIn && <p className="pt-1 text-center text-xs text-muted"><Link href={signInHref} className="link">Sign in</Link> to contact the lister. It&apos;s free.</p>}
       <button type="button" onClick={() => setModal("report")} className="mx-auto mt-2 flex items-center gap-1.5 text-sm text-muted hover:text-danger"><Flag className="h-4 w-4" /> Report listing</button>
 

@@ -9,10 +9,12 @@ import type { SearchOption } from "./search-panel";
 const PURPOSES = [
   { value: "RENT", label: "Rent" },
   { value: "SALE", label: "Buy" },
+  { value: "LEASE", label: "Lease" },
+  { value: "SHORT_STAY", label: "Short stay" },
 ] as const;
 
 /**
- * The compact search on the homepage photo: rent or buy, then a place. Everything else (type, price,
+ * The compact search on the homepage photo: rent, buy, lease or short stay, then a place. Everything else (type, price,
  * bedrooms) is on the results page.
  */
 export function HeroSearch({ locations, className }: { locations: SearchOption[]; className?: string }) {
@@ -30,15 +32,15 @@ export function HeroSearch({ locations, className }: { locations: SearchOption[]
   }
 
   return (
-    <form onSubmit={submit} role="search" aria-label="Find property" className={cn("flex max-w-2xl flex-col gap-2 rounded-2xl bg-surface p-2 shadow-[var(--shadow-lift)] sm:flex-row", className)}>
-      <div className="flex rounded-xl bg-sand p-1" role="group" aria-label="Rent or buy">
+    <form onSubmit={submit} role="search" aria-label="Find property" className={cn("flex max-w-3xl flex-col gap-2 rounded-2xl bg-surface p-2 shadow-[var(--shadow-lift)] sm:flex-row", className)}>
+      <div className="grid grid-cols-4 rounded-xl bg-sand p-1 sm:flex" role="group" aria-label="Rent, buy, lease or short stay">
         {PURPOSES.map((p) => (
           <button
             key={p.value}
             type="button"
             aria-pressed={purpose === p.value}
             onClick={() => setPurpose(p.value)}
-            className={cn("flex-1 rounded-lg px-5 py-2 text-sm font-medium transition", purpose === p.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink")}
+            className={cn("flex-1 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium transition sm:px-4", purpose === p.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink")}
           >
             {p.label}
           </button>
