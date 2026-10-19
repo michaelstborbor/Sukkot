@@ -9,6 +9,7 @@ import {
   inspectionStillValid,
   listingMachine,
   parseMajorToMinor,
+  hidePhoneNumbers,
   propertyInputSchema,
   slugify,
   validatePropertyForCategory,
@@ -115,7 +116,7 @@ export function toSummary(p: SummaryRow & { isFeatured: boolean }): PropertySumm
     id: p.id,
     reference: p.reference,
     slug: p.slug,
-    title: p.title,
+    title: hidePhoneNumbers(p.title),
     category: p.category,
     typeName: p.propertyTypeOther ?? p.propertyType.name,
     purpose: p.purpose,
@@ -165,7 +166,8 @@ function toDetail(p: DetailRow, opts: { saved: boolean; canSeeExact: boolean }):
   }
   return {
     ...summary,
-    description: p.description,
+    // Listers' own numbers stay out of the public page; the people managing the listing still see their text.
+    description: opts.canSeeExact ? p.description : hidePhoneNumbers(p.description),
     images: p.images.map((i) => imageDto(i, p.title)),
     amenities: p.amenities.map((a) => ({ id: a.amenity.id, name: a.amenity.name, slug: a.amenity.slug, group: a.amenity.group })),
     furnishing: p.furnishing,
@@ -173,7 +175,8 @@ function toDetail(p: DetailRow, opts: { saved: boolean; canSeeExact: boolean }):
     electricity: p.electricity,
     parkingSpaces: p.parkingSpaces,
     securityFeatures: p.securityFeatures,
-    addressLine: p.showExactLocation || opts.canSeeExact ? p.addressLine : null,
+    // The street or landmark is no longer published; only the area is.
+    addressLine: opts.canSeeExact ? p.addressLine : null,
     coordinates,
     availableFrom: p.availableFrom?.toISOString() ?? null,
     videoUrl: p.videoUrl,

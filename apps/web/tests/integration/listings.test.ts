@@ -5,6 +5,23 @@ import { addImages, createProperty, getPropertyDetail, moderateListing, ownerLis
 import { houseInput, makeUser, pngFile, publishedListing, refs } from "../support/factory";
 
 describe("listings", () => {
+  it("keeps the lister's phone number and street out of the public listing page", async () => {
+    const owner = await makeUser(["OWNER"]);
+    const mod = await makeUser(["MODERATOR"]);
+    const description = "Spacious family house with a garden and a borehole. Call the landlord on 076 123 456 to view.";
+    const p = await publishedListing(owner, mod, { description, addressLine: "12 Wilkinson Road", showExactLocation: true });
+
+    const visitor = await getPropertyDetail(p.slug, null);
+    expect(visitor!.description).not.toContain("076 123 456");
+    expect(visitor!.description).toContain("use the Call or WhatsApp buttons");
+    expect(visitor!.addressLine).toBeNull();
+    expect(visitor!.lister.phone).toBeNull();
+
+    const lister = await getPropertyDetail(p.slug, owner);
+    expect(lister!.description).toBe(description);
+    expect(lister!.addressLine).toBe("12 Wilkinson Road");
+  });
+
   it("goes draft → review → published, and only then appears in search", async () => {
     const owner = await makeUser(["OWNER"], "Owner One");
     const mod = await makeUser(["MODERATOR"], "Moderator");

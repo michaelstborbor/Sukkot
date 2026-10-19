@@ -306,11 +306,10 @@ export function ListingForm({
             {type?.slug === OTHER_PROPERTY_TYPE_SLUG && text("propertyTypeOther", "What kind of property is it?", { maxLength: 60, placeholder: "e.g. School building, filling station, church hall" })}
           </div>
           {text("title", "Listing title", { maxLength: 140, placeholder: "e.g. Three-bedroom family house with garden in Hill Station" })}
-          <Field id="f-description" label="Description" error={err("description")} hint="Describe the property honestly, including anything a visitor should know.">
+          <Field id="f-description" label="Description" error={err("description")} hint="Describe the property honestly, including anything a visitor should know. Phone numbers are hidden from visitors, because enquiries come through the Sukkot Salone team.">
             <Textarea id="f-description" rows={7} value={str("description")} onChange={(e) => set("description", e.target.value)} maxLength={6000} placeholder={DESCRIPTION_EXAMPLE} aria-invalid={!!err("description")} />
           </Field>
           <LocationCascade locations={catalog.locations} value={str("locationId")} onChange={(id) => set("locationId", id)} error={err("locationId")} idPrefix="f-loc" />
-          {text("addressLine", "Street or landmark", { optional: true, hint: "Shown only if you allow the exact location below.", maxLength: 200 })}
           <div className="grid gap-4 sm:grid-cols-2">
             {text("latitude", "Latitude", { optional: true, inputMode: "decimal", placeholder: "8.4657" })}
             {text("longitude", "Longitude", { optional: true, inputMode: "decimal", placeholder: "-13.2317" })}

@@ -245,7 +245,7 @@ export default async function PropertyPage({ params }: Props) {
           <section className="mt-8" aria-labelledby="loc">
             <h2 id="loc" className="text-xl font-bold text-navy-900">Location</h2>
             <div className="mt-3 rounded-xl border border-line bg-surface p-4 text-sm">
-              <p className="font-medium">{p.addressLine ?? `${p.locationLabel}${p.district ? `, ${p.district}` : ""}`}</p>
+              <p className="font-medium">{`${p.locationLabel}${p.district && !p.locationLabel.includes(p.district) ? `, ${p.district}` : ""}`}</p>
               {p.coordinates && (
                 <p className="mt-1 text-muted">
                   {p.coordinates.approximate ? "Approximate area shown to protect the owner's privacy. " : ""}
