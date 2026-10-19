@@ -64,7 +64,7 @@ function FilterForm({ initial, options, onApply }: { initial: SearchFilters; opt
         <legend className="mb-2 text-sm font-semibold">Looking to</legend>
         <div className="grid grid-cols-2 gap-1.5">
           {LISTING_PURPOSES.map((p) => (
-            <button key={p} type="button" onClick={() => set("purpose", f.purpose === p ? undefined : p)} aria-pressed={f.purpose === p} className={cn("rounded-lg border px-3 py-2 text-sm font-medium transition", f.purpose === p ? "border-navy-900 bg-navy-900 text-white" : "border-line bg-white hover:border-navy-600")}>
+            <button key={p} type="button" onClick={() => set("purpose", f.purpose === p ? undefined : p)} aria-pressed={f.purpose === p} className={cn("rounded-lg border px-3 py-2 text-sm font-medium transition", f.purpose === p ? "border-navy-900 bg-navy-900 text-white" : "border-line bg-surface hover:border-navy-600")}>
               {LISTING_PURPOSE_LABELS[p]}
             </button>
           ))}
@@ -215,7 +215,7 @@ function FilterForm({ initial, options, onApply }: { initial: SearchFilters; opt
         </div>
       </div>
 
-      <div className="sticky bottom-0 -mx-1 flex gap-2 bg-white px-1 pt-2 pb-1">
+      <div className="sticky bottom-0 -mx-1 flex gap-2 bg-surface px-1 pt-2 pb-1">
         <Button type="button" variant="outline" className="flex-1" onClick={() => onApply({ q: initial.q, sort: initial.sort, view: initial.view })}>Clear</Button>
         <Button type="submit" variant="secondary" className="flex-1">Show results</Button>
       </div>
@@ -252,7 +252,7 @@ export function FilterPanel({ filters, options }: { filters: SearchFilters; opti
       {open && (
         <div role="dialog" aria-modal="true" aria-label="Filters" className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 animate-[fade-in_0.2s] bg-navy-950/50" onClick={() => setOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[90vh] animate-[fade-up_0.25s_ease-out] overflow-y-auto rounded-t-2xl bg-white p-5">
+          <div className="absolute inset-x-0 bottom-0 max-h-[90vh] animate-[fade-up_0.25s_ease-out] overflow-y-auto rounded-t-2xl bg-surface p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold">Filters</h2>
               <button type="button" onClick={() => setOpen(false)} aria-label="Close filters" className="rounded-full p-1.5 hover:bg-navy-50"><X className="h-5 w-5" /></button>

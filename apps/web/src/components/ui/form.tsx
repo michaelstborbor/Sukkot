@@ -2,7 +2,7 @@ import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type T
 import { cn } from "@/lib/utils";
 
 const control =
-  "w-full rounded-[10px] border border-line bg-white px-3 text-[15px] text-ink placeholder:text-muted/70 transition-colors focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 disabled:bg-canvas aria-[invalid=true]:border-danger";
+  "w-full rounded-[10px] border border-line bg-surface px-3 text-[15px] text-ink placeholder:text-muted/70 transition-colors focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20 disabled:bg-canvas aria-[invalid=true]:border-danger";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...p }, ref) {
   return <input ref={ref} className={cn(control, "h-11", className)} {...p} />;

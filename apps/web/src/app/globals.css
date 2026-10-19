@@ -2,43 +2,53 @@
 
 /* ───────────────────────── Design tokens ───────────────────────── */
 @theme {
-  --color-navy-950: #061224;
-  --color-navy-900: #0b1f3a;
-  --color-navy-800: #12294b;
-  --color-navy-700: #1b3a66;
-  --color-navy-600: #2a4f85;
-  --color-navy-100: #e3e9f3;
-  --color-navy-50: #f1f4f9;
+  /* Warm "Salone" palette. The navy-* names now hold the dark brown ink scale and clay-* is the
+     terracotta brand colour, so existing class names keep working. */
+  --color-navy-950: #1b0e08;
+  --color-navy-900: #2b1b12;
+  --color-navy-800: #3d2c23;
+  --color-navy-700: #523d32;
+  --color-navy-600: #6b5244;
+  --color-navy-100: #e7dcd0;
+  --color-navy-50: #f2eae0;
 
-  --color-emerald-800: #0b5650;
-  --color-emerald-700: #0f766e;
-  --color-emerald-600: #128a80;
-  --color-emerald-100: #d5f0ec;
-  --color-emerald-50: #ecf8f6;
+  --color-clay-800: #793111;
+  --color-clay-700: #973e16;
+  --color-clay-600: #b65329;
+  --color-clay-500: #cd6a39;
+  --color-clay-100: #fcdecd;
+  --color-clay-50: #fdefe5;
+
+  --color-emerald-800: #244d2e;
+  --color-emerald-700: #31623d;
+  --color-emerald-600: #457650;
+  --color-emerald-100: #d3edd7;
+  --color-emerald-50: #e9f6eb;
 
   --color-gold-700: #8a6316;
   --color-gold-600: #a97a1f;
-  --color-gold-500: #c8962e;
+  --color-gold-500: #ca933e;
   --color-gold-100: #f7ecd2;
   --color-gold-50: #fcf7ea;
 
-  --color-ink: #111827;
-  --color-muted: #5b6474;
-  --color-line: #e3e6ec;
-  --color-surface: #ffffff;
-  --color-canvas: #f6f7f9;
+  --color-ink: #2b1b12;
+  --color-muted: #6b594e;
+  --color-line: #dfd2c3;
+  --color-surface: #fdfaf4;
+  --color-canvas: #f7f2e8;
+  --color-sand: #f0e2d3;
   --color-danger: #b42318;
   --color-danger-50: #fef1f0;
   --color-warning: #b45309;
   --color-warning-50: #fff7e8;
 
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-dm-serif), Georgia, "Times New Roman", serif;
 
   --radius-card: 14px;
-  --shadow-card: 0 1px 2px rgb(11 31 58 / 0.06), 0 1px 1px rgb(11 31 58 / 0.04);
-  --shadow-lift: 0 12px 28px -8px rgb(11 31 58 / 0.18), 0 4px 10px -4px rgb(11 31 58 / 0.08);
-  --shadow-pop: 0 20px 48px -12px rgb(11 31 58 / 0.28);
+  --shadow-card: 0 1px 2px rgb(43 27 18 / 0.06), 0 1px 1px rgb(43 27 18 / 0.04);
+  --shadow-lift: 0 10px 30px -12px rgb(43 27 18 / 0.25);
+  --shadow-pop: 0 20px 48px -12px rgb(43 27 18 / 0.3);
 
   --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-fade-in: fade-in 0.25s ease-out both;
@@ -88,12 +98,12 @@
     text-wrap: balance;
   }
   :focus-visible {
-    outline: 2px solid var(--color-emerald-600);
+    outline: 2px solid var(--color-clay-600);
     outline-offset: 2px;
     border-radius: 6px;
   }
   ::selection {
-    background: var(--color-gold-100);
+    background: var(--color-clay-100);
   }
 }
 
@@ -103,19 +113,25 @@
   }
   .font-display {
     font-family: var(--font-display);
-    font-optical-sizing: auto;
+    /* DM Serif Display has one weight; never fake a bold version of it. */
+    font-weight: 400;
+    font-synthesis: none;
+    letter-spacing: -0.01em;
+  }
+  .bg-hero-fade {
+    background-image: linear-gradient(90deg, rgb(27 14 8 / 0.85) 0%, rgb(27 14 8 / 0.45) 55%, rgb(27 14 8 / 0.1) 100%);
   }
   .card {
     @apply rounded-[var(--radius-card)] border border-line bg-surface;
     box-shadow: var(--shadow-card);
   }
   .skeleton {
-    background: linear-gradient(90deg, #eef0f4 0%, #f7f8fa 40%, #eef0f4 80%);
+    background: linear-gradient(90deg, #efe6da 0%, #f8f2ea 40%, #efe6da 80%);
     background-size: 800px 100%;
     animation: var(--animate-shimmer);
   }
   .link {
-    @apply font-medium text-emerald-700 underline-offset-4 hover:underline;
+    @apply font-medium text-clay-700 underline-offset-4 hover:underline;
   }
   .nav-underline {
     background-image: linear-gradient(currentColor, currentColor);
@@ -165,5 +181,5 @@
   @apply mt-2 list-decimal space-y-1.5 pl-5;
 }
 .prose-page a {
-  @apply font-medium text-emerald-700 underline underline-offset-4;
+  @apply font-medium text-clay-700 underline underline-offset-4;
 }

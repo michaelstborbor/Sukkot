@@ -31,7 +31,7 @@ export function ResultsToolbar({ filters }: { filters: SearchFilters }) {
       <Select id="sort" className="w-auto min-w-44" value={filters.sort ?? "relevant"} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>
         {SORT_OPTIONS.map((s) => <option key={s} value={s}>{SORT_LABELS[s]}</option>)}
       </Select>
-      <div className="flex rounded-[10px] border border-line bg-white p-0.5" role="group" aria-label="Layout">
+      <div className="flex rounded-[10px] border border-line bg-surface p-0.5" role="group" aria-label="Layout">
         {(["grid", "list"] as const).map((v) => (
           <button key={v} type="button" aria-pressed={(filters.view ?? "grid") === v} onClick={() => go({ ...filters, view: v })} className={cn("rounded-lg p-2 transition", (filters.view ?? "grid") === v ? "bg-navy-900 text-white" : "text-muted hover:text-navy-900")} aria-label={v === "grid" ? "Grid view" : "List view"} title={v === "grid" ? "Grid view" : "List view"}>
             {v === "grid" ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}

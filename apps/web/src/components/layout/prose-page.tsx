@@ -1,7 +1,7 @@
 /** Layout for static information pages (help, safety, legal). */
 export function ProsePage({ eyebrow, title, intro, updated, children }: { eyebrow?: string; title: string; intro?: string; updated?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white">
+    <div className="bg-surface">
       <header className="border-b border-line bg-gradient-to-b from-navy-50 to-white">
         <div className="container-page max-w-3xl py-12 sm:py-16">
           {eyebrow && <p className="mb-2 text-xs font-bold tracking-[0.14em] text-emerald-700 uppercase">{eyebrow}</p>}

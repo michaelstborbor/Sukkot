@@ -25,7 +25,7 @@ export default async function HelpPage() {
       <h2>Common questions</h2>
       <div className="space-y-3">
         {TOPICS.map((t) => (
-          <details key={t.q} className="rounded-xl border border-line bg-white p-4">
+          <details key={t.q} className="rounded-xl border border-line bg-surface p-4">
             <summary className="cursor-pointer font-semibold text-navy-900">{t.q}</summary>
             <p className="mt-2">{t.a}</p>
           </details>

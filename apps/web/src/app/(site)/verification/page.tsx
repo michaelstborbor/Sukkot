@@ -11,7 +11,7 @@ export default function VerificationInfoPage() {
       <h2>Our badges</h2>
       <div className="mt-4 space-y-4">
         {VERIFICATION_KINDS.map((k) => (
-          <div key={k} className="rounded-xl border border-line bg-white p-5">
+          <div key={k} className="rounded-xl border border-line bg-surface p-5">
             <VerificationBadge kind={k} />
             <p className="mt-3"><strong>What it means:</strong> {VERIFICATION_BADGES[k].means}</p>
             <p className="mt-1"><strong>What it does not mean:</strong> {VERIFICATION_BADGES[k].doesNotMean}</p>

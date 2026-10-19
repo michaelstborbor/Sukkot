@@ -30,7 +30,7 @@ export const POST = handler(async (ctx) => {
   return { ok: true, width: stored.width, height: stored.height };
 });
 
-/** Go back to the drawn background. */
+/** Go back to the bundled default photo. */
 export const DELETE = handler(async (ctx) => {
   const actor = assertPermission(ctx.actor, "admin:settings.manage");
   const previous = await getSetting("site.heroImage");

@@ -133,7 +133,7 @@ export function HelpChat() {
           role="dialog"
           aria-label={`${brand.shortName} helper`}
           onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-          className="fixed right-4 z-[60] flex max-h-[min(70vh,calc(100dvh-19rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-[var(--shadow-pop)]"
+          className="fixed right-4 z-[60] flex max-h-[min(70vh,calc(100dvh-19rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow-pop)]"
           style={{ bottom: `calc(${bottom} + 4rem)` }}
         >
           <div className="flex items-center justify-between bg-navy-900 px-4 py-3 text-white">

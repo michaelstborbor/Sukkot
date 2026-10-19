@@ -13,16 +13,16 @@ const COLS = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 bg-navy-950 text-white/80">
+    <footer className="mt-24 bg-navy-900 text-[#f9f4ec]/80">
       <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Logo light />
           <p className="mt-4 max-w-xs text-sm leading-relaxed">{brand.tagline}</p>
           <ul className="mt-5 space-y-2 text-sm">
-            <li className="flex items-center gap-2"><MapPin className="h-4 w-4 text-gold-500" aria-hidden />{brand.address}</li>
-            <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-gold-500" aria-hidden /><a href={`mailto:${brand.supportEmail}`} className="hover:text-white">{brand.supportEmail}</a></li>
-            <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-gold-500" aria-hidden /><a href={telLink(brand.supportPhone)} className="hover:text-white">{brand.supportPhone}</a></li>
-            <li className="flex items-center gap-2"><WhatsAppIcon className="h-4 w-4 text-gold-500" /><a href={whatsappLink(brand.supportWhatsapp, GENERAL_ENQUIRY)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Chat on WhatsApp</a></li>
+            <li className="flex items-center gap-2"><MapPin className="h-4 w-4 text-clay-500" aria-hidden />{brand.address}</li>
+            <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-clay-500" aria-hidden /><a href={`mailto:${brand.supportEmail}`} className="hover:text-white">{brand.supportEmail}</a></li>
+            <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-clay-500" aria-hidden /><a href={telLink(brand.supportPhone)} className="hover:text-white">{brand.supportPhone}</a></li>
+            <li className="flex items-center gap-2"><WhatsAppIcon className="h-4 w-4 text-clay-500" /><a href={whatsappLink(brand.supportWhatsapp, GENERAL_ENQUIRY)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Chat on WhatsApp</a></li>
           </ul>
         </div>
         {COLS.map((c) => (
@@ -41,7 +41,7 @@ export function SiteFooter() {
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-3 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-start gap-2 sm:max-w-2xl">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" aria-hidden />
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-clay-500" aria-hidden />
             Stay safe: always inspect a property and confirm ownership documents with a lawyer before paying any money. {brand.name} does not hold client funds.
           </p>
           <p>© {new Date().getFullYear()} {brand.name}</p>

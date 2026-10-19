@@ -44,7 +44,7 @@ export default async function AdminVisitsPage({ searchParams }: { searchParams: 
       <PageHeader title="Inspection visits" description="Listers pay for staff to visit, check the property matches the listing, and take the photos and video. Marking a visit done gives the listing a dated &ldquo;Inspected by Sukkot&rdquo; badge for a year." />
       <nav className="mb-4 flex flex-wrap gap-1" aria-label="Status">
         {tabs.map((t) => (
-          <Link key={t.label} href={t.key ? `?status=${t.key}` : "?"} className={cn("rounded-full px-3 py-1 text-sm font-medium", t.key === status ? "bg-navy-900 text-white" : "bg-white ring-1 ring-line")}>
+          <Link key={t.label} href={t.key ? `?status=${t.key}` : "?"} className={cn("rounded-full px-3 py-1 text-sm font-medium", t.key === status ? "bg-navy-900 text-white" : "bg-surface ring-1 ring-line")}>
             {t.label}
           </Link>
         ))}

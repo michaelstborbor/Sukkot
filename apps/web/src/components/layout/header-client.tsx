@@ -28,7 +28,7 @@ interface HeaderUser {
 
 function CountDot({ n }: { n: number }) {
   if (!n) return null;
-  return <span className="absolute -top-1 -right-1 min-w-[18px] rounded-full bg-gold-500 px-1 text-center text-[11px] leading-[18px] font-bold text-navy-950">{n > 99 ? "99+" : n}</span>;
+  return <span className="absolute -top-1 -right-1 min-w-[18px] rounded-full bg-clay-600 px-1 text-center text-[11px] leading-[18px] font-bold text-white">{n > 99 ? "99+" : n}</span>;
 }
 
 export function HeaderClient({ user }: { user: HeaderUser | null }) {
@@ -73,21 +73,21 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
 
   return (
     <>
-      <header ref={headerRef} className={cn("sticky top-0 z-40 border-b bg-white/92 backdrop-blur transition-shadow", scrolled ? "border-line shadow-[0_6px_20px_-12px_rgb(11_31_58/0.25)]" : "border-transparent")}>
-        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">
+      <header ref={headerRef} className={cn("sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur transition-shadow", scrolled && "shadow-[0_6px_20px_-12px_rgb(43_27_18/0.25)]")}>
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">
           Skip to content
         </a>
         <div className="container-page flex h-16 items-center justify-between gap-4">
           <Logo />
           <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="nav-underline py-1 text-[15px] font-medium text-ink/85 hover:text-navy-900">
+              <Link key={n.href} href={n.href} className="nav-underline py-1 text-sm text-muted hover:text-ink">
                 {n.label}
               </Link>
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <Link href={user?.canList ? "/dashboard/properties/new" : "/list-your-property"} className={buttonClasses("accent", "sm", "hidden sm:inline-flex")}>
+            <Link href={user?.canList ? "/dashboard/properties/new" : "/list-your-property"} className={buttonClasses("outline", "sm", "hidden sm:inline-flex")}>
               <Plus className="h-4 w-4" aria-hidden /> List a property
             </Link>
             {user ? (
@@ -106,7 +106,7 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
                     <ChevronDown className={cn("h-4 w-4 text-muted transition-transform", menu && "rotate-180")} />
                   </button>
                   {menu && (
-                    <div role="menu" className="absolute right-0 mt-2 w-60 animate-[fade-up_0.18s_ease-out] rounded-xl border border-line bg-white p-1.5 shadow-[var(--shadow-pop)]">
+                    <div role="menu" className="absolute right-0 mt-2 w-60 animate-[fade-up_0.18s_ease-out] rounded-xl border border-line bg-surface p-1.5 shadow-[var(--shadow-pop)]">
                       <p className="truncate px-3 py-2 text-sm font-semibold text-navy-900">{user.name}</p>
                       <MenuLink href="/dashboard" icon={<LayoutDashboard className="h-4 w-4" />}>Dashboard</MenuLink>
                       <MenuLink href="/dashboard/messages" icon={<MessageSquare className="h-4 w-4" />}>Messages</MenuLink>
@@ -134,7 +134,7 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
       {/* Outside the header on purpose: its backdrop blur would make it the containing block for this
           fixed panel and squash the panel to zero height. */}
       {open && (
-        <div style={{ top: menuTop }} className="fixed inset-x-0 bottom-0 z-40 animate-[fade-in_0.18s_ease-out] overflow-y-auto bg-white lg:hidden">
+        <div style={{ top: menuTop }} className="fixed inset-x-0 bottom-0 z-40 animate-[fade-in_0.18s_ease-out] overflow-y-auto bg-surface lg:hidden">
           <nav aria-label="Mobile" className="container-page flex flex-col gap-1 py-4">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} className="rounded-lg px-3 py-3 text-lg font-semibold text-navy-900 hover:bg-navy-50">

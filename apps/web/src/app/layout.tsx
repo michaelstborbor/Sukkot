@@ -7,8 +7,8 @@ import { HelpChat } from "@/components/layout/help-chat";
 import "./globals.css";
 
 // Fonts are bundled from src/fonts (SIL Open Font License) so builds never depend on Google Fonts being reachable.
-const jakarta = localFont({ src: "../fonts/plus-jakarta-sans-latin-wght-normal.woff2", variable: "--font-jakarta", display: "swap", weight: "200 800" });
-const fraunces = localFont({ src: "../fonts/fraunces-latin-wght-normal.woff2", variable: "--font-fraunces", display: "swap", weight: "100 900" });
+const figtree = localFont({ src: "../fonts/figtree-latin-wght-normal.woff2", variable: "--font-figtree", display: "swap", weight: "300 900" });
+const dmSerif = localFont({ src: "../fonts/dm-serif-display-latin-400-normal.woff2", variable: "--font-dm-serif", display: "swap", weight: "400" });
 
 const appUrl = process.env.APP_URL || "http://localhost:3000";
 
@@ -24,14 +24,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B1F3A",
+  themeColor: "#2B1B12",
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-SL" className={`${jakarta.variable} ${fraunces.variable}`}>
+    <html lang="en-SL" className={`${figtree.variable} ${dmSerif.variable}`}>
       <body>
         {children}
         <HelpChat />

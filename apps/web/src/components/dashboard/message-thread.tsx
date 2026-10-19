@@ -68,7 +68,7 @@ export function MessageThread({ conversationId, initial, canSend }: { conversati
             );
           return (
             <li key={m.id} className={cn("flex", m.fromMe ? "justify-end" : "justify-start")}>
-              <div className={cn("max-w-[85%] rounded-2xl px-3.5 py-2 text-sm shadow-sm sm:max-w-[70%]", m.fromMe ? "rounded-br-sm bg-navy-900 text-white" : "rounded-bl-sm bg-white text-ink")}>
+              <div className={cn("max-w-[85%] rounded-2xl px-3.5 py-2 text-sm shadow-sm sm:max-w-[70%]", m.fromMe ? "rounded-br-sm bg-navy-900 text-white" : "rounded-bl-sm bg-surface text-ink")}>
                 {!m.fromMe && <p className="mb-0.5 text-xs font-semibold text-emerald-700">{m.senderName}</p>}
                 <p className="break-words whitespace-pre-wrap">{m.body}</p>
                 <p className={cn("mt-1 flex items-center justify-end gap-1 text-[11px]", m.fromMe ? "text-white/70" : "text-muted")}>
@@ -82,7 +82,7 @@ export function MessageThread({ conversationId, initial, canSend }: { conversati
         <div ref={endRef} />
       </ol>
       {canSend ? (
-        <form onSubmit={send} className="flex items-end gap-2 border-t border-line bg-white p-3">
+        <form onSubmit={send} className="flex items-end gap-2 border-t border-line bg-surface p-3">
           <label htmlFor="msg" className="sr-only">Message</label>
           <Textarea
             id="msg"
@@ -104,7 +104,7 @@ export function MessageThread({ conversationId, initial, canSend }: { conversati
           </Button>
         </form>
       ) : (
-        <p className="border-t border-line bg-white p-3 text-center text-sm text-muted">You are viewing this conversation as staff. Access is recorded.</p>
+        <p className="border-t border-line bg-surface p-3 text-center text-sm text-muted">You are viewing this conversation as staff. Access is recorded.</p>
       )}
     </div>
   );

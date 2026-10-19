@@ -153,7 +153,7 @@ export default async function PropertyPage({ params }: Props) {
           </div>
 
           {/* Price on mobile */}
-          <div className="mt-5 rounded-2xl border border-line bg-white p-4 lg:hidden">
+          <div className="mt-5 rounded-2xl border border-line bg-surface p-4 lg:hidden">
             <p className="text-2xl font-bold text-navy-900">{p.price.formatted}</p>
             {p.negotiable && <p className="text-sm text-muted">Price negotiable</p>}
           </div>
@@ -163,7 +163,7 @@ export default async function PropertyPage({ params }: Props) {
               <h2 id="specs" className="text-xl font-bold text-navy-900">Key facts</h2>
               <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {specs.map((s) => (
-                  <div key={s.label} className="rounded-xl border border-line bg-white p-3.5">
+                  <div key={s.label} className="rounded-xl border border-line bg-surface p-3.5">
                     <dt className="flex items-center gap-1.5 text-xs font-semibold text-muted uppercase"><s.icon className="h-4 w-4" aria-hidden />{s.label}</dt>
                     <dd className="mt-1 font-semibold text-navy-900">{s.value}</dd>
                   </div>
@@ -215,7 +215,7 @@ export default async function PropertyPage({ params }: Props) {
           {attributes.length > 0 && (
             <section className="mt-8" aria-labelledby="attrs">
               <h2 id="attrs" className="text-xl font-bold text-navy-900">{p.category === "LAND" ? "Land details" : "Property details"}</h2>
-              <dl className="mt-3 divide-y divide-line rounded-xl border border-line bg-white">
+              <dl className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface">
                 {attributes.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
                     <dt className="text-muted">{LAND_LABELS[k] ?? k}</dt>
@@ -230,7 +230,7 @@ export default async function PropertyPage({ params }: Props) {
           {terms.length > 0 && (
             <section className="mt-8" aria-labelledby="terms">
               <h2 id="terms" className="text-xl font-bold text-navy-900">Rental terms</h2>
-              <dl className="mt-3 divide-y divide-line rounded-xl border border-line bg-white">
+              <dl className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface">
                 {terms.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
                     <dt className="text-muted">{TERMS_LABELS[k] ?? k}</dt>
@@ -244,7 +244,7 @@ export default async function PropertyPage({ params }: Props) {
 
           <section className="mt-8" aria-labelledby="loc">
             <h2 id="loc" className="text-xl font-bold text-navy-900">Location</h2>
-            <div className="mt-3 rounded-xl border border-line bg-white p-4 text-sm">
+            <div className="mt-3 rounded-xl border border-line bg-surface p-4 text-sm">
               <p className="font-medium">{p.addressLine ?? `${p.locationLabel}${p.district ? `, ${p.district}` : ""}`}</p>
               {p.coordinates && (
                 <p className="mt-1 text-muted">

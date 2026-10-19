@@ -6,7 +6,7 @@ export const brand = {
   shortName: process.env.NEXT_PUBLIC_BRAND_SHORT_NAME || "Sukkot",
   tagline: "Trusted homes, land and spaces across Sierra Leone.",
   heroTitle: "Find your place in Salone.",
-  heroSubtitle: "Houses, apartments, land and shops — from Freetown to Kenema, with checked listings and direct contact with owners and agents.",
+  heroSubtitle: "Houses, apartments, land and shops, from Freetown to Kenema. Talk directly with owners and agents.",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@example.sl",
   supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE || SUPPORT_CONTACT.phone,
   /** The number people chat with on WhatsApp (the floating button, help pages, listings without a lister number). */

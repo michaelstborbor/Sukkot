@@ -36,7 +36,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Prom
   return (
     <div className="container-page py-10">
       <h1 className="mb-6 font-display text-3xl font-semibold text-navy-900">Compare properties</h1>
-      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-white">
+      <div className="overflow-x-auto rounded-[var(--radius-card)] border border-line bg-surface">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr>

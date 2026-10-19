@@ -61,7 +61,7 @@ export function SearchPanel({ types, locations, className }: { types: SearchOpti
 
   const presets = PRICE_PRESETS[purpose] ?? PRICE_PRESETS.RENT!;
   return (
-    <form onSubmit={submit} role="search" aria-label="Search properties" className={cn("rounded-2xl bg-white p-3 shadow-[var(--shadow-pop)] sm:p-4", className)}>
+    <form onSubmit={submit} role="search" aria-label="Search properties" className={cn("rounded-2xl bg-surface p-3 shadow-[var(--shadow-pop)] sm:p-4", className)}>
       <div role="tablist" aria-label="Listing purpose" className="mb-3 flex gap-1 overflow-x-auto rounded-xl bg-navy-50 p-1">
         {TABS.map((t) => (
           <button
@@ -73,7 +73,7 @@ export function SearchPanel({ types, locations, className }: { types: SearchOpti
               setPurpose(t.value as ListingPurpose);
               setPrice("");
             }}
-            className={cn("flex-1 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap transition", purpose === t.value ? "bg-white text-navy-900 shadow-sm" : "text-muted hover:text-navy-900")}
+            className={cn("flex-1 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap transition", purpose === t.value ? "bg-surface text-navy-900 shadow-sm" : "text-muted hover:text-navy-900")}
           >
             {t.label}
           </button>

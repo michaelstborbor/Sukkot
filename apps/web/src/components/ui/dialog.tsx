@@ -39,7 +39,7 @@ export function Dialog({
       }}
       aria-labelledby="dialog-title"
       className={cn(
-        "m-0 mt-auto w-full max-w-none rounded-t-2xl bg-white p-0 shadow-[var(--shadow-pop)] backdrop:bg-navy-950/50 backdrop:backdrop-blur-[2px] open:animate-[fade-up_0.25s_ease-out]",
+        "m-0 mt-auto w-full max-w-none rounded-t-2xl bg-surface p-0 shadow-[var(--shadow-pop)] backdrop:bg-navy-950/50 backdrop:backdrop-blur-[2px] open:animate-[fade-up_0.25s_ease-out]",
         "sm:m-auto sm:max-w-lg sm:rounded-2xl",
         className,
       )}

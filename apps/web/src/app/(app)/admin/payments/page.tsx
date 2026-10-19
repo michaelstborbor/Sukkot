@@ -47,7 +47,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <nav className="flex flex-wrap gap-1">
           {[undefined, "AWAITING", "PENDING", "SUCCEEDED", "RECORDED", "REFUNDED", "FAILED", "DISPUTED"].map((s) => (
-            <Link key={s ?? "all"} href={s ? `?status=${s}` : "?"} className={cn("rounded-full px-3 py-1 text-sm font-medium", s === (awaitingOnly ? "AWAITING" : status) ? "bg-navy-900 text-white" : "bg-white ring-1 ring-line")}>
+            <Link key={s ?? "all"} href={s ? `?status=${s}` : "?"} className={cn("rounded-full px-3 py-1 text-sm font-medium", s === (awaitingOnly ? "AWAITING" : status) ? "bg-navy-900 text-white" : "bg-surface ring-1 ring-line")}>
               {s === "AWAITING" ? `Transfers to check (${awaitingCount})` : s ? s.charAt(0) + s.slice(1).toLowerCase() : "All"}
             </Link>
           ))}
