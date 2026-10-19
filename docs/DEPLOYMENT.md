@@ -190,6 +190,15 @@ Copy `apps/web/.env.example`. In production you must set at least:
 
 Secrets go in the host's secret manager, never in git.
 
+### AI chat assistant
+
+The chat button answers with fixed replies until `ANTHROPIC_API_KEY` is set. With a key (create one
+at console.anthropic.com, under a workspace with a monthly spend limit), it holds real conversations
+and searches published listings. It can read listings and help content only: it cannot sign anyone
+in, change data, take payments or message listers. Each visitor is limited to 15 questions per
+10 minutes and 80 per day. `ASSISTANT_MODEL` picks the model (default `claude-opus-5-5`). A question typically
+costs a few US cents with the default model; set a spend limit in the Anthropic console to cap the bill.
+
 ## First deploy
 
 ```bash

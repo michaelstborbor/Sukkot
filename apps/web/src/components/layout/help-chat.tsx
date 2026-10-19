@@ -6,12 +6,14 @@ import { usePathname } from "next/navigation";
 import { MessageCircleQuestion, Send, X } from "lucide-react";
 import { GENERAL_ENQUIRY, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
+import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /**
- * A small help assistant beside the WhatsApp button. It answers common questions from a fixed list
- * and turns "2 bedroom flat to rent in Lumley" into a search. It is automatic, says so, and hands
- * anything it cannot answer to a person on WhatsApp.
+ * The chat assistant beside the WhatsApp button. When the AI assistant is switched on (an API key is
+ * set on the server) it holds a real conversation and searches listings. Otherwise it falls back to
+ * fixed answers for common questions. Either way it says it is automatic and offers a person on
+ * WhatsApp.
  */
 
 interface Reply {
@@ -98,31 +100,97 @@ function answer(text: string): Reply {
   return { text: "Sorry, I can't answer that one. Our team can help on WhatsApp.", links: [{ label: "Chat with a person", href: whatsappLink(brand.supportWhatsapp, `${GENERAL_ENQUIRY} ${text}`.slice(0, 500)) }] };
 }
 
-const WELCOME: Message = { from: "bot", text: `Hi, I'm the ${brand.shortName} helper. I give automatic answers to common questions, or tell me what kind of place you are looking for.` };
+const WELCOME: Message = { from: "bot", text: `Hi, I'm the ${brand.shortName} assistant. Ask me anything about renting, buying or listing property, or tell me what kind of place you are looking for.` };
+
+/** Only site paths and a few well-known sites may be linked from an answer. */
+function safeHref(url: string): string | null {
+  if (/^\/(?!\/)/.test(url)) return url;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && ["wa.me", "api.whatsapp.com"].includes(u.hostname) ? url : null;
+  } catch {
+    return url.startsWith("mailto:") ? url : null;
+  }
+}
+
+/** Render answer text: paragraphs, "- " lists, **bold** and [label](url) links. Everything else is plain text. */
+function RichText({ text, onNavigate }: { text: string; onNavigate: () => void }) {
+  const inline = (line: string, key: string) =>
+    line.split(/(\[[^\]]+\]\([^)\s]+\)|\*\*[^*]+\*\*)/g).map((part, i) => {
+      const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+      if (link) {
+        const href = safeHref(link[2]!);
+        if (!href) return <span key={`${key}-${i}`}>{link[1]}</span>;
+        return href.startsWith("/") ? (
+          <Link key={`${key}-${i}`} href={href} onClick={onNavigate} className="link font-semibold">{link[1]}</Link>
+        ) : (
+          <a key={`${key}-${i}`} href={href} target="_blank" rel="noopener noreferrer" className="link font-semibold">{link[1]}</a>
+        );
+      }
+      const bold = part.match(/^\*\*([^*]+)\*\*$/);
+      return bold ? <strong key={`${key}-${i}`}>{bold[1]}</strong> : part;
+    });
+  const blocks = text.split(/\n{2,}/);
+  return (
+    <div className="space-y-2">
+      {blocks.map((block, b) => {
+        const lines = block.split("\n").filter((l) => l.trim());
+        if (lines.length && lines.every((l) => /^\s*([-*•]|\d+\.)\s+/.test(l))) {
+          return (
+            <ul key={b} className="list-disc space-y-1 pl-4">
+              {lines.map((l, i) => <li key={i}>{inline(l.replace(/^\s*([-*•]|\d+\.)\s+/, ""), `${b}-${i}`)}</li>)}
+            </ul>
+          );
+        }
+        return <p key={b}>{lines.map((l, i) => <span key={i}>{i > 0 && <br />}{inline(l, `${b}-${i}`)}</span>)}</p>;
+      })}
+    </div>
+  );
+}
 
 export function HelpChat() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [draft, setDraft] = useState("");
+  const [ai, setAi] = useState<boolean | null>(null);
+  const [thinking, setThinking] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const log = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) input.current?.focus();
-  }, [open]);
+    if (open && ai === null) api<{ available: boolean }>("/assistant").then((r) => setAi(r.available), () => setAi(false));
+  }, [open, ai]);
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
-  }, [messages, open]);
+  }, [messages, open, thinking]);
 
   // Same screens as the WhatsApp button: these keep their own buttons in that corner.
   if (["/dashboard/messages/", "/dashboard/properties/", "/admin"].some((p) => pathname.startsWith(p))) return null;
 
-  function ask(text: string) {
-    const clean = text.trim().slice(0, 300);
-    if (!clean) return;
-    setMessages((m) => [...m, { from: "user", text: clean }, { from: "bot", ...answer(clean) }]);
+  async function ask(text: string) {
+    const clean = text.trim().slice(0, 1000);
+    if (!clean || thinking) return;
     setDraft("");
+    if (!ai) {
+      setMessages((m) => [...m, { from: "user", text: clean }, { from: "bot", ...answer(clean) }]);
+      return;
+    }
+    const next: Message[] = [...messages, { from: "user", text: clean }];
+    setMessages(next);
+    setThinking(true);
+    try {
+      // The welcome line is ours, not the model's, so the conversation sent starts with the visitor.
+      const history = next.slice(1).slice(-20).map((m) => ({ role: m.from === "user" ? ("user" as const) : ("assistant" as const), content: m.text.slice(0, 2000) }));
+      const { reply } = await api<{ reply: string }>("/assistant", { body: { messages: history, page: pathname } });
+      setMessages((m) => [...m, { from: "bot", text: reply }]);
+    } catch (err) {
+      const msg = err instanceof ApiError && err.code === "RATE_LIMITED" ? "You've asked a lot of questions in a short time. Please wait a few minutes and try again." : "Sorry, something went wrong. Please try again.";
+      setMessages((m) => [...m, { from: "bot", text: msg, links: [{ label: "Chat with a person", href: whatsappLink(brand.supportWhatsapp, `${GENERAL_ENQUIRY} ${clean}`.slice(0, 500)) }] }]);
+    } finally {
+      setThinking(false);
+    }
   }
 
   const bottom = "calc(max(1rem, env(safe-area-inset-bottom)) + 4.5rem)";
@@ -131,24 +199,24 @@ export function HelpChat() {
       {open && (
         <div
           role="dialog"
-          aria-label={`${brand.shortName} helper`}
+          aria-label={`${brand.shortName} assistant`}
           onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
           className="fixed right-4 z-[60] flex max-h-[min(70vh,calc(100dvh-19rem))] w-[min(22rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[var(--shadow-pop)]"
           style={{ bottom: `calc(${bottom} + 4rem)` }}
         >
           <div className="flex items-center justify-between bg-navy-900 px-4 py-3 text-white">
             <div>
-              <p className="font-semibold">{brand.shortName} helper</p>
-              <p className="text-xs text-white/70">Automatic answers · not a person</p>
+              <p className="font-semibold">{brand.shortName} assistant</p>
+              <p className="text-xs text-white/70">{ai ? "AI assistant · not a person · can make mistakes" : "Automatic answers · not a person"}</p>
             </div>
-            <button type="button" onClick={() => setOpen(false)} aria-label="Close helper" className="rounded-full p-1 hover:bg-white/10">
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close assistant" className="rounded-full p-1 hover:bg-white/10">
               <X className="h-5 w-5" />
             </button>
           </div>
           <div ref={log} className="flex-1 space-y-3 overflow-y-auto p-4 text-sm" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={cn("max-w-[85%] rounded-2xl px-3 py-2", m.from === "user" ? "ml-auto bg-emerald-600 text-white" : "bg-canvas text-ink")}>
-                <p>{m.text}</p>
+                {m.from === "bot" ? <RichText text={m.text} onNavigate={() => setOpen(false)} /> : <p className="whitespace-pre-wrap">{m.text}</p>}
                 {m.links && (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {m.links.map((l) =>
@@ -166,6 +234,11 @@ export function HelpChat() {
                 )}
               </div>
             ))}
+            {thinking && (
+              <div className="inline-flex items-center gap-1 rounded-2xl bg-canvas px-3 py-3" role="status" aria-label="The assistant is typing">
+                {[0, 150, 300].map((d) => <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${d}ms` }} />)}
+              </div>
+            )}
             {messages.length === 1 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {TOPICS.slice(0, 5).map((t) => (
@@ -187,12 +260,12 @@ export function HelpChat() {
               ref={input}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              maxLength={300}
-              placeholder="Ask a question"
+              maxLength={1000}
+              placeholder={thinking ? "Waiting for the answer…" : "Ask a question"}
               aria-label="Your question"
               className="h-10 min-w-0 flex-1 rounded-full border border-line px-4 text-sm focus:border-navy-900 focus:outline-none"
             />
-            <button type="submit" aria-label="Send" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-900 text-white hover:bg-navy-800">
+            <button type="submit" aria-label="Send" disabled={thinking || !draft.trim()} className="disabled:opacity-50 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-900 text-white hover:bg-navy-800">
               <Send className="h-4 w-4" />
             </button>
           </form>
@@ -202,7 +275,7 @@ export function HelpChat() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={open ? "Close helper" : `Ask the ${brand.shortName} helper`}
+        aria-label={open ? "Close assistant" : `Ask the ${brand.shortName} assistant`}
         className="fixed right-4 z-[35] inline-flex items-center gap-2 rounded-full bg-navy-900 p-3.5 font-semibold text-white shadow-[var(--shadow-pop)] transition hover:scale-105 focus-visible:ring-4 focus-visible:ring-navy-900/30 focus-visible:outline-none active:scale-95 sm:px-5 sm:py-3"
         style={{ bottom }}
       >

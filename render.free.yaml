@@ -34,6 +34,9 @@ services:
         generateValue: true
       - key: APP_URL
         sync: false # https://sukkot-web-test.onrender.com, or whatever URL Render gives the service
+      # Turns on the AI chat assistant. Leave empty to keep the built-in fixed answers.
+      - key: ANTHROPIC_API_KEY
+        sync: false
       # First administrator, created on start while none exists. Remove ADMIN_PASSWORD after signing in.
       - key: ADMIN_EMAIL
         sync: false

@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 
-const FAQS = [
+export const FAQS: [string, string][] = [
   ["Is it free to search and contact owners?", "Yes. Browsing, saving properties, sending enquiries and booking inspections are free for tenants and buyers."],
   ["How do I list my property?", "Create an owner or agent account, add your property with photos and details, and submit it for review. A moderator checks it before it goes live, usually within one working day."],
   ["What does “Documents Reviewed” mean?", "Our verification team has looked at the ownership documents the lister supplied, such as a conveyance or survey plan, and found them consistent with the listing. It is not a legal title search and does not replace checks at the Ministry of Lands or advice from a lawyer."],
