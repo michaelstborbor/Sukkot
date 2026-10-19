@@ -17,7 +17,7 @@ export interface SettingTypes {
   "billing.manual": ManualBillingSettings;
   /** Online mobile money checkout. Secret fields are stored encrypted (see `encryptSecret`). */
   "payments.mobileMoney": MobileMoneySettings;
-  /** Background photo of the homepage hero, stored at several widths. Null: the drawn panorama. */
+  /** Background photo of the homepage hero, stored at several widths. Null: the bundled default photo. */
   "site.heroImage": HeroImageSettings | null;
 }
 

@@ -121,7 +121,7 @@ export function CheckoutButton({
             {methods.length > 0 && canTransfer && (
               <div className="grid grid-cols-2 gap-1 rounded-xl bg-navy-50 p-1 text-sm font-semibold" role="tablist">
                 {(["online", "transfer"] as const).map((m) => (
-                  <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={cn("rounded-lg px-3 py-2", mode === m ? "bg-white shadow-sm" : "text-muted")}>
+                  <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)} className={cn("rounded-lg px-3 py-2", mode === m ? "bg-surface shadow-sm" : "text-muted")}>
                     {m === "online" ? "Pay now" : "Pay by transfer"}
                   </button>
                 ))}

@@ -41,7 +41,7 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <nav className="flex flex-wrap gap-1" aria-label="Status">
           {tabs.map((t) => (
-            <Link key={t} href={`?status=${t}`} aria-current={t === status ? "page" : undefined} className={cn("rounded-full px-3 py-1 text-sm font-medium", t === status ? "bg-navy-900 text-white" : "bg-white text-ink ring-1 ring-line hover:bg-navy-50")}>
+            <Link key={t} href={`?status=${t}`} aria-current={t === status ? "page" : undefined} className={cn("rounded-full px-3 py-1 text-sm font-medium", t === status ? "bg-navy-900 text-white" : "bg-surface text-ink ring-1 ring-line hover:bg-navy-50")}>
               {LISTING_STATUS_LABELS[t]}
             </Link>
           ))}

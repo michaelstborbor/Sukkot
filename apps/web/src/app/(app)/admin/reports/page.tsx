@@ -32,7 +32,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
       <PageHeader title="Reports" description="Fraud, misleading listings, abuse and support requests from users." />
       <nav className="mb-4 flex gap-1">
         {[["open", "Open"], ["closed", "Closed"]].map(([k, l]) => (
-          <Link key={k} href={`?view=${k}`} className={cn("rounded-full px-3 py-1 text-sm font-medium", (k === "open") === open ? "bg-navy-900 text-white" : "bg-white ring-1 ring-line")}>{l}</Link>
+          <Link key={k} href={`?view=${k}`} className={cn("rounded-full px-3 py-1 text-sm font-medium", (k === "open") === open ? "bg-navy-900 text-white" : "bg-surface ring-1 ring-line")}>{l}</Link>
         ))}
       </nav>
       {rows.length === 0 ? (

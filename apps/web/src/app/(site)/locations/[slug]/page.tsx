@@ -56,7 +56,7 @@ export default async function LocationPage({ params }: { params: Promise<{ slug:
       {loc.children.length > 0 && (
         <div className="mb-8 flex flex-wrap gap-2">
           {loc.children.map((c) => (
-            <Link key={c.id} href={`/locations/${c.slug}`} className="rounded-full border border-line bg-white px-3 py-1 text-sm hover:border-navy-600">{c.name}</Link>
+            <Link key={c.id} href={`/locations/${c.slug}`} className="rounded-full border border-line bg-surface px-3 py-1 text-sm hover:border-navy-600">{c.name}</Link>
           ))}
         </div>
       )}

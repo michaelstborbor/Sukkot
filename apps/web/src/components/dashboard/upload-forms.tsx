@@ -144,7 +144,11 @@ export function HeroImageUpload({ current, currentAlt }: { current: string | nul
         // eslint-disable-next-line @next/next/no-img-element
         <img src={current} alt="Current homepage background" className="aspect-[21/9] w-full rounded-xl object-cover" />
       ) : (
-        <div className="flex aspect-[21/9] w-full items-center justify-center rounded-xl bg-navy-900 text-sm text-white/70">Using the drawn hills and sea</div>
+        <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl bg-navy-900">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/hero/salone-hillside-768.webp" alt="" className="h-full w-full object-cover" />
+          <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white">Default photo</span>
+        </div>
       )}
       <Field id="hero-alt" label="Describe the photo" optional hint="Read aloud by screen readers, for example “Freetown from Leicester Peak at sunset”.">
         <Input id="hero-alt" value={alt} maxLength={200} onChange={(e) => setAlt(e.target.value)} />
@@ -152,7 +156,7 @@ export function HeroImageUpload({ current, currentAlt }: { current: string | nul
       <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="hero-photo" onChange={(e) => upload(e.target.files?.[0])} />
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" loading={busy} onClick={() => ref.current?.click()}>{current ? "Replace photo" : "Upload photo"}</Button>
-        {current && <ActionButton path="/admin/settings/hero" method="DELETE" label="Use the drawn background" variant="ghost" success="Background photo removed" />}
+        {current && <ActionButton path="/admin/settings/hero" method="DELETE" label="Use the default photo" variant="ghost" success="Background photo removed" />}
       </div>
     </div>
   );

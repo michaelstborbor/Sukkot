@@ -340,7 +340,7 @@ export function DocumentManager({ propertyId, documents, canUpload = true }: { p
       {documents.length === 0 ? (
         <p className="text-sm text-muted">No documents uploaded.</p>
       ) : (
-        <ul className="divide-y divide-line rounded-xl border border-line bg-white">
+        <ul className="divide-y divide-line rounded-xl border border-line bg-surface">
           {documents.map((d) => (
             <li key={d.id} className="flex items-center justify-between gap-3 p-3 text-sm">
               <span className="flex min-w-0 items-center gap-2">

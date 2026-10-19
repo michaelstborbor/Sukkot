@@ -22,7 +22,7 @@ export default function GetTheAppPage() {
   ].filter((s): s is { href: string; label: string } => !!s);
 
   return (
-    <div className="bg-white">
+    <div className="bg-surface">
       <header className="border-b border-line bg-gradient-to-b from-navy-50 to-white">
         <div className="container-page grid max-w-5xl items-center gap-10 py-12 sm:py-16 md:grid-cols-[1.3fr_1fr]">
           <div>

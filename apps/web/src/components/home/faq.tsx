@@ -12,7 +12,7 @@ const FAQS = [
 
 export function Faq() {
   return (
-    <div className="divide-y divide-line rounded-2xl border border-line bg-white">
+    <div className="divide-y divide-line rounded-2xl border border-line bg-surface">
       {FAQS.map(([q, a]) => (
         <details key={q} className="group px-5 py-1 [&_summary::-webkit-details-marker]:hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left font-semibold text-navy-900">

@@ -26,7 +26,7 @@ export function HowItWorks() {
   const [tab, setTab] = useState<keyof typeof FLOWS>("rent");
   return (
     <div>
-      <div role="tablist" aria-label="How it works" className="mx-auto mb-8 flex w-fit gap-1 rounded-full bg-white p-1 ring-1 ring-line">
+      <div role="tablist" aria-label="How it works" className="mx-auto mb-8 flex w-fit gap-1 rounded-full bg-surface p-1 ring-1 ring-line">
         {(["rent", "buy", "list"] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} type="button" onClick={() => setTab(t)} className={cn("rounded-full px-5 py-2 text-sm font-semibold capitalize transition", tab === t ? "bg-navy-900 text-white" : "text-muted hover:text-navy-900")}>
             {t === "list" ? "List" : t === "rent" ? "Rent" : "Buy"}

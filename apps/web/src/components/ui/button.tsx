@@ -4,13 +4,13 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const variants = {
-  primary: "bg-navy-900 text-white hover:bg-navy-800 shadow-sm hover:shadow-md",
-  secondary: "bg-emerald-700 text-white hover:bg-emerald-800 shadow-sm hover:shadow-md",
+  primary: "bg-clay-600 text-white hover:bg-clay-700 shadow-sm hover:shadow-md",
+  secondary: "bg-navy-900 text-white hover:bg-navy-800 shadow-sm hover:shadow-md",
   accent: "bg-gold-500 text-navy-950 hover:bg-gold-600 hover:text-white shadow-sm",
-  outline: "border border-line bg-white text-ink hover:border-navy-600 hover:bg-navy-50",
+  outline: "border border-line bg-surface text-ink hover:border-clay-600 hover:bg-navy-50",
   ghost: "text-ink hover:bg-navy-50",
   danger: "bg-danger text-white hover:bg-red-800",
-  link: "text-emerald-700 underline-offset-4 hover:underline px-0 h-auto",
+  link: "text-clay-700 underline-offset-4 hover:underline px-0 h-auto",
 } as const;
 
 const sizes = {

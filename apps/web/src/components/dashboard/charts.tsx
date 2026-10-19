@@ -27,7 +27,7 @@ export function ActivityChart({ data }: { data: Point[] }) {
           <YAxis yAxisId="v" tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
           <YAxis yAxisId="e" orientation="right" tickLine={false} axisLine={false} fontSize={12} allowDecimals={false} />
           <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e3e6ec" }} />
-          <Line yAxisId="v" type="monotone" dataKey="views" name="Views" stroke="#0B1F3A" strokeWidth={2.5} dot={false} />
+          <Line yAxisId="v" type="monotone" dataKey="views" name="Views" stroke="#B65329" strokeWidth={2.5} dot={false} />
           <Line yAxisId="e" type="monotone" dataKey="enquiries" name="Enquiries" stroke="#0F766E" strokeWidth={2.5} dot={{ r: 3 }} />
         </LineChart>
       </ResponsiveContainer>

@@ -9,6 +9,7 @@ const badgeTones = {
   warning: "bg-warning-50 text-warning ring-amber-100",
   danger: "bg-danger-50 text-danger ring-red-100",
   dark: "bg-navy-900/85 text-white ring-white/10 backdrop-blur",
+  light: "bg-surface/90 text-ink ring-transparent font-medium",
 } as const;
 
 export function Badge({ tone = "neutral", className, children, title }: { tone?: keyof typeof badgeTones; className?: string; children: React.ReactNode; title?: string }) {
@@ -29,7 +30,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function EmptyState({ icon, title, body, action }: { icon?: React.ReactNode; title: string; body?: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-line bg-white px-6 py-12 text-center">
+    <div className="flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-line bg-surface px-6 py-12 text-center">
       {icon && <div className="mb-3 rounded-full bg-navy-50 p-3 text-navy-700">{icon}</div>}
       <h3 className="text-base font-semibold text-ink">{title}</h3>
       {body && <p className="mt-1 max-w-md text-sm text-muted">{body}</p>}
@@ -65,7 +66,7 @@ export function Pagination({ page, totalPages, hrefFor }: { page: number; totalP
     if (p === 1 || p === totalPages || Math.abs(p - page) <= 1) pages.push(p);
     else if (pages[pages.length - 1] !== "…") pages.push("…");
   }
-  const item = "inline-flex h-10 min-w-10 items-center justify-center rounded-[10px] border border-line bg-white px-3 text-sm font-semibold transition hover:border-navy-600";
+  const item = "inline-flex h-10 min-w-10 items-center justify-center rounded-[10px] border border-line bg-surface px-3 text-sm font-semibold transition hover:border-navy-600";
   return (
     <nav aria-label="Pagination" className="mt-10 flex flex-wrap items-center justify-center gap-1.5">
       {page > 1 && (
@@ -114,8 +115,8 @@ export function SectionHeading({ eyebrow, title, body, action, className }: { ey
   return (
     <div className={cn("mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="max-w-2xl">
-        {eyebrow && <p className="mb-2 text-xs font-bold tracking-[0.14em] text-emerald-700 uppercase">{eyebrow}</p>}
-        <h2 className="font-display text-3xl font-semibold text-navy-900 sm:text-4xl">{title}</h2>
+        {eyebrow && <p className="mb-2 text-xs font-bold tracking-[0.14em] text-clay-600 uppercase">{eyebrow}</p>}
+        <h2 className="font-display text-3xl text-ink sm:text-4xl">{title}</h2>
         {body && <p className="mt-3 text-base text-muted">{body}</p>}
       </div>
       {action}

@@ -34,7 +34,7 @@ export default async function AdminVerificationPage({ searchParams }: { searchPa
       <Notice className="mb-4">Opening a document is recorded in the audit log. Never download documents to personal devices.</Notice>
       <nav className="mb-4 flex gap-1">
         {(["pending", "decided"] as const).map((s) => (
-          <Link key={s} href={`?status=${s}`} className={cn("rounded-full px-3 py-1 text-sm font-medium", s === status ? "bg-navy-900 text-white" : "bg-white ring-1 ring-line")}>
+          <Link key={s} href={`?status=${s}`} className={cn("rounded-full px-3 py-1 text-sm font-medium", s === status ? "bg-navy-900 text-white" : "bg-surface ring-1 ring-line")}>
             {s === "pending" ? "Waiting for review" : "Decided"}
           </Link>
         ))}

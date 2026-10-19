@@ -34,7 +34,7 @@ export function DashboardNav({ items, title }: { items: NavItem[]; title: string
           <ul className="space-y-0.5">
             {items.map((i) => (
               <li key={i.href}>
-                <Link href={i.href} aria-current={active(i.href) ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition", active(i.href) ? "bg-navy-900 text-white" : "text-ink hover:bg-white")}>
+                <Link href={i.href} aria-current={active(i.href) ? "page" : undefined} className={cn("flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition", active(i.href) ? "bg-navy-900 text-white" : "text-ink hover:bg-surface")}>
                   <span className="opacity-80">{i.icon}</span>
                   <span className="flex-1">{i.label}</span>
                   {!!i.badge && <span className="rounded-full bg-gold-500 px-1.5 text-[11px] font-bold text-navy-950">{i.badge}</span>}
