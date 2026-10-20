@@ -10,6 +10,7 @@ import { Avatar } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { href: "/", label: "Home", match: "/" },
   { href: "/properties?purpose=SALE", label: "Buy", match: "SALE" },
   { href: "/properties?purpose=RENT", label: "Rent", match: "RENT" },
   { href: "/properties?category=LAND", label: "Land", match: "LAND" },
@@ -85,10 +86,10 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
           Skip to content
         </a>
         <div className="container-page flex h-16 items-center justify-between gap-4">
-          <Logo />
-          <nav aria-label="Main" className="hidden items-center gap-6 lg:flex">
+          <div className="shrink-0"><Logo /></div>
+          <nav aria-label="Main" className="hidden items-center gap-4 lg:flex xl:gap-6">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="nav-underline py-1 text-sm text-muted hover:text-ink">
+              <Link key={n.href} href={n.href} className="nav-underline whitespace-nowrap py-1 text-[15px] font-bold text-ink/90 hover:text-ink xl:text-base">
                 {n.label}
               </Link>
             ))}
@@ -151,7 +152,7 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
         <div style={{ top: menuTop }} className="fixed inset-x-0 bottom-0 z-40 animate-[fade-in_0.18s_ease-out] overflow-y-auto bg-surface lg:hidden">
           <nav aria-label="Mobile" className="container-page flex flex-col gap-1 py-4">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="rounded-lg px-3 py-3 text-lg font-semibold text-navy-900 hover:bg-navy-50">
+              <Link key={n.href} href={n.href} className="rounded-lg px-3 py-3 text-lg font-bold text-navy-900 hover:bg-navy-50">
                 {n.label}
               </Link>
             ))}
