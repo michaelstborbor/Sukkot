@@ -12,7 +12,7 @@ async function webhook(body: Record<string, unknown>, signature?: string) {
 
 async function startPlanPayment() {
   const user = await makeUser(["OWNER"]);
-  const plan = await db.subscriptionPlan.findFirstOrThrow({ where: { priceMinor: { gt: 0 }, isActive: true } });
+  const plan = await db.subscriptionPlan.findFirstOrThrow({ where: { priceMinor: { gt: 0 }, isActive: true, audience: "LANDLORD" } });
   const key = randomUUID();
   const p = await initiatePayment(user, { method: "SANDBOX", purpose: "PLATFORM_SUBSCRIPTION", subscriptionPlanId: plan.id, idempotencyKey: key });
   return { user, plan, key, p, tx: await db.paymentTransaction.findUniqueOrThrow({ where: { id: p.id } }) };

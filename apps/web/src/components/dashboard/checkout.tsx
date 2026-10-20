@@ -21,7 +21,7 @@ export interface TransferDetails {
 type Mode = "online" | "transfer";
 
 /**
- * Checkout for platform-collected items only (plans, promotions, inspection visits, listing slots). The amount shown is
+ * Checkout for platform-collected items only (plans, promotions, visits, listing slots, booking and service fees). The amount shown is
  * informational: the server computes the charge from the plan or price setting.
  * Two ways to pay: online through a mobile money provider (activates when the provider confirms),
  * or by transfer to Sukkot Salone's own wallet or bank account (activates when finance confirms).
@@ -35,6 +35,8 @@ export function CheckoutButton({
   purpose,
   subscriptionPlanId,
   propertyId,
+  inspectionId,
+  serviceFeeId,
   variant = "primary",
 }: {
   label: string;
@@ -45,6 +47,8 @@ export function CheckoutButton({
   purpose: PlatformCheckoutPurpose;
   subscriptionPlanId?: string;
   propertyId?: string;
+  inspectionId?: string;
+  serviceFeeId?: string;
   variant?: ButtonVariant;
 }) {
   const router = useRouter();
@@ -110,10 +114,10 @@ export function CheckoutButton({
               e.preventDefault();
               if (mode === "online") {
                 if (!method) return;
-                online.submit({ method, purpose, subscriptionPlanId, propertyId, payerPhone: needsPhone ? phone : undefined, idempotencyKey: key });
+                online.submit({ method, purpose, subscriptionPlanId, propertyId, inspectionId, serviceFeeId, payerPhone: needsPhone ? phone : undefined, idempotencyKey: key });
               } else {
                 if (!channel) return;
-                manual.submit({ channel, purpose, subscriptionPlanId, propertyId, externalReference: txId, payerPhone: phone || undefined, idempotencyKey: key });
+                manual.submit({ channel, purpose, subscriptionPlanId, propertyId, inspectionId, serviceFeeId, externalReference: txId, payerPhone: phone || undefined, idempotencyKey: key });
               }
             }}
           >

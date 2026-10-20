@@ -35,3 +35,7 @@ qualified in Sierra Leone before the platform takes real users or money.
    slots, as set out in the draft `/refunds` page (including the 14-day visit promise and 7 working
    days to pay a refund back).
 9. **Tax**: whether platform fees attract GST and how receipts must be issued.
+10. **Service fee and booking fee**: tenants and buyers now owe Sukkot Salone 5% of rent, lease or
+    purchase money once it is paid, and Le 250 to book an inspection. Confirm whether charging the
+    tenant or buyer this way needs an estate agency licence or registration, how it must be disclosed
+    before an inspection or offer, and that the refund terms in `/refunds` are fair.

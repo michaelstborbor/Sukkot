@@ -5,6 +5,7 @@
  * - ends featured promotions that have run out
  * - expires verification badges past their validity date
  * - ends paid plans that have run out, and reminds subscribers a few days before (once per period)
+ * - drops the search lift of plans that have run out (or moves it to a renewal that has started)
  * - removes expired sessions, auth tokens and rate-limit buckets
  * Pending payments are never expired here: a late provider confirmation must still be able to land.
  */
@@ -65,13 +66,25 @@ async function main() {
       });
     }
 
+    // Search lift from a plan that has run out: drop it, or carry on with a renewal that has started.
+    const lifted = await db.user.findMany({ where: { searchBoost: { gt: 0 }, searchBoostUntil: { lt: now } }, select: { id: true } });
+    for (const u of lifted) {
+      const current = await db.subscription.findFirst({
+        where: { userId: u.id, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gt: now } },
+        include: { plan: { select: { searchBoost: true } } },
+        orderBy: [{ plan: { searchBoost: "desc" } }, { endsAt: "desc" }],
+      });
+      const boost = current?.plan.searchBoost ?? 0;
+      await db.user.update({ where: { id: u.id }, data: { searchBoost: boost, searchBoostUntil: boost ? current!.endsAt : null } });
+    }
+
     const badges = await db.verificationRequest.updateMany({ where: { status: "VERIFIED", expiresAt: { lt: now } }, data: { status: "EXPIRED" } });
     const sessions = await db.session.deleteMany({ where: { expiresAt: { lt: now } } });
     const tokens = await db.authToken.deleteMany({ where: { expiresAt: { lt: now } } });
     const buckets = await db.rateLimitBucket.deleteMany({ where: { resetAt: { lt: now } } });
 
     console.log(
-      JSON.stringify({ at: now.toISOString(), offersExpired: offers.length, promotionsEnded: unfeatured, plansReminded: reminded, plansEnded: ended.length, badgesExpired: badges.count, sessions: sessions.count, tokens: tokens.count, rateLimitBuckets: buckets.count }),
+      JSON.stringify({ at: now.toISOString(), offersExpired: offers.length, promotionsEnded: unfeatured, plansReminded: reminded, plansEnded: ended.length, searchLiftsUpdated: lifted.length, badgesExpired: badges.count, sessions: sessions.count, tokens: tokens.count, rateLimitBuckets: buckets.count }),
     );
   } finally {
     await db.$disconnect();

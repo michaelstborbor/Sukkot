@@ -26,7 +26,7 @@ export const metadata: Metadata = { title: "Site settings" };
 export default async function AdminSettingsPage() {
   await requirePagePermission("admin:settings.manage", "/admin/settings");
   clearMobileMoneyConfig();
-  const [announcement, promo, visit, shoot, slot, manual, mobileMoney, mm, hero] = await Promise.all([
+  const [announcement, promo, visit, shoot, slot, manual, mobileMoney, mm, hero, viewing, success] = await Promise.all([
     getSetting("site.announcement"),
     getSetting("promotion.featured7d"),
     getSetting("visit.inspection"),
@@ -36,6 +36,8 @@ export default async function AdminSettingsPage() {
     getSetting("payments.mobileMoney"),
     loadMobileMoneyConfig(),
     getSetting("site.heroImage"),
+    getSetting("fees.viewing"),
+    getSetting("fees.success"),
   ]);
   const om = mobileMoney.orangeMoney;
   const am = mobileMoney.afrimoney;
@@ -45,6 +47,7 @@ export default async function AdminSettingsPage() {
     { key: "promotionPrice", title: "Featured listing price (7 days)", hint: "Leave the amount empty to stop selling promotions.", value: promo },
     { key: "visitPrice", title: "Inspection visit price", hint: "What a lister pays for staff to visit, check and photograph a property, earning the dated \u201cInspected by Sukkot\u201d badge. Leave empty to stop selling visits.", value: visit },
     { key: "photoShootPrice", title: "Photo shoot price (per property)", hint: "What a lister pays, non-refundable, for our team to take the photos and video for a new listing. Leave empty to stop offering photo shoots.", value: shoot },
+    { key: "viewingFee", title: "Inspection booking fee", hint: "What a tenant or buyer pays Sukkot Salone to book an inspection of a listing. The request reaches the lister once it is paid. Leave empty to make booking free.", value: viewing },
     { key: "slotPrice", title: "Extra listing slot price", hint: "A one-off payment for one more active listing on top of the plan's allowance. The slot never expires. Leave empty to stop selling slots.", value: slot },
   ];
   return (
@@ -81,6 +84,16 @@ export default async function AdminSettingsPage() {
           />
         </section>
       ))}
+      <section className="card p-5">
+        <h2 className="mb-1 font-bold text-navy-900">Service fee on rent, lease and purchase payments</h2>
+        <p className="mb-3 text-sm text-muted">
+          The percentage a tenant or buyer pays Sukkot Salone once rent, lease or purchase money has been paid to the landlord or seller. It is charged on each such payment the landlord or seller records or confirms here (not on security deposits), and staff can raise it for deals agreed through our team under Service fees. Leave empty to stop charging it.
+        </p>
+        <JsonForm
+          path="/admin/settings"
+          fields={[{ name: "successFee.percent", label: "Percentage", optional: true, defaultValue: success ? String(success.basisPoints / 100) : "", placeholder: "5" }]}
+        />
+      </section>
       <section className="card p-5">
         <h2 className="mb-1 font-bold text-navy-900">Pay by transfer</h2>
         <p className="mb-3 text-sm text-muted">

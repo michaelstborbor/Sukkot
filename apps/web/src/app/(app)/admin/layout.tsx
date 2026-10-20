@@ -1,4 +1,4 @@
-import { BadgeCheck, Building2, Camera, ClipboardList, CreditCard, Flag, LayoutDashboard, ListChecks, MapPin, Settings, Shapes, Users, Briefcase } from "lucide-react";
+import { BadgeCheck, Building2, Camera, ClipboardList, CreditCard, Flag, LayoutDashboard, ListChecks, MapPin, Percent, Settings, Shapes, Users, Briefcase } from "lucide-react";
 import { hasPermission, type Permission } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
@@ -8,11 +8,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const actor = await requirePagePermission("admin:access", "/admin");
-  const [pending, visits, verif, reports] = await Promise.all([
+  const [pending, visits, verif, reports, feesDue] = await Promise.all([
     db.property.count({ where: { listingStatus: "PENDING_REVIEW" } }),
     db.siteVisit.count({ where: { status: "REQUESTED" } }),
     db.verificationRequest.count({ where: { status: "PENDING_REVIEW" } }),
     db.report.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
+    db.serviceFee.count({ where: { status: "DUE" } }),
   ]);
   const icon = (I: typeof Users) => <I className="h-4 w-4" />;
   const all: (NavItem & { perm: Permission })[] = [
@@ -27,6 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/catalog", label: "Types and amenities", icon: icon(Shapes), perm: "admin:catalog.manage" },
     { href: "/admin/plans", label: "Plans", icon: icon(ListChecks), perm: "admin:plans.manage" },
     { href: "/admin/payments", label: "Payments", icon: icon(CreditCard), perm: "admin:payments.view" },
+    { href: "/admin/fees", label: "Service fees", icon: icon(Percent), perm: "admin:payments.view", badge: feesDue },
     { href: "/admin/settings", label: "Site settings", icon: icon(Settings), perm: "admin:settings.manage" },
     { href: "/admin/audit", label: "Audit log", icon: icon(ClipboardList), perm: "admin:audit.view" },
   ];

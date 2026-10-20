@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/misc";
 
 export const metadata: Metadata = { title: "Plans" };
 
-function fields(p?: { code: string; name: string; audience: string; description: string; priceMinor: bigint; currency: string; periodDays: number; maxListings: number | null; featuredSlots: number; features: string[]; isActive: boolean }): JsonField[] {
+function fields(p?: { code: string; name: string; audience: string; description: string; priceMinor: bigint; currency: string; periodDays: number; maxListings: number | null; featuredSlots: number; searchBoost: number; areaSuggestions: number; features: string[]; isActive: boolean }): JsonField[] {
   return [
     { name: "code", label: "Code", defaultValue: p?.code ?? "", hint: "Lowercase letters, numbers, dashes. Same code updates the plan." },
     { name: "name", label: "Name", defaultValue: p?.name ?? "" },
@@ -18,6 +18,8 @@ function fields(p?: { code: string; name: string; audience: string; description:
     { name: "periodDays", label: "Period (days)", type: "number", defaultValue: String(p?.periodDays ?? 30) },
     { name: "maxListings", label: "Listing limit", type: "number", optional: true, defaultValue: p?.maxListings ? String(p.maxListings) : "" },
     { name: "featuredSlots", label: "Featured slots", type: "number", defaultValue: String(p?.featuredSlots ?? 0) },
+    { name: "searchBoost", label: "Search lift", type: "number", defaultValue: String(p?.searchBoost ?? 0), hint: "0 for none. Listings of higher-lift plans show first in search, after featured listings." },
+    { name: "areaSuggestions", label: "Area suggestions per period", type: "number", defaultValue: String(p?.areaSuggestions ?? 0), hint: "Listings the subscriber can send to people searching in that area." },
     { name: "description", label: "Description", type: "textarea", defaultValue: p?.description ?? "" },
     { name: "features", label: "Features (one per line)", type: "list", defaultValue: p?.features.join("\n") ?? "" },
     { name: "isActive", label: "Plan is on sale", type: "checkbox", defaultValue: p?.isActive ?? true, wide: true },

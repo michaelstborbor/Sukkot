@@ -28,7 +28,13 @@ Honest list of what is incomplete or needs work before production.
   automatic statement import yet.
 - Plan prices are starting guesses, not market research. Set real prices in Admin → Plans. The
   inspection visit (Le 350) and extra listing slot (Le 100) prices are starting guesses too; change
-  them in Admin → Site settings.
+  them in Admin → Site settings. The same goes for the tenant's inspection booking fee (Le 250) and
+  the 5% service fee on rent, lease and purchase payments, and for the agent packages (2 free
+  listings, then Le 500, Le 1,000 or Le 2,000 every 30 days).
+- The service fee is raised automatically only on rent and sale payments recorded in the app. Deals
+  done outside the app need staff to raise the fee under Admin → Service fees, and nothing stops a
+  tenant and landlord from not recording a payment.
+- Agents' area suggestions reach only people who saved a search for that area with alerts on.
 - Search alerts go out in the app and by email (when email is switched on), not by SMS or WhatsApp.
   They are sent when a moderator first approves a listing; a listing that is paused and resumed does
   not alert again.

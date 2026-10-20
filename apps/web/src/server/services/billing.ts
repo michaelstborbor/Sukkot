@@ -35,9 +35,41 @@ export async function activeSubscription(userId: string, client: Client = db, no
   return subs.reduce<ActiveSubscription | null>((best, s) => (!best || !stronger(best.plan, s.plan) ? s : best), null);
 }
 
-/** The free plan everyone is on without a paid subscription (the cheapest active plan priced at zero). */
-export function freePlan(client: Client = db) {
-  return client.subscriptionPlan.findFirst({ where: { isActive: true, priceMinor: 0 }, orderBy: { sortOrder: "asc" } });
+export type PlanAudience = "LANDLORD" | "AGENT";
+
+/** Agents get the agent packages; everyone else who lists (owners, landlords, developers) the landlord plans. */
+export async function planAudience(userId: string, client: Client = db): Promise<PlanAudience> {
+  const agent = await client.userRoleAssignment.count({ where: { userId, role: "AGENT" } });
+  return agent ? "AGENT" : "LANDLORD";
+}
+
+/** The free plan a lister is on without a paid subscription: the first active zero-priced plan for their audience. */
+export async function freePlan(client: Client = db, audience: PlanAudience = "LANDLORD") {
+  return (
+    (await client.subscriptionPlan.findFirst({ where: { isActive: true, priceMinor: 0, audience }, orderBy: { sortOrder: "asc" } })) ??
+    client.subscriptionPlan.findFirst({ where: { isActive: true, priceMinor: 0 }, orderBy: { sortOrder: "asc" } })
+  );
+}
+
+/** Refuse a plan meant for another kind of lister, so agents cannot list on the cheaper landlord plans. */
+export async function assertPlanAudience(userId: string, plan: Pick<SubscriptionPlan, "audience" | "name">, client: Client = db) {
+  if (plan.audience !== "LANDLORD" && plan.audience !== "AGENT") return;
+  const audience = await planAudience(userId, client);
+  if (plan.audience !== audience) {
+    throw new AppError("BAD_REQUEST", audience === "AGENT" ? `${plan.name} is for landlords and owners. Choose one of the agent packages.` : `${plan.name} is for agents. Choose one of the landlord plans.`);
+  }
+}
+
+/**
+ * Copy the search ranking lift of a lister's plan onto their account so search can sort by it. Run
+ * when a plan starts and from the scheduled job once `searchBoostUntil` passes, which also picks up
+ * a renewal queued to start then.
+ */
+export async function refreshListerBoost(userId: string, client: Client = db, now = new Date()) {
+  const sub = await activeSubscription(userId, client, now);
+  const boost = sub?.plan.searchBoost ?? 0;
+  await client.user.update({ where: { id: userId }, data: { searchBoost: boost, searchBoostUntil: boost ? sub!.endsAt : null } });
+  return boost;
 }
 
 /** When a renewal of `planId` bought now would start: straight away, or when the current period of that plan ends. */
@@ -65,14 +97,18 @@ export interface Entitlements {
   activeListings: number;
   featuredSlots: number;
   featuredUsed: number;
+  /** Area suggestions included in the paid plan this period, and how many have been sent. */
+  suggestions: number;
+  suggestionsUsed: number;
 }
 
 export async function getEntitlements(userId: string, client: Client = db): Promise<Entitlements> {
   const subscription = await activeSubscription(userId, client);
-  const plan = subscription?.plan ?? (await freePlan(client));
-  const [activeListings, featuredUsed, user] = await Promise.all([
+  const plan = subscription?.plan ?? (await freePlan(client, await planAudience(userId, client)));
+  const [activeListings, featuredUsed, suggestionsUsed, user] = await Promise.all([
     client.property.count({ where: { listerId: userId, listingStatus: { in: [...COUNTED_LISTING_STATUSES] } } }),
     subscription ? client.featuredListing.count({ where: { source: `plan:${subscription.id}` } }) : 0,
+    subscription ? client.listingSuggestion.count({ where: { subscriptionId: subscription.id } }) : 0,
     client.user.findUnique({ where: { id: userId }, select: { extraListingSlots: true } }),
   ]);
   const extraSlots = user?.extraListingSlots ?? 0;
@@ -85,6 +121,8 @@ export async function getEntitlements(userId: string, client: Client = db): Prom
     activeListings,
     featuredSlots: subscription?.plan.featuredSlots ?? 0,
     featuredUsed,
+    suggestions: subscription?.plan.areaSuggestions ?? 0,
+    suggestionsUsed,
   };
 }
 

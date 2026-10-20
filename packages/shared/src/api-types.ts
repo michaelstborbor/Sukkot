@@ -170,6 +170,8 @@ export interface InspectionDTO {
   notes: string | null;
   property: { id: string; title: string; slug: string };
   requester: { id: string; name: string };
+  /** Booking fee the requester pays Sukkot Salone; the landlord or agent only sees paid requests. */
+  fee: { amountMinor: string; currency: Currency; paid: boolean } | null;
   myRole: "REQUESTER" | "REPRESENTATIVE";
   actions: string[];
 }

@@ -373,7 +373,7 @@ export const reportSchema = z
 /* ------------------------------------------------------------- Payments */
 
 /** What a customer can buy from Sukkot Salone at checkout. Everything else is paid between users. */
-export const PLATFORM_CHECKOUT_PURPOSES = ["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION", "INSPECTION_VISIT", "PHOTO_SHOOT", "LISTING_SLOT"] as const;
+export const PLATFORM_CHECKOUT_PURPOSES = ["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION", "INSPECTION_VISIT", "PHOTO_SHOOT", "LISTING_SLOT", "VIEWING_FEE", "SUCCESS_FEE"] as const;
 export type PlatformCheckoutPurpose = (typeof PLATFORM_CHECKOUT_PURPOSES)[number];
 
 export const paymentInitiateSchema = z.object({
@@ -388,6 +388,8 @@ export const paymentInitiateSchema = z.object({
   offerId: idSchema.optional(),
   subscriptionPlanId: idSchema.optional(),
   propertyId: idSchema.optional(),
+  inspectionId: idSchema.optional(),
+  serviceFeeId: idSchema.optional(),
   /** Client-generated key so a retried request never creates a second charge. */
   idempotencyKey: z.string().min(8).max(100),
 });
@@ -405,6 +407,8 @@ export const manualPlatformPaymentSchema = z.object({
   purpose: z.enum(PLATFORM_CHECKOUT_PURPOSES),
   subscriptionPlanId: idSchema.optional(),
   propertyId: idSchema.optional(),
+  inspectionId: idSchema.optional(),
+  serviceFeeId: idSchema.optional(),
   channel: z.enum(MANUAL_PLATFORM_CHANNELS),
   externalReference: trimmed(4, 60),
   payerPhone: phoneSchema.optional(),

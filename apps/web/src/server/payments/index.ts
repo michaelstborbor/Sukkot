@@ -25,7 +25,9 @@ import { audit } from "../audit";
 import { notify } from "../notify";
 import { env } from "../env";
 import { getSetting } from "../services/settings";
-import { FEATURED_PERIOD_DAYS, featuredStart, getEntitlements, renewalStart } from "../services/billing";
+import { assertPlanAudience, FEATURED_PERIOD_DAYS, featuredStart, getEntitlements, refreshListerBoost, renewalStart } from "../services/billing";
+import { chargeServiceFee, settleServiceFee } from "../services/service-fees";
+import { markViewingFeePaid } from "../services/inspections";
 import { loadMobileMoneyConfig } from "./config";
 import { afrimoneyProvider } from "./providers/afrimoney";
 import { orangeMoneyProvider } from "./providers/orange-money";
@@ -88,18 +90,21 @@ interface PricedItem {
   description: string;
   planId?: string;
   propertyId?: string;
+  inspectionId?: string;
+  serviceFeeId?: string;
 }
 
 /** Price a plan or promotion on the server. Whatever amount a client sends is never used. */
 async function pricePlatformItem(
   userId: string,
   purpose: PaymentPurpose,
-  ids: { subscriptionPlanId?: string; propertyId?: string },
+  ids: { subscriptionPlanId?: string; propertyId?: string; inspectionId?: string; serviceFeeId?: string },
 ): Promise<PricedItem> {
   if (purpose === "PLATFORM_SUBSCRIPTION") {
     const plan = ids.subscriptionPlanId ? await db.subscriptionPlan.findFirst({ where: { id: ids.subscriptionPlanId, isActive: true } }) : null;
     if (!plan) throw new AppError("VALIDATION", "Choose a plan", { subscriptionPlanId: "Required" });
     if (plan.priceMinor <= 0n) throw new AppError("BAD_REQUEST", "This plan is free; no payment is needed");
+    await assertPlanAudience(userId, plan);
     return { amountMinor: plan.priceMinor, currency: plan.currency, description: `${plan.name} plan`, planId: plan.id };
   }
   if (purpose === "LISTING_PROMOTION") {
@@ -137,6 +142,22 @@ async function pricePlatformItem(
     if (!price) throw new AppError("NOT_CONFIGURED", "Extra listing slots are not on sale yet");
     return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: "One extra listing slot" };
   }
+  if (purpose === "VIEWING_FEE") {
+    const insp = ids.inspectionId
+      ? await db.inspection.findUnique({ where: { id: ids.inspectionId }, select: { id: true, requesterId: true, status: true, feeMinor: true, feeCurrency: true, feePaidAt: true, propertyId: true, property: { select: { reference: true } } } })
+      : null;
+    if (!insp || insp.requesterId !== userId) throw notFound("Inspection");
+    if (insp.feeMinor === null || !insp.feeCurrency) throw new AppError("BAD_REQUEST", "No fee is due for this inspection");
+    if (insp.feePaidAt) throw new AppError("CONFLICT", "The fee for this inspection is already paid");
+    if (!["REQUESTED", "RESCHEDULE_PROPOSED", "CONFIRMED"].includes(insp.status)) throw new AppError("CONFLICT", "This inspection is no longer open");
+    return { amountMinor: insp.feeMinor, currency: insp.feeCurrency, description: `Inspection booking fee for ${insp.property.reference}`, propertyId: insp.propertyId, inspectionId: insp.id };
+  }
+  if (purpose === "SUCCESS_FEE") {
+    const fee = ids.serviceFeeId ? await db.serviceFee.findUnique({ where: { id: ids.serviceFeeId } }) : null;
+    if (!fee || fee.payerId !== userId) throw notFound("Service fee");
+    if (fee.status !== "DUE") throw new AppError("CONFLICT", fee.status === "PAID" ? "This service fee is already paid" : "This service fee was cancelled");
+    return { amountMinor: fee.amountMinor, currency: fee.currency, description: `Service fee ${fee.reference}`, propertyId: fee.propertyId ?? undefined, serviceFeeId: fee.id };
+  }
   throw new AppError("NOT_CONFIGURED", "Platform fees are not enabled");
 }
 
@@ -170,7 +191,7 @@ export async function initiatePayment(actorIn: Actor | null, input: unknown) {
   }
 
   const item = await pricePlatformItem(actor.id, data.purpose, data);
-  const { amountMinor, currency, description, propertyId } = item;
+  const { amountMinor, currency, description, propertyId, inspectionId, serviceFeeId } = item;
   const subscriptionId = item.planId
     ? (await db.subscription.create({ data: { userId: actor.id, planId: item.planId, status: "PENDING_PAYMENT" } })).id
     : undefined;
@@ -189,6 +210,8 @@ export async function initiatePayment(actorIn: Actor | null, input: unknown) {
       payerPhone: data.payerPhone ?? null,
       subscriptionId,
       propertyId,
+      inspectionId,
+      serviceFeeId,
       events: { create: { type: "created", source: "api", statusAfter: "CREATED" } },
     },
   });
@@ -233,6 +256,7 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
         where: { id: sub.id },
         data: { status: "ACTIVE", startsAt, endsAt: new Date(startsAt.getTime() + sub.plan.periodDays * 86400_000) },
       });
+      await refreshListerBoost(sub.userId, tx);
     }
   }
   if (p.purpose === "LISTING_PROMOTION" && p.propertyId) {
@@ -259,6 +283,8 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
       await notify(staff.map((s) => ({ userId: s.userId, type: "visit.photo_paid", title: "Photo shoot paid", body: `The ${formatMoney(p.amountMinor, p.currency)} photo shoot fee (${p.reference}) is confirmed. Agree a date with the lister.`, link: "/admin/visits" })), tx);
     }
   }
+  if (p.purpose === "VIEWING_FEE" && p.inspectionId) await markViewingFeePaid(tx, p);
+  if (p.purpose === "SUCCESS_FEE") await settleServiceFee(tx, p);
   if (p.purpose === "LISTING_SLOT" && p.payerId) {
     await tx.user.update({ where: { id: p.payerId }, data: { extraListingSlots: { increment: 1 } } });
   }
@@ -425,6 +451,8 @@ export async function submitManualPlatformPayment(actorIn: Actor | null, input: 
         recordedById: actor.id,
         subscriptionId: sub?.id,
         propertyId: item.propertyId,
+        inspectionId: item.inspectionId,
+        serviceFeeId: item.serviceFeeId,
         externalReference,
         notes: item.description,
         providerData: { manualChannel: data.channel },
@@ -541,6 +569,7 @@ export async function recordPayment(actorIn: Actor | null, input: unknown) {
       },
     });
     if (byPayee && data.tenancyId) await applyToSchedule(tx, data.tenancyId, amountMinor);
+    if (byPayee) await chargeServiceFee(tx, created);
     await notify(
       [{ userId: byPayee ? payerId : payeeId, type: "payment.recorded", title: byPayee ? "Payment receipt recorded" : "Please confirm a payment", body: `${formatMoney(amountMinor, data.currency)} (${PAYMENT_PURPOSE_LABELS[data.purpose]}) via ${data.method.replace("_", " ").toLowerCase()}.`, link: "/dashboard/payments" }],
       tx,
@@ -577,6 +606,7 @@ export async function confirmRecordedPayment(actorIn: Actor | null, id: string, 
       data: { status, confirmedByPayeeAt: confirm ? new Date() : null, events: { create: { type: confirm ? "payee_confirmed" : "payee_disputed", source: "payee", statusBefore: p.status, statusAfter: status } } },
     });
     if (confirm && p.tenancyId) await applyToSchedule(tx, p.tenancyId, p.amountMinor);
+    if (confirm) await chargeServiceFee(tx, u);
     if (p.payerId) {
       await notify([{ userId: p.payerId, type: "payment.confirmation", title: confirm ? "Payment confirmed by recipient" : "Payment disputed by recipient", body: `${formatMoney(p.amountMinor, p.currency)} – ${confirm ? "confirmed" : "the recipient says they did not receive this"}.`, link: "/dashboard/payments" }], tx);
     }

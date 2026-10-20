@@ -21,6 +21,7 @@ import {
 } from "@sukkot/shared";
 import { getCurrentActor } from "@/server/auth/actor";
 import { getPropertyDetail, recordView, similarProperties } from "@/server/services/properties";
+import { getSetting } from "@/server/services/settings";
 import { brand } from "@/config/brand";
 import { Gallery } from "@/components/property/gallery";
 import { PropertyActions } from "@/components/property/action-forms";
@@ -99,6 +100,7 @@ export default async function PropertyPage({ params }: Props) {
   if (p.listingStatus === "PUBLISHED") await recordView(p.id).catch(() => undefined);
   const similar = await similarProperties({ id: p.id, category: p.category, purpose: p.purpose, district: p.district });
   const isOwn = actor?.id === p.lister.id;
+  const [fee, successFee] = await Promise.all([getSetting("fees.viewing"), getSetting("fees.success")]);
   const available = p.availability === "AVAILABLE" || p.availability === "UNDER_OFFER";
   const whatsappMessage = listingEnquiry(p, process.env.APP_URL ? `${process.env.APP_URL}/properties/${p.slug}` : undefined);
 
@@ -308,6 +310,8 @@ export default async function PropertyPage({ params }: Props) {
               signedIn={!!actor}
               isOwnListing={isOwn}
               available={available}
+              viewingFee={fee ? formatMoney(BigInt(fee.priceMinor), fee.currency) : null}
+              serviceFee={successFee ? `${successFee.basisPoints / 100}%` : null}
             />
           </div>
 

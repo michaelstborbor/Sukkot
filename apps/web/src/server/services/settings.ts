@@ -13,6 +13,10 @@ export interface SettingTypes {
   "visit.photoShoot": { priceMinor: string; currency: Currency } | null;
   /** Price of one extra listing slot on top of the plan's allowance. Null: not on sale. */
   "listing.extraSlot": { priceMinor: string; currency: Currency } | null;
+  /** What a tenant or buyer pays Sukkot Salone to book an inspection of a listing. Null: booking is free. */
+  "fees.viewing": { priceMinor: string; currency: Currency } | null;
+  /** Sukkot Salone's success fee on rent, lease and purchase payments, in hundredths of a percent (500 = 5%). Null: off. */
+  "fees.success": { basisPoints: number } | null;
   "listing.autoExpireDays": number;
   "inspection.maxPerDay": number;
   /** Sukkot Salone's own wallet numbers and bank account, shown to customers who pay by transfer. */
@@ -55,6 +59,8 @@ export const SETTING_DEFAULTS: SettingTypes = {
   "visit.inspection": null,
   "visit.photoShoot": null,
   "listing.extraSlot": null,
+  "fees.viewing": null,
+  "fees.success": null,
   "listing.autoExpireDays": 90,
   "inspection.maxPerDay": 8,
   "billing.manual": { enabled: false, accountName: "", orangeMoneyNumber: "", afrimoneyNumber: "", bankDetails: "" },

@@ -1,6 +1,7 @@
-import { FlatList, RefreshControl, Text } from "react-native";
+import { FlatList, Linking, RefreshControl, Text } from "react-native";
 import { Link } from "expo-router";
-import { formatDateTime, type InspectionDTO } from "@sukkot/shared";
+import { formatDateTime, formatMoney, type InspectionDTO } from "@sukkot/shared";
+import { API_URL } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 import { StatusBadge } from "@/components/status";
 import { WorkflowActions } from "@/components/workflow-actions";
@@ -27,6 +28,11 @@ export default function InspectionsScreen() {
           {i.status === "RESCHEDULE_PROPOSED" && i.proposedAt ? <Text style={ui.body}>New time proposed: {formatDateTime(i.proposedAt)}</Text> : null}
           <Text style={ui.muted}>{i.myRole === "REQUESTER" ? "You requested this viewing" : `Requested by ${i.requester.name}`}</Text>
           {i.notes ? <Text style={ui.muted}>“{i.notes}”</Text> : null}
+          {i.myRole === "REQUESTER" && i.fee && !i.fee.paid && ["REQUESTED", "RESCHEDULE_PROPOSED", "CONFIRMED"].includes(i.status) ? (
+            <Text style={[ui.body, { fontWeight: "700" }]} onPress={() => Linking.openURL(`${API_URL}/dashboard/inspections`)}>
+              Pay the {formatMoney(BigInt(i.fee.amountMinor), i.fee.currency)} booking fee on the website to send this request →
+            </Text>
+          ) : null}
           <WorkflowActions kind="inspection" endpoint={`/inspections/${i.id}`} actions={i.actions} onDone={reload} />
         </Card>
       )}

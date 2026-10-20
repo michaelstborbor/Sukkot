@@ -283,7 +283,8 @@ function orderBy(sort: SearchFilters["sort"]): Prisma.PropertyOrderByWithRelatio
     case "views":
       return [{ viewCount: "desc" }, { id: "desc" }];
     default:
-      return [{ isFeatured: "desc" }, { documentsStatus: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
+      // Featured first, then listers on paid plans with a search lift (agent packages), then the rest.
+      return [{ isFeatured: "desc" }, { lister: { searchBoost: "desc" } }, { documentsStatus: "desc" }, { publishedAt: "desc" }, { id: "desc" }];
   }
 }
 

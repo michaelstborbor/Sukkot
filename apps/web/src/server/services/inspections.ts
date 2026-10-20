@@ -8,13 +8,14 @@ import {
   type InspectionDTO,
   type InspectionSide,
 } from "@sukkot/shared";
-import type { Inspection } from "@prisma/client";
+import type { Inspection, PaymentTransaction } from "@prisma/client";
 import { db, type Tx } from "../db";
 import { AppError, notFound } from "../errors";
 import type { Actor } from "../auth/session";
 import { assertActor } from "../auth/actor";
 import { notify } from "../notify";
 import { postSystemMessage } from "./messaging";
+import { getSetting } from "./settings";
 
 const MIN_LEAD_MS = 60 * 60 * 1000;
 const MAX_AHEAD_MS = 90 * 86400_000;
@@ -52,6 +53,26 @@ async function propertyConversation(tx: Tx, propertyId: string, a: string, b: st
   return tx.conversation.create({ data: { subject, propertyId, participants: { create: [{ userId: a }, { userId: b }] } } });
 }
 
+async function staffToTell(tx: Tx) {
+  const staff = await tx.userRoleAssignment.findMany({ where: { role: { in: ["MODERATOR", "SUPER_ADMIN"] }, user: { status: "ACTIVE" } }, select: { userId: true }, distinct: ["userId"] });
+  return staff.map((s) => s.userId);
+}
+
+/** Pass a request on to the landlord or agent, in the conversation about the listing and by notification. */
+async function sendToRepresentative(tx: Tx, insp: Pick<Inspection, "propertyId" | "requesterId" | "representativeId" | "scheduledAt">, property: { title: string; reference: string }, requesterName: string) {
+  const convo = await propertyConversation(tx, insp.propertyId, insp.requesterId, insp.representativeId, `${property.title} (${property.reference})`);
+  await postSystemMessage(tx, convo.id, insp.requesterId, `Inspection requested for ${formatDateTime(insp.scheduledAt)} (Freetown time).`);
+  await notify(
+    [{ userId: insp.representativeId, type: "inspection.requested", title: `Inspection request for ${property.reference}`, body: `${requesterName} would like to view on ${formatDateTime(insp.scheduledAt)}.`, link: "/dashboard/inspections", email: true }],
+    tx,
+  );
+}
+
+/**
+ * Booking an inspection costs the tenant or buyer a small fee to Sukkot Salone when one is set in Site
+ * settings (`fees.viewing`). The request is saved straight away, but the landlord or agent only sees
+ * it once the fee is confirmed by the payment provider or by finance (see `markViewingFeePaid`).
+ */
 export async function requestInspection(actorIn: Actor | null, input: unknown) {
   const actor = assertActor(actorIn);
   const data = inspectionRequestSchema.parse(input);
@@ -64,6 +85,7 @@ export async function requestInspection(actorIn: Actor | null, input: unknown) {
       where: { propertyId: property.id, requesterId: actor.id, status: { in: ["REQUESTED", "CONFIRMED", "RESCHEDULE_PROPOSED"] } },
     });
     if (pending > 0) throw new AppError("CONFLICT", "You already have an upcoming inspection request for this property");
+    const fee = await getSetting("fees.viewing");
     const insp = await tx.inspection.create({
       data: {
         propertyId: property.id,
@@ -74,17 +96,43 @@ export async function requestInspection(actorIn: Actor | null, input: unknown) {
         attendees: data.attendees,
         contactPhone: data.contactPhone ?? null,
         notes: data.notes ?? null,
+        feeMinor: fee ? BigInt(fee.priceMinor) : null,
+        feeCurrency: fee?.currency ?? null,
       },
     });
-    const convo = await propertyConversation(tx, property.id, actor.id, property.listerId, `${property.title} (${property.reference})`);
-    await postSystemMessage(tx, convo.id, actor.id, `Inspection requested for ${formatDateTime(data.scheduledAt)} (Freetown time).`);
-    await notify(
-      [{ userId: property.listerId, type: "inspection.requested", title: `Inspection request for ${property.reference}`, body: `${actor.name} would like to view on ${formatDateTime(data.scheduledAt)}.`, link: "/dashboard/inspections", email: true }],
-      tx,
-    );
+    if (!fee) await sendToRepresentative(tx, insp, property, actor.name);
     return insp;
   });
 }
+
+/**
+ * The booking fee is confirmed: send the request on to the landlord or agent and tell our team.
+ * A second payment for the same inspection changes nothing; finance refunds it.
+ */
+export async function markViewingFeePaid(tx: Tx, p: Pick<PaymentTransaction, "inspectionId" | "paidAt" | "amountMinor" | "currency" | "reference">) {
+  if (!p.inspectionId) return;
+  const moved = await tx.inspection.updateMany({ where: { id: p.inspectionId, feePaidAt: null }, data: { feePaidAt: p.paidAt ?? new Date() } });
+  if (!moved.count) return;
+  const insp = await tx.inspection.findUniqueOrThrow({
+    where: { id: p.inspectionId },
+    include: { property: { select: { title: true, reference: true } }, requester: { select: { email: true, phone: true, profile: { select: { fullName: true } } } } },
+  });
+  const name = insp.requester.profile?.fullName ?? insp.requester.email;
+  if (["REQUESTED", "RESCHEDULE_PROPOSED", "CONFIRMED"].includes(insp.status)) await sendToRepresentative(tx, insp, insp.property, name);
+  await notify(
+    (await staffToTell(tx)).map((userId) => ({
+      userId,
+      type: "inspection.fee_paid",
+      title: `Inspection booked: ${insp.property.reference}`,
+      body: `${name} paid the inspection booking fee (${p.reference}) to view "${insp.property.title}" on ${formatDateTime(insp.scheduledAt)}. Phone: ${insp.contactPhone ?? insp.requester.phone ?? "not given"}.`,
+      link: "/admin/payments",
+    })),
+    tx,
+  );
+}
+
+/** Fee-bearing requests stay with the requester until the fee is paid. */
+const visibleToRepresentative = { OR: [{ feeMinor: null }, { feePaidAt: { not: null } }] };
 
 function sideOf(actor: Actor, insp: Pick<Inspection, "requesterId" | "representativeId">): InspectionSide | null {
   if (insp.representativeId === actor.id) return "REPRESENTATIVE";
@@ -99,7 +147,7 @@ export async function actOnInspection(actorIn: Actor | null, id: string, input: 
     const insp = await tx.inspection.findUnique({ where: { id }, include: { property: { select: { title: true, reference: true } } } });
     if (!insp) throw notFound("Inspection");
     const side = sideOf(actor, insp);
-    if (!side) throw notFound("Inspection");
+    if (!side || (side === "REPRESENTATIVE" && insp.feeMinor !== null && !insp.feePaidAt)) throw notFound("Inspection");
     const next = inspectionMachine.next(insp.status, data.action, side);
     const update: Parameters<typeof tx.inspection.update>[0]["data"] = { status: next, responseNote: data.note ?? insp.responseNote };
 
@@ -148,7 +196,7 @@ export async function actOnInspection(actorIn: Actor | null, id: string, input: 
 export async function listInspections(actorIn: Actor | null): Promise<InspectionDTO[]> {
   const actor = assertActor(actorIn);
   const rows = await db.inspection.findMany({
-    where: { OR: [{ requesterId: actor.id }, { representativeId: actor.id }] },
+    where: { OR: [{ requesterId: actor.id }, { representativeId: actor.id, ...visibleToRepresentative }] },
     include: {
       property: { select: { id: true, title: true, slug: true } },
       requester: { select: { id: true, profile: { select: { fullName: true } } } },
@@ -170,6 +218,7 @@ export async function listInspections(actorIn: Actor | null): Promise<Inspection
       notes: r.notes,
       property: r.property,
       requester: { id: r.requester.id, name: r.requester.profile?.fullName ?? "User" },
+      fee: r.feeMinor !== null && r.feeCurrency ? { amountMinor: r.feeMinor.toString(), currency: r.feeCurrency, paid: !!r.feePaidAt } : null,
       myRole: side,
       actions,
     };
