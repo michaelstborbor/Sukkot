@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MailCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** Shown until the person confirms their email address, with a way to get a new link. */
+/** Shown until the person confirms their email address or phone number, with a way to get a new link or a code. */
 export function EmailVerifyBanner({ email, className }: { email: string; className?: string }) {
   const [busy, setBusy] = useState(false);
   const [demoLink, setDemoLink] = useState<string | null>(null);
@@ -33,9 +34,9 @@ export function EmailVerifyBanner({ email, className }: { email: string; classNa
       <div className="flex gap-3">
         <MailCheck className="mt-0.5 h-5 w-5 shrink-0 text-gold-700" aria-hidden />
         <div>
-          <p className="font-semibold text-navy-900">Confirm your email address</p>
+          <p className="font-semibold text-navy-900">Confirm your email address or phone number</p>
           <p className="text-muted">
-            We sent a link to <strong className="text-ink">{email}</strong>. You need a confirmed email to submit a listing, make an offer, apply to rent or pay for a service.
+            Open the link we sent to <strong className="text-ink">{email}</strong>, or <Link href="/auth/verify-phone" className="link">confirm your phone with a text message code</Link> instead. You need one of them confirmed to submit a listing, make an offer, apply to rent or pay for a service.
           </p>
           {demoLink && (
             <p className="mt-1">
@@ -44,7 +45,7 @@ export function EmailVerifyBanner({ email, className }: { email: string; classNa
           )}
         </div>
       </div>
-      <Button variant="outline" size="sm" loading={busy} onClick={resend} className="shrink-0">Send the link again</Button>
+      <Button variant="outline" size="sm" loading={busy} onClick={resend} className="shrink-0">Send the email link again</Button>
     </div>
   );
 }

@@ -21,15 +21,15 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
     }
   }
   const actor = await getCurrentActor();
-  const me = actor ? await db.user.findUnique({ where: { id: actor.id }, select: { email: true, emailVerifiedAt: true } }) : null;
+  const me = actor ? await db.user.findUnique({ where: { id: actor.id }, select: { email: true, emailVerifiedAt: true, phoneVerifiedAt: true } }) : null;
 
   return (
     <>
       <h1 className="mb-4 text-2xl font-bold text-navy-900">Email confirmation</h1>
       {ok ? (
         <Notice tone="success" title="Your email address is confirmed">You can now submit listings, make offers, apply to rent and pay for services.</Notice>
-      ) : me?.emailVerifiedAt ? (
-        <Notice tone="success" title="Your email is already confirmed">There is nothing more to do.</Notice>
+      ) : me?.emailVerifiedAt || me?.phoneVerifiedAt ? (
+        <Notice tone="success" title={me.emailVerifiedAt ? "Your email is already confirmed" : "Your account is already confirmed by phone"}>There is nothing more to do.</Notice>
       ) : (
         <>
           <Notice tone="danger" title="This link is invalid or has expired">Links work once and expire after 3 days. Each new link cancels the earlier ones, so use the most recent email.</Notice>

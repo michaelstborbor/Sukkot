@@ -83,14 +83,20 @@ Neon's free database holds about 0.5 GB, so before it fills up add the R2 settin
 and change `STORAGE_DRIVER` to `s3`. For real email, add the Resend settings and change
 `EMAIL_DRIVER` to `resend`.
 
-### Email verification
+### Email and phone verification
 
-Sign-up emails a confirmation link. Until people open it they can browse, save, enquire and message,
-but they cannot submit a listing for review, ask for a photo shoot, make an offer, apply to rent or
-pay Sukkot Salone. That rule is on whenever `EMAIL_DRIVER=resend`, because only then can people
-receive the link. With `EMAIL_DRIVER=console` it is off, and on a demo site the dashboard's "Send the
-link again" button shows the link on screen instead. Set `REQUIRE_EMAIL_VERIFICATION=true` or `false`
-to override this either way.
+At sign-up people choose how to confirm their account: a link by email, or a 6-digit code by text
+message (valid 10 minutes, at most 3 texts and 5 guesses per account in a set period). Either one is
+enough. Until one is confirmed they can browse, save, enquire and message, but they cannot submit a
+listing for review, ask for a photo shoot, make an offer, apply to rent or pay Sukkot Salone. That
+rule is on whenever `EMAIL_DRIVER=resend` or `SMS_DRIVER=twilio`, because only then can people
+receive a link or code. With both on `console` it is off, and on a demo site the link and code are
+shown on screen instead. Set `REQUIRE_EMAIL_VERIFICATION=true` or `false` to override this either way.
+
+To send texts, create a Twilio account, check that it can deliver to Sierra Leone numbers, and set
+`SMS_DRIVER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and either
+`TWILIO_MESSAGING_SERVICE_SID` or `TWILIO_FROM`. Each text is charged by Twilio. A phone number can
+be confirmed on one account only.
 
 ### Before real users arrive
 

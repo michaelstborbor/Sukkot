@@ -30,6 +30,10 @@ export const LIMITS = {
   passwordReset: { limit: 5, window: 60 * 60 },
   /** "Send the link again": each one sends an email. */
   verifyResend: { limit: 3, window: 60 * 60 },
+  /** Text-message codes: each one costs money to send. */
+  phoneCode: { limit: 3, window: 60 * 60 },
+  /** Wrong-code guesses, per account. A code has a million possibilities and lasts 10 minutes. */
+  phoneCodeCheck: { limit: 5, window: 15 * 60 },
   enquiry: { limit: 20, window: 60 * 60 },
   message: { limit: 60, window: 10 * 60 },
   report: { limit: 10, window: 60 * 60 },

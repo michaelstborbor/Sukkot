@@ -61,8 +61,10 @@ export const registerSchema = z.object({
   phone: phoneSchema.optional().or(z.literal("").transform(() => undefined)),
   password: passwordSchema,
   accountType: z.enum(["USER", "OWNER", "AGENT"]).default("USER"),
+  /** How the new account is confirmed: a link by email, or a code by text message to `phone`. */
+  verifyBy: z.enum(["EMAIL", "PHONE"]).default("EMAIL"),
   acceptTerms: z.literal(true, { errorMap: () => ({ message: "You must accept the terms to continue" }) }),
-});
+}).refine((v) => v.verifyBy === "EMAIL" || v.phone, { message: "Enter the phone number to send the code to", path: ["phone"] });
 export type RegisterInput = z.input<typeof registerSchema>;
 
 export const loginSchema = z.object({
