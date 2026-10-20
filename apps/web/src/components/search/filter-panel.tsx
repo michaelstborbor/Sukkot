@@ -72,29 +72,29 @@ function FilterForm({ initial, options, onApply }: { initial: SearchFilters; opt
       </fieldset>
 
       <div>
-        <Label htmlFor="f-cat">Category</Label>
-        <Select id="f-cat" value={f.category ?? ""} onChange={(e) => set("category", (e.target.value || undefined) as SearchFilters["category"])}>
+        <Label htmlFor="f-cat" className="text-base font-bold">Category</Label>
+        <Select id="f-cat" className="text-base font-bold" value={f.category ?? ""} onChange={(e) => set("category", (e.target.value || undefined) as SearchFilters["category"])}>
           <option value="">All categories</option>
           {PROPERTY_CATEGORIES.map((c) => <option key={c} value={c}>{PROPERTY_CATEGORY_LABELS[c]}</option>)}
         </Select>
       </div>
 
       <fieldset>
-        <legend className="mb-2 text-sm font-semibold">Property type</legend>
+        <legend className="mb-2 text-base font-bold">Property type</legend>
         <div className="grid max-h-48 grid-cols-1 gap-2 overflow-y-auto pr-1">
           {options.types.filter((t) => !f.category || t.group === PROPERTY_CATEGORY_LABELS[f.category]).map((t) => (
-            <Checkbox key={t.value} id={`f-type-${t.value}`} label={t.label} checked={!!f.type?.includes(t.value)} onChange={() => set("type", toggle(f.type, t.value))} />
+            <Checkbox key={t.value} id={`f-type-${t.value}`} className="text-base font-bold" label={t.label} checked={!!f.type?.includes(t.value)} onChange={() => set("type", toggle(f.type, t.value))} />
           ))}
         </div>
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="mb-2 text-sm font-semibold">Location</legend>
-        <Select aria-label="District" value={f.district ?? ""} onChange={(e) => setF((c) => ({ ...c, district: e.target.value || undefined, city: undefined, locality: undefined }))}>
+        <legend className="mb-2 text-base font-bold">Location</legend>
+        <Select aria-label="District" className="text-base font-bold" value={f.district ?? ""} onChange={(e) => setF((c) => ({ ...c, district: e.target.value || undefined, city: undefined, locality: undefined }))}>
           <option value="">Any district</option>
           {options.districts.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
         </Select>
-        <Select aria-label="City or town" value={f.city ?? ""} onChange={(e) => setF((c) => ({ ...c, city: e.target.value || undefined, locality: undefined }))}>
+        <Select aria-label="City or town" className="text-base font-bold" value={f.city ?? ""} onChange={(e) => setF((c) => ({ ...c, city: e.target.value || undefined, locality: undefined }))}>
           <option value="">Any city or town</option>
           {["Cities", "Towns"].map((g) => {
             const inGroup = cities.filter((c) => c.group === g);
@@ -106,7 +106,7 @@ function FilterForm({ initial, options, onApply }: { initial: SearchFilters; opt
           })}
         </Select>
         {localities.length > 0 && (
-          <Select aria-label="Area or section" value={f.locality ?? ""} onChange={(e) => set("locality", e.target.value || undefined)}>
+          <Select aria-label="Area or section" className="text-base font-bold" value={f.locality ?? ""} onChange={(e) => set("locality", e.target.value || undefined)}>
             <option value="">Any area or section</option>
             {localities.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
           </Select>

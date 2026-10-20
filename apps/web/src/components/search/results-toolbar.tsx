@@ -25,7 +25,7 @@ export function ResultsToolbar({ filters }: { filters: SearchFilters }) {
         }}
       >
         <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
-        <Input aria-label="Keyword or reference" placeholder="Keyword, area or reference (SS-…)" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
+        <Input aria-label="Keyword or reference" placeholder="Keyword, area or reference (SS-…)" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9 text-base font-bold placeholder:font-normal" />
       </form>
       <label htmlFor="sort" className="sr-only">Sort by</label>
       <Select id="sort" className="w-auto min-w-44" value={filters.sort ?? "relevant"} onChange={(e) => go({ ...filters, sort: e.target.value as SearchFilters["sort"], page: undefined })}>

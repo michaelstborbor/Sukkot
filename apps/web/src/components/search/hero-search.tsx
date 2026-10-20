@@ -40,14 +40,14 @@ export function HeroSearch({ locations, className }: { locations: SearchOption[]
             type="button"
             aria-pressed={purpose === p.value}
             onClick={() => setPurpose(p.value)}
-            className={cn("flex-1 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium transition sm:px-4", purpose === p.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink")}
+            className={cn("flex-1 whitespace-nowrap rounded-lg px-2 py-2 text-base font-bold transition sm:px-4", purpose === p.value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink")}
           >
             {p.label}
           </button>
         ))}
       </div>
       <label htmlFor="hero-place" className="sr-only">Where</label>
-      <select id="hero-place" value={place} onChange={(e) => setPlace(e.target.value)} className="h-11 min-w-0 flex-1 rounded-xl border-0 bg-transparent px-3 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-clay-600">
+      <select id="hero-place" value={place} onChange={(e) => setPlace(e.target.value)} className="h-11 min-w-0 flex-1 rounded-xl border-0 bg-transparent px-3 text-base font-bold text-ink outline-none focus-visible:ring-2 focus-visible:ring-clay-600">
         <option value="">All of Sierra Leone</option>
         {groups.map((g) => (
           <optgroup key={g} label={g}>
@@ -57,7 +57,7 @@ export function HeroSearch({ locations, className }: { locations: SearchOption[]
           </optgroup>
         ))}
       </select>
-      <button type="submit" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-clay-600 px-6 text-sm font-semibold text-white transition hover:bg-clay-700 active:scale-[0.98]">
+      <button type="submit" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-clay-600 px-6 text-base font-bold text-white transition hover:bg-clay-700 active:scale-[0.98]">
         <Search className="h-4 w-4" aria-hidden /> Search
       </button>
     </form>

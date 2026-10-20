@@ -6,7 +6,7 @@ import { WhatsAppIcon } from "@/components/layout/whatsapp-icon";
 import { Logo } from "@/components/ui/logo";
 
 const COLS = [
-  { title: "Discover", links: [["Homes for rent", "/properties?purpose=RENT"], ["Homes for sale", "/properties?purpose=SALE"], ["Land", "/properties?category=LAND"], ["Commercial", "/properties?category=COMMERCIAL"], ["Locations", "/locations"], ["Agents", "/agents"]] },
+  { title: "Discover", links: [["Home", "/"], ["Homes for rent", "/properties?purpose=RENT"], ["Homes for sale", "/properties?purpose=SALE"], ["Land", "/properties?category=LAND"], ["Commercial", "/properties?category=COMMERCIAL"], ["Locations", "/locations"], ["Agents", "/agents"]] },
   { title: "Owners & agents", links: [["List a property", "/list-your-property"], ["Dashboard", "/dashboard"], ["Plans and pricing", "/dashboard/billing"], ["Verification", "/verification"]] },
   { title: "Help", links: [["Help centre", "/help"], ["Safety guidance", "/safety"], ["Report a problem", "/help#report"], ["Takedown requests", "/takedown"], ["Refund policy", "/refunds"], ["Get the app", "/get-the-app"], ["Privacy policy", "/privacy"], ["Terms of use", "/terms"]] },
 ] as const;
