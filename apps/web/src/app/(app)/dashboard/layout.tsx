@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const [unread, notes, me] = await Promise.all([
     unreadMessageCount(actor.id),
     unreadNotificationCount(actor.id),
-    db.user.findUnique({ where: { id: actor.id }, select: { email: true, emailVerifiedAt: true } }),
+    db.user.findUnique({ where: { id: actor.id }, select: { email: true, emailVerifiedAt: true, phoneVerifiedAt: true } }),
   ]);
   const icon = (I: typeof Home) => <I className="h-4 w-4" />;
   const items: NavItem[] = [
@@ -38,7 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="container-page grid gap-6 py-6 lg:grid-cols-[230px_1fr] lg:gap-10 lg:py-10">
       <DashboardNav items={items} title="Dashboard" />
       <div className="min-w-0">
-        {me && !me.emailVerifiedAt && <EmailVerifyBanner email={me.email} className="mb-6" />}
+        {me && !me.emailVerifiedAt && !me.phoneVerifiedAt && <EmailVerifyBanner email={me.email} className="mb-6" />}
         {children}
       </div>
     </div>

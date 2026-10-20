@@ -9,7 +9,7 @@ import { assertActor, assertPermission } from "../auth/actor";
 import { audit } from "../audit";
 import { notify } from "../notify";
 import { getSetting } from "./settings";
-import { requireVerifiedEmail } from "./auth";
+import { requireVerifiedContact } from "./auth";
 
 /**
  * Paid inspection visits: a lister pays (see payments `INSPECTION_VISIT`), which opens a visit as
@@ -54,7 +54,7 @@ export function openPhotoShoot(propertyId: string) {
 export async function requestPhotoShoot(actorIn: Actor | null, propertyId: string, input: unknown, ipHash?: string | null) {
   const actor = assertActor(actorIn);
   const data = photoShootSchema.parse(input);
-  await requireVerifiedEmail(actor.id, "ask for a photo shoot");
+  await requireVerifiedContact(actor.id, "ask for a photo shoot");
   const property = await db.property.findUnique({
     where: { id: propertyId },
     select: { id: true, title: true, reference: true, listerId: true, ownerId: true, listingStatus: true, privateContactEmail: true, location: { select: { name: true } }, propertyType: { select: { name: true } } },

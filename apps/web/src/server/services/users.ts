@@ -34,10 +34,14 @@ export async function getMe(actorIn: Actor | null): Promise<MeDTO> {
 export async function updateProfile(actorIn: Actor | null, input: unknown) {
   const actor = assertActor(actorIn);
   const data = profileUpdateSchema.parse(input);
+  const current = await db.user.findUniqueOrThrow({ where: { id: actor.id }, select: { phone: true } });
+  // A different number loses its confirmation and any code sent to the old one; saving the same number keeps it.
+  const phoneChanged = data.phone !== undefined && (data.phone ?? null) !== current.phone;
+  if (phoneChanged) await db.authToken.deleteMany({ where: { userId: actor.id, type: "PHONE_VERIFICATION" } });
   await db.user.update({
     where: { id: actor.id },
     data: {
-      ...(data.phone !== undefined ? { phone: data.phone, phoneVerifiedAt: null } : {}),
+      ...(phoneChanged ? { phone: data.phone, phoneVerifiedAt: null } : {}),
       profile: {
         update: {
           ...(data.fullName ? { fullName: data.fullName } : {}),

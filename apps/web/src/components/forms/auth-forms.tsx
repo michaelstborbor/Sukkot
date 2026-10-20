@@ -81,7 +81,7 @@ export function SignUpForm() {
   const router = useRouter();
   const params = useSearchParams();
   const initialType = (params.get("type") as (typeof TYPES)[number]["value"]) ?? "USER";
-  const [v, setV] = useState({ fullName: "", email: "", phone: "", password: "", accountType: TYPES.some((t) => t.value === initialType) ? initialType : "USER", acceptTerms: false });
+  const [v, setV] = useState({ fullName: "", email: "", phone: "", password: "", accountType: TYPES.some((t) => t.value === initialType) ? initialType : "USER", verifyBy: "EMAIL" as "EMAIL" | "PHONE", acceptTerms: false });
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +92,14 @@ export function SignUpForm() {
     setError(null);
     try {
       await api("/auth/register", { body: v });
-      toast.success(`Account created. We sent a link to ${v.email} to confirm your email address.`);
-      router.push(v.accountType === "USER" ? safeNext(params.get("next")) : "/dashboard/properties/new");
+      const next = v.accountType === "USER" ? safeNext(params.get("next")) : "/dashboard/properties/new";
+      if (v.verifyBy === "PHONE") {
+        toast.success(`Account created. We texted a 6-digit code to ${v.phone}.`);
+        router.push(`/auth/verify-phone?next=${encodeURIComponent(next)}`);
+      } else {
+        toast.success(`Account created. We sent a link to ${v.email} to confirm your email address.`);
+        router.push(next);
+      }
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError) {
@@ -124,8 +130,20 @@ export function SignUpForm() {
       <Field id="email" label="Email" error={errors.email}>
         <Input id="email" type="email" autoComplete="email" value={v.email} onChange={(e) => setV((c) => ({ ...c, email: e.target.value }))} required aria-invalid={!!errors.email} />
       </Field>
-      <Field id="phone" label="Phone number" optional hint="Sierra Leone number, e.g. 076 123 456" error={errors.phone}>
-        <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" value={v.phone} onChange={(e) => setV((c) => ({ ...c, phone: e.target.value }))} aria-invalid={!!errors.phone} />
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold">Confirm my account by</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {([["EMAIL", "Email", "We email you a link"], ["PHONE", "Text message", "We text a code to your phone"]] as const).map(([value, title, body]) => (
+            <label key={value} className={cn("cursor-pointer rounded-xl border p-3 transition", v.verifyBy === value ? "border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20" : "border-line hover:border-navy-600")}>
+              <input type="radio" name="verifyBy" value={value} className="sr-only" checked={v.verifyBy === value} onChange={() => setV((c) => ({ ...c, verifyBy: value }))} />
+              <span className="block text-sm font-semibold">{title}</span>
+              <span className="block text-xs text-muted">{body}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <Field id="phone" label="Phone number" optional={v.verifyBy === "EMAIL"} hint={v.verifyBy === "PHONE" ? "Sierra Leone number that can receive texts, e.g. 076 123 456" : "Sierra Leone number, e.g. 076 123 456"} error={errors.phone}>
+        <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" value={v.phone} onChange={(e) => setV((c) => ({ ...c, phone: e.target.value }))} required={v.verifyBy === "PHONE"} aria-invalid={!!errors.phone} />
       </Field>
       <Field id="password" label="Password" hint="At least 10 characters with letters and numbers." error={errors.password}>
         <PasswordInput id="password" value={v.password} onChange={(p) => setV((c) => ({ ...c, password: p }))} autoComplete="new-password" invalid={!!errors.password} />
@@ -200,6 +218,98 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </Field>
       {error && <p role="alert" className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger">{error}</p>}
       <Button type="submit" className="w-full" size="lg" loading={pending}>Update password</Button>
+    </form>
+  );
+}
+
+/** Enter the code texted to the phone, send a new one, or switch to a different number. */
+export function PhoneVerifyForm({ phone: initialPhone, next, demoNoSms = false }: { phone: string | null; next: string; demoNoSms?: boolean }) {
+  const router = useRouter();
+  const [phone, setPhone] = useState(initialPhone ?? "");
+  const [editing, setEditing] = useState(!initialPhone);
+  const [code, setCode] = useState("");
+  const [sentTo, setSentTo] = useState<string | null>(initialPhone);
+  const [demoCode, setDemoCode] = useState<string | null>(null);
+  const [pending, setPending] = useState<"send" | "check" | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  async function send() {
+    setPending("send");
+    setErrors({});
+    setError(null);
+    try {
+      const res = await api<{ alreadyVerified: boolean; phone: string; demoCode: string | null }>("/auth/verify-phone/send", { body: editing ? { phone } : {} });
+      if (res.alreadyVerified) {
+        toast.success("Your phone number is already confirmed");
+        router.push(safeNext(next));
+        return;
+      }
+      setSentTo(res.phone);
+      setEditing(false);
+      setDemoCode(res.demoCode);
+      toast.success("We sent you a new code");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrors(err.fields ?? {});
+        setError(err.message);
+      } else setError("Could not send the code");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  async function check(e: React.FormEvent) {
+    e.preventDefault();
+    setPending("check");
+    setErrors({});
+    setError(null);
+    try {
+      await api("/auth/verify-phone", { body: { code } });
+      toast.success("Your phone number is confirmed");
+      router.push(safeNext(next));
+      router.refresh();
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setErrors(err.fields ?? {});
+        setError(err.message);
+      } else setError("Could not check the code");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="space-y-4">
+        <Field id="vp-phone" label="Phone number" hint="Sierra Leone number that can receive texts, e.g. 076 123 456" error={errors.phone}>
+          <Input id="vp-phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={!!errors.phone} />
+        </Field>
+        {error && <p role="alert" className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger">{error}</p>}
+        <Button className="w-full" size="lg" loading={pending === "send"} onClick={send}>Text me a code</Button>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={check} className="space-y-4" noValidate>
+      <p className="text-sm text-muted">
+        Enter the 6-digit code we texted to <strong className="text-ink">{sentTo}</strong>. Codes expire after 10 minutes.
+      </p>
+      {demoNoSms && !demoCode && (
+        <Notice tone="info" title="Demo site">Texts are not sent here. Choose Send a new code and the code appears on this page.</Notice>
+      )}
+      {demoCode && (
+        <Notice tone="info" title="Demo site">Texts are not sent here. Your code is <strong className="font-mono">{demoCode}</strong>.</Notice>
+      )}
+      <Field id="vp-code" label="Code" error={errors.code}>
+        <Input id="vp-code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} className="font-mono tracking-[0.3em]" aria-invalid={!!errors.code} />
+      </Field>
+      {error && <p role="alert" className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger">{error}</p>}
+      <Button type="submit" className="w-full" size="lg" loading={pending === "check"}>Confirm my phone</Button>
+      <div className="flex flex-wrap justify-between gap-2 text-sm">
+        <button type="button" className="link" onClick={send} disabled={pending !== null}>Send a new code</button>
+        <button type="button" className="link" onClick={() => { setEditing(true); setError(null); }}>Use a different number</button>
+      </div>
     </form>
   );
 }
