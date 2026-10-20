@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { ArrowDownLeft, ArrowUpRight, CreditCard, ShieldCheck } from "lucide-react";
-import { formatDate, NOTICES, PAYMENT_METHOD_LABELS, PAYMENT_PURPOSE_LABELS } from "@sukkot/shared";
+import { formatDate, formatMoney, NOTICES, PAYMENT_METHOD_LABELS, PAYMENT_PURPOSE_LABELS } from "@sukkot/shared";
 import { requirePageActor } from "@/server/auth/actor";
-import { listMyPayments } from "@/server/payments";
+import { availableOnlineMethods, listMyPayments } from "@/server/payments";
+import { transferDetails } from "@/server/services/billing";
+import { myServiceFees } from "@/server/services/service-fees";
+import { brand } from "@/config/brand";
+import { CheckoutButton } from "@/components/dashboard/checkout";
 import { PageHeader } from "@/components/dashboard/shell";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { ActionButton } from "@/components/dashboard/action-button";
@@ -14,7 +18,8 @@ export const metadata: Metadata = { title: "Payments" };
 export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ ref?: string; cancelled?: string }> }) {
   const actor = await requirePageActor("/dashboard/payments");
   const { ref, cancelled } = await searchParams;
-  const rows = await listMyPayments(actor);
+  const [rows, fees, methods, transfer] = await Promise.all([listMyPayments(actor), myServiceFees(actor.id), availableOnlineMethods(), transferDetails()]);
+  const due = fees.filter((f) => f.status === "DUE");
   const highlighted = ref ? rows.find((r) => r.reference === ref) : undefined;
 
   return (
@@ -26,6 +31,33 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <Notice tone="info" className="mb-4" title="Waiting for the provider">
           Payment {highlighted.reference} is not confirmed yet. Approve it on your phone, then check the status below.
         </Notice>
+      )}
+      {due.length > 0 && (
+        <section className="card mb-6 space-y-3 border-gold-500 p-5">
+          <h2 className="font-bold text-navy-900">Service fees due to {brand.name}</h2>
+          <p className="text-sm text-muted">
+            Once rent, lease or purchase money has been paid to the landlord or seller, {brand.name}&apos;s service fee is due. Pay it here by mobile money or transfer, or pay our team directly (call or WhatsApp {brand.supportPhone}) and we will record it.
+          </p>
+          <ul className="divide-y divide-line">
+            {due.map((f) => (
+              <li key={f.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-semibold">{formatMoney(f.amountMinor, f.currency)}</p>
+                  <p className="text-sm text-muted">{f.description} · <span className="font-mono text-xs">{f.reference}</span></p>
+                </div>
+                <CheckoutButton
+                  label={`Pay ${formatMoney(f.amountMinor, f.currency)}`}
+                  title="Service fee"
+                  amountLabel={formatMoney(f.amountMinor, f.currency)}
+                  methods={methods}
+                  transfer={transfer}
+                  purpose="SUCCESS_FEE"
+                  serviceFeeId={f.id}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       {rows.length === 0 ? (
         <EmptyState icon={<CreditCard className="h-6 w-6" />} title="No payments yet" />

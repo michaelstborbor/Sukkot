@@ -164,7 +164,11 @@ async function seedCatalog() {
   const plans = [
     { code: "landlord-free", name: "Landlord Basic", audience: "LANDLORD", description: "List up to 3 properties for free.", priceMinor: 0n, maxListings: 3, featuredSlots: 0, features: ["Up to 3 active listings", "Enquiries, messaging and inspection booking", "Tenancy and rent records"], sortOrder: 0 },
     { code: "landlord-pro", name: "Landlord Pro", audience: "LANDLORD", description: "For landlords managing several properties.", priceMinor: 300n * 100n, maxListings: 25, featuredSlots: 1, features: ["Up to 25 active listings", "1 featured listing (7 days) every 30 days", "Everything in Landlord Basic"], sortOrder: 1 },
-    { code: "agent-pro", name: "Agent Pro", audience: "AGENT", description: "For agents and small agencies.", priceMinor: 900n * 100n, maxListings: 100, featuredSlots: 3, features: ["Up to 100 active listings", "3 featured listings (7 days each) every 30 days", "Everything in Landlord Basic"], sortOrder: 2 },
+    // Agent packages: two free listings, then three paid tiers. Kept in step with migration 20261020020000.
+    { code: "agent-free", name: "Agent Starter", audience: "AGENT", description: "Try Sukkot Salone with two free listings.", priceMinor: 0n, maxListings: 2, featuredSlots: 0, features: ["Up to 2 active listings", "Enquiries, messaging and inspection booking", "Order professional photos and video for any listing"], sortOrder: 10 },
+    { code: "agent-basic", name: "Agent Basic", audience: "AGENT", description: "For agents starting out.", priceMinor: 500n * 100n, maxListings: 10, featuredSlots: 1, searchBoost: 1, areaSuggestions: 2, features: ["Up to 10 active listings", "Your listings appear above free listings in search", "1 featured listing (7 days) every 30 days", "Suggest 2 listings every 30 days to people searching in that area"], sortOrder: 11 },
+    { code: "agent-premium", name: "Agent Premium", audience: "AGENT", description: "For busy agents who want more reach.", priceMinor: 1_000n * 100n, maxListings: 30, featuredSlots: 3, searchBoost: 2, areaSuggestions: 6, features: ["Up to 30 active listings", "Your listings appear above Basic and free listings in search", "3 featured listings (7 days each) every 30 days", "Suggest 6 listings every 30 days to people searching in that area"], sortOrder: 12 },
+    { code: "agent-premium-pro", name: "Agent Premium Pro", audience: "AGENT", description: "For agencies and top agents.", priceMinor: 2_000n * 100n, maxListings: null, featuredSlots: 6, searchBoost: 3, areaSuggestions: 15, features: ["Unlimited active listings", "Your listings appear first in search, after featured listings", "6 featured listings (7 days each) every 30 days", "Suggest 15 listings every 30 days to people searching in that area"], sortOrder: 13 },
   ];
   // Earlier seeds used placeholder prices a hundred times too high. Replace them only where an
   // administrator has not changed the price since.
@@ -392,12 +396,14 @@ async function seedDemo() {
   const tenant = await demoUser("tenant@demo.sukkot.sl", "Mohamed Kamara (Demo)", [], "+23278400400");
   const buyer = await demoUser("buyer@demo.sukkot.sl", "Hawa Koroma (Demo)", [], "+23233500500");
 
-  // Demo plans so the paid features can be tried: the landlord and agent are on Pro, landlord2 stays
+  // Demo plans so the paid features can be tried: the landlord is on Pro, the agent on Premium, landlord2 stays
   // on the free plan (and is over its limit, which shows the upgrade prompt).
-  for (const [userId, code] of [[landlord.id, "landlord-pro"], [agent.id, "agent-pro"]] as const) {
+  for (const [userId, code] of [[landlord.id, "landlord-pro"], [agent.id, "agent-premium"]] as const) {
     if (await db.subscription.count({ where: { userId } })) continue;
     const plan = await db.subscriptionPlan.findUniqueOrThrow({ where: { code } });
-    await db.subscription.create({ data: { userId, planId: plan.id, status: "ACTIVE", startsAt: new Date(), endsAt: new Date(Date.now() + plan.periodDays * 86400_000) } });
+    const endsAt = new Date(Date.now() + plan.periodDays * 86400_000);
+    await db.subscription.create({ data: { userId, planId: plan.id, status: "ACTIVE", startsAt: new Date(), endsAt } });
+    if (plan.searchBoost) await db.user.update({ where: { id: userId }, data: { searchBoost: plan.searchBoost, searchBoostUntil: endsAt } });
   }
 
 

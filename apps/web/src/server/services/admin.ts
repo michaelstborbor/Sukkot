@@ -8,6 +8,7 @@ import type { Actor } from "../auth/session";
 import { assertPermission } from "../auth/actor";
 import { audit } from "../audit";
 import { destroyAllSessions } from "../auth/session";
+import { refreshListerBoost } from "./billing";
 
 export async function adminOverview() {
   const since = new Date(Date.now() - 30 * 86400_000);
@@ -121,6 +122,8 @@ const planSchema = z.object({
   periodDays: z.coerce.number().int().min(1).max(366),
   maxListings: z.preprocess((v) => (v === "" || v === undefined || v === null ? null : v), z.coerce.number().int().min(1).max(10000).nullable()),
   featuredSlots: z.coerce.number().int().min(0).max(100),
+  searchBoost: z.coerce.number().int().min(0).max(10).default(0),
+  areaSuggestions: z.coerce.number().int().min(0).max(1000).default(0),
   features: z.array(z.string().trim().min(2).max(120)).max(12),
   isActive: z.boolean(),
 });
@@ -132,6 +135,10 @@ export async function upsertPlan(actorIn: Actor | null, input: unknown) {
   if (priceMinor === null) throw new AppError("VALIDATION", "Enter a valid price", { price: "Invalid amount" });
   const data = { ...rest, priceMinor };
   const plan = await db.subscriptionPlan.upsert({ where: { code: data.code }, create: data, update: data });
+  // Carry a changed search lift over to everyone on the plan now, not only at their next renewal.
+  const now = new Date();
+  const subscribers = await db.subscription.findMany({ where: { planId: plan.id, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gt: now } }, select: { userId: true }, distinct: ["userId"] });
+  for (const s of subscribers) await refreshListerBoost(s.userId);
   await audit({ actorId: actor.id, action: "plan.upsert", targetType: "SubscriptionPlan", targetId: plan.id, metadata: { price: priceMinor.toString(), currency: data.currency } });
   return plan;
 }

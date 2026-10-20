@@ -4,18 +4,20 @@ import { GENERAL_ENQUIRY, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { ProsePage } from "@/components/layout/prose-page";
 
-export const metadata: Metadata = { title: "Refund policy", description: "When you get your money back for plans, featured listings, inspection visits, photo shoots and extra listing slots." };
+export const metadata: Metadata = { title: "Refund policy", description: "When you get your money back for plans, featured listings, visits, photo shoots, listing slots, booking fees and service fees." };
 
 export default function RefundsPage() {
   return (
     <ProsePage eyebrow="Legal" title="Refund policy" updated="20 October 2026" intro="Draft for legal review. This covers the things you pay Sukkot Salone for. It does not cover rent, deposits or sale money, which you pay directly to the other party.">
       <h2>1. What we charge for</h2>
       <ul>
-        <li>Monthly plans for landlords and agents.</li>
+        <li>Monthly plans for landlords and agent packages.</li>
         <li>Featured listings for 7 days.</li>
         <li>Inspection visits, where our staff check and photograph a property.</li>
         <li>Professional photos and video for a new listing (photo shoots).</li>
         <li>Extra listing slots.</li>
+        <li>The booking fee a tenant or buyer pays to book an inspection of a listing.</li>
+        <li>Our service fee, a percentage of rent, lease or purchase money, due once that money has been paid to the landlord or seller.</li>
       </ul>
       <p>
         {brand.name} never collects or holds rent, deposits or sale money. If anyone asks you to pay rent or a deposit to {brand.name}, do not pay and <Link href="/takedown">report it</Link>.
@@ -26,6 +28,8 @@ export default function RefundsPage() {
         <li>You paid but what you bought never started, and we cannot fix it.</li>
         <li>We cancel an inspection visit, or cannot agree a date and visit within 14 days of your payment.</li>
         <li>You cancel an inspection visit before the day of the visit.</li>
+        <li>The owner or agent declines or cancels your booked inspection, or the property is let or sold before it.</li>
+        <li>The rent, lease or sale payment a service fee was charged on is cancelled or refunded to you.</li>
         <li>We suspended or removed your listing by mistake while a plan or featured period was running. We refund the unused part.</li>
       </ul>
       <h2>3. When there is no refund</h2>
@@ -34,6 +38,8 @@ export default function RefundsPage() {
         <li>An inspection visit that took place, or that failed on the day because nobody let our staff in.</li>
         <li>A photo shoot. Its fee is non-refundable, unless you were charged twice or the wrong amount, or we cancel the shoot ourselves.</li>
         <li>An extra listing slot, unless you were charged in error.</li>
+        <li>An inspection booking fee once the inspection has taken place, or when you cancel on the day or do not turn up.</li>
+        <li>A service fee on rent, lease or sale money that was paid as agreed.</li>
         <li>A listing taken down for breaking our <Link href="/terms">terms of use</Link>.</li>
       </ul>
       <h2>4. How to ask</h2>

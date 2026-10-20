@@ -46,13 +46,17 @@ function EnquiryForm({ propertyId, onDone }: { propertyId: string; onDone: (conv
   );
 }
 
-function InspectionForm({ propertyId, onDone }: { propertyId: string; onDone: () => void }) {
+function InspectionForm({ propertyId, viewingFee, onDone }: { propertyId: string; viewingFee: string | null; onDone: () => void }) {
   const [when, setWhen] = useState("");
   const [notes, setNotes] = useState("");
   const [attendees, setAttendees] = useState(1);
   const [phone, setPhone] = useState("");
-  const f = useApiForm("/inspections", { success: "Inspection requested. We'll notify you when it's confirmed.", onSuccess: onDone });
-  const min = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 16);
+  const f = useApiForm("/inspections", {
+    success: viewingFee ? `Inspection saved. Pay the ${viewingFee} booking fee to send it.` : "Inspection requested. We'll notify you when it's confirmed.",
+    onSuccess: onDone,
+  });
+  // Round up to a quarter hour: the browser only accepts times a whole number of steps after `min`.
+  const min = new Date(Math.ceil((Date.now() + 2 * 3600_000) / 900_000) * 900_000).toISOString().slice(0, 16);
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); f.submit({ propertyId, scheduledAt: freetownLocalToIso(when), notes, attendees, contactPhone: phone }); }}>
       <Field id="insp-when" label="Preferred date and time" hint="Freetown time (GMT)." error={f.errors.scheduledAt}>
@@ -69,9 +73,14 @@ function InspectionForm({ propertyId, onDone }: { propertyId: string; onDone: ()
       <Field id="insp-notes" label="Notes" optional>
         <Textarea id="insp-notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} className="min-h-20" />
       </Field>
+      {viewingFee && (
+        <Notice tone="info" title={`Booking fee: ${viewingFee}`}>
+          Paid to {brand.name} by mobile money or transfer on the next page. Your request goes to the owner or agent, and our team is told, as soon as the fee is confirmed.
+        </Notice>
+      )}
       <Notice tone="warning">{NOTICES.inspectionSafety}</Notice>
       <FormError message={f.formError} />
-      <Button type="submit" variant="secondary" className="w-full" loading={f.pending}>Request inspection</Button>
+      <Button type="submit" variant="secondary" className="w-full" loading={f.pending}>{viewingFee ? "Continue to payment" : "Request inspection"}</Button>
     </form>
   );
 }
@@ -189,6 +198,8 @@ export function PropertyActions({
   signedIn,
   isOwnListing,
   available,
+  viewingFee = null,
+  serviceFee = null,
 }: {
   propertyId: string;
   slug: string;
@@ -199,6 +210,10 @@ export function PropertyActions({
   signedIn: boolean;
   isOwnListing: boolean;
   available: boolean;
+  /** The inspection booking fee, formatted, or null when booking is free. */
+  viewingFee?: string | null;
+  /** Sukkot Salone's service fee on rent or purchase money, e.g. "5%", or null when it is off. */
+  serviceFee?: string | null;
 }) {
   const [modal, setModal] = useState<Modal>(null);
   const router = useRouter();
@@ -234,6 +249,12 @@ export function PropertyActions({
       <Button variant="outline" size="lg" className="w-full" onClick={need("inspection")} disabled={!available}><CalendarClock className="h-5 w-5" /> Book an inspection</Button>
       {(purpose === "SALE" || purpose === "LEASE") && <Button variant="outline" size="lg" className="w-full" onClick={need("offer")} disabled={!available}><HandCoins className="h-5 w-5" /> Make an offer</Button>}
       {purpose !== "SALE" && <Button variant="outline" size="lg" className="w-full" onClick={need("apply")} disabled={!available}><FileText className="h-5 w-5" /> Apply to rent</Button>}
+      {serviceFee && (
+        <p className="pt-1 text-center text-xs text-muted">
+          {viewingFee ? `Booking an inspection costs ${viewingFee}. ` : ""}Once you pay the {purpose === "SALE" ? "purchase money" : "rent or lease"}, a {serviceFee} {brand.name} service fee is due.{" "}
+          <Link href="/help" className="link">How fees work</Link>
+        </p>
+      )}
       {!signedIn && <p className="pt-1 text-center text-xs text-muted"><Link href={signInHref} className="link">Sign in</Link> to contact the lister. It&apos;s free.</p>}
       <button type="button" onClick={() => setModal("report")} className="mx-auto mt-2 flex items-center gap-1.5 text-sm text-muted hover:text-danger"><Flag className="h-4 w-4" /> Report listing</button>
 
@@ -241,7 +262,7 @@ export function PropertyActions({
         <EnquiryForm propertyId={propertyId} onDone={(id) => { close(); router.push(`/dashboard/messages/${id}`); }} />
       </Dialog>
       <Dialog open={modal === "inspection"} onClose={close} title="Book an inspection">
-        <InspectionForm propertyId={propertyId} onDone={() => { close(); router.push("/dashboard/inspections"); }} />
+        <InspectionForm propertyId={propertyId} viewingFee={viewingFee} onDone={() => { close(); router.push("/dashboard/inspections"); }} />
       </Dialog>
       <Dialog open={modal === "offer"} onClose={close} title="Make an offer">
         <OfferForm propertyId={propertyId} currency={currency} onDone={() => { close(); router.push("/dashboard/offers"); }} />

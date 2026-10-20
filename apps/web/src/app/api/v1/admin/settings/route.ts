@@ -17,12 +17,23 @@ function toPrice(input: z.infer<typeof price>) {
   return minor ? { priceMinor: minor.toString(), currency: input!.currency } : null;
 }
 
+/** "5" or "2.5" percent to basis points; empty or zero switches the fee off. */
+function toBasisPoints(percent: string) {
+  if (!percent) return null;
+  if (!/^\d{1,2}(\.\d{1,2})?$/.test(percent)) throw new AppError("VALIDATION", "Enter a percentage such as 5 or 2.5", { "successFee.percent": "Enter a number from 0 to 99" });
+  const bp = Math.round(Number(percent) * 100);
+  return bp > 0 ? { basisPoints: bp } : null;
+}
+
 const schema = z.object({
   announcement: z.object({ text: z.string().trim().max(200), link: z.string().max(200).optional(), enabled: z.boolean() }).optional(),
   promotionPrice: price,
   visitPrice: price,
   photoShootPrice: price,
   slotPrice: price,
+  viewingFee: price,
+  /** Percentage as typed, e.g. "5" or "2.5". Empty switches the fee off. */
+  successFee: z.object({ percent: z.string().trim().max(6) }).optional(),
   billingManual: z
     .object({
       enabled: z.boolean(),
@@ -67,6 +78,8 @@ export const POST = handler(async (ctx) => {
   if (input.visitPrice !== undefined) await setSetting("visit.inspection", toPrice(input.visitPrice));
   if (input.photoShootPrice !== undefined) await setSetting("visit.photoShoot", toPrice(input.photoShootPrice));
   if (input.slotPrice !== undefined) await setSetting("listing.extraSlot", toPrice(input.slotPrice));
+  if (input.viewingFee !== undefined) await setSetting("fees.viewing", toPrice(input.viewingFee));
+  if (input.successFee) await setSetting("fees.success", toBasisPoints(input.successFee.percent));
   if (input.billingManual) await setSetting("billing.manual", input.billingManual);
   if (input.orangeMoney || input.afrimoney) {
     const saved = await getSetting("payments.mobileMoney");

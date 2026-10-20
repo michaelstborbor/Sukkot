@@ -259,6 +259,8 @@ enum PaymentPurpose {
   INSPECTION_VISIT
   PHOTO_SHOOT
   LISTING_SLOT
+  VIEWING_FEE
+  SUCCESS_FEE
   REFUND
   OTHER
 }
@@ -305,64 +307,70 @@ enum DocumentVisibility {
 // ─────────────────────────────────────────────── Identity and access
 
 model User {
-  id               String        @id @default(cuid())
-  email            String        @unique
-  emailVerifiedAt  DateTime?     @db.Timestamptz(3)
-  phone            String?
-  phoneVerifiedAt  DateTime?     @db.Timestamptz(3)
-  passwordHash     String
-  status           UserStatus    @default(ACTIVE)
-  suspendedReason  String?
-  isDemo           Boolean       @default(false)
-  lastLoginAt      DateTime?     @db.Timestamptz(3)
-  failedLoginCount Int           @default(0)
-  lockedUntil      DateTime?     @db.Timestamptz(3)
+  id                String     @id @default(cuid())
+  email             String     @unique
+  emailVerifiedAt   DateTime?  @db.Timestamptz(3)
+  phone             String?
+  phoneVerifiedAt   DateTime?  @db.Timestamptz(3)
+  passwordHash      String
+  status            UserStatus @default(ACTIVE)
+  suspendedReason   String?
+  isDemo            Boolean    @default(false)
+  lastLoginAt       DateTime?  @db.Timestamptz(3)
+  failedLoginCount  Int        @default(0)
+  lockedUntil       DateTime?  @db.Timestamptz(3)
   /// One-off listing slots bought on top of the plan's allowance. They never expire.
-  extraListingSlots Int          @default(0)
-  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+  extraListingSlots Int        @default(0)
+  /// Search ranking lift from the lister's paid plan (see `refreshListerBoost`); 0 on free plans.
+  searchBoost       Int        @default(0)
+  searchBoostUntil  DateTime?  @db.Timestamptz(3)
+  createdAt         DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime   @updatedAt @db.Timestamptz(3)
 
   profile              UserProfile?
-  roles                UserRoleAssignment[]       @relation("RoleHolder")
-  rolesGranted         UserRoleAssignment[]       @relation("RoleGranter")
+  roles                UserRoleAssignment[]      @relation("RoleHolder")
+  rolesGranted         UserRoleAssignment[]      @relation("RoleGranter")
   sessions             Session[]
   tokens               AuthToken[]
-  verificationRequests VerificationRequest[]      @relation("VerificationSubject")
-  verificationReviews  VerificationRequest[]      @relation("VerificationReviewer")
+  verificationRequests VerificationRequest[]     @relation("VerificationSubject")
+  verificationReviews  VerificationRequest[]     @relation("VerificationReviewer")
   agencyMemberships    AgencyMember[]
-  properties           Property[]                 @relation("PropertyOwner")
-  listedProperties     Property[]                 @relation("PropertyLister")
+  properties           Property[]                @relation("PropertyOwner")
+  listedProperties     Property[]                @relation("PropertyLister")
   savedProperties      SavedProperty[]
   savedSearches        SavedSearch[]
   enquiries            Enquiry[]
   conversationLinks    ConversationParticipant[]
   messages             Message[]
   notifications        Notification[]
-  inspectionsRequested Inspection[]               @relation("InspectionRequester")
-  inspectionsHandled   Inspection[]               @relation("InspectionRepresentative")
+  inspectionsRequested Inspection[]              @relation("InspectionRequester")
+  inspectionsHandled   Inspection[]              @relation("InspectionRepresentative")
   availability         AvailabilityWindow[]
   applications         RentalApplication[]
   offers               Offer[]
   offerEvents          OfferEvent[]
-  tenancies            Tenancy[]                  @relation("Tenant")
-  tenanciesAsLandlord  Tenancy[]                  @relation("Landlord")
-  payments             PaymentTransaction[]       @relation("Payer")
-  paymentsReceived     PaymentTransaction[]       @relation("Payee")
-  paymentsRecorded     PaymentTransaction[]       @relation("PaymentRecorder")
+  tenancies            Tenancy[]                 @relation("Tenant")
+  tenanciesAsLandlord  Tenancy[]                 @relation("Landlord")
+  payments             PaymentTransaction[]      @relation("Payer")
+  paymentsReceived     PaymentTransaction[]      @relation("Payee")
+  paymentsRecorded     PaymentTransaction[]      @relation("PaymentRecorder")
+  serviceFees          ServiceFee[]              @relation("ServiceFeePayer")
+  serviceFeesRaised    ServiceFee[]              @relation("ServiceFeeRaiser")
+  listingSuggestions   ListingSuggestion[]
   subscriptions        Subscription[]
-  reportsFiled         Report[]                   @relation("Reporter")
-  reportsAgainst       Report[]                   @relation("ReportedUser")
-  reportsHandled       Report[]                   @relation("ReportHandler")
+  reportsFiled         Report[]                  @relation("Reporter")
+  reportsAgainst       Report[]                  @relation("ReportedUser")
+  reportsHandled       Report[]                  @relation("ReportHandler")
   moderationActions    ModerationAction[]
   auditLogs            AuditLog[]
-  blocksMade           UserBlock[]                @relation("Blocker")
-  blocksReceived       UserBlock[]                @relation("Blocked")
+  blocksMade           UserBlock[]               @relation("Blocker")
+  blocksReceived       UserBlock[]               @relation("Blocked")
   uploadedDocuments    PropertyDocument[]
   dueDiligenceUpdates  DueDiligenceItem[]
   statusChanges        PropertyStatusHistory[]
   appEvents            ApplicationEvent[]
-  siteVisitsRequested  SiteVisit[]                @relation("SiteVisitRequester")
-  siteVisitsHandled    SiteVisit[]                @relation("SiteVisitStaff")
+  siteVisitsRequested  SiteVisit[]               @relation("SiteVisitRequester")
+  siteVisitsHandled    SiteVisit[]               @relation("SiteVisitStaff")
 
   @@index([status])
   @@map("users")
@@ -475,9 +483,9 @@ model VerificationDocument {
 }
 
 model Agency {
-  id                 String               @id @default(cuid())
+  id                 String                @id @default(cuid())
   name               String
-  slug               String               @unique
+  slug               String                @unique
   description        String?
   logoKey            String?
   phone              String?
@@ -485,9 +493,9 @@ model Agency {
   website            String?
   address            String?
   registrationNumber String?
-  isDemo             Boolean              @default(false)
-  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+  isDemo             Boolean               @default(false)
+  createdAt          DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime              @updatedAt @db.Timestamptz(3)
   members            AgencyMember[]
   properties         Property[]
   verifications      VerificationRequest[]
@@ -512,26 +520,26 @@ model AgencyMember {
 // ───────────────────────────────────────────────────────── Catalogue
 
 model Location {
-  id        String        @id @default(cuid())
-  name      String
-  slug      String        @unique
-  level     LocationLevel
-  parentId  String?
-  parent    Location?     @relation("LocationTree", fields: [parentId], references: [id], onDelete: Restrict)
-  children  Location[]    @relation("LocationTree")
+  id         String        @id @default(cuid())
+  name       String
+  slug       String        @unique
+  level      LocationLevel
+  parentId   String?
+  parent     Location?     @relation("LocationTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children   Location[]    @relation("LocationTree")
   /// Denormalised ancestor ids (country→self) so a district search can match any descendant
   /// with one indexed array lookup. Maintained by the location service.
-  pathIds   String[]
-  latitude  Float?
-  longitude Float?
+  pathIds    String[]
+  latitude   Float?
+  longitude  Float?
   /// For CITY-level places: true for cities, false for towns.
-  isCity    Boolean       @default(false)
+  isCity     Boolean       @default(false)
   /// OpenStreetMap element (e.g. "node/123") this place was imported from, when it was.
-  osmId     String?       @unique
-  isActive  Boolean       @default(true)
-  sortOrder Int           @default(0)
-  createdAt DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime      @updatedAt @db.Timestamptz(3)
+  osmId      String?       @unique
+  isActive   Boolean       @default(true)
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime      @updatedAt @db.Timestamptz(3)
   properties Property[]
 
   @@index([parentId])
@@ -568,94 +576,96 @@ model Amenity {
 // ──────────────────────────────────────────────────────── Properties
 
 model Property {
-  id                 String           @id @default(cuid())
+  id                  String             @id @default(cuid())
   /// Human-readable reference, e.g. SS-24-000123.
-  reference          String           @unique
-  slug               String           @unique
-  ownerId            String
-  owner              User             @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  reference           String             @unique
+  slug                String             @unique
+  ownerId             String
+  owner               User               @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   /// The account that created and manages the listing (owner or authorised agent).
-  listerId           String
-  lister             User             @relation("PropertyLister", fields: [listerId], references: [id], onDelete: Restrict)
-  agencyId           String?
-  agency             Agency?          @relation(fields: [agencyId], references: [id], onDelete: SetNull)
-  listerCapacity     ListerCapacity   @default(OWNER)
+  listerId            String
+  lister              User               @relation("PropertyLister", fields: [listerId], references: [id], onDelete: Restrict)
+  agencyId            String?
+  agency              Agency?            @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  listerCapacity      ListerCapacity     @default(OWNER)
   /// The lister's phone and email for this listing. Only Sukkot Salone staff see them; never published.
   privateContactPhone String?
   privateContactEmail String?
-  title              String
-  description        String
-  propertyTypeId     String
-  propertyType       PropertyType     @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
+  title               String
+  description         String
+  propertyTypeId      String
+  propertyType        PropertyType       @relation(fields: [propertyTypeId], references: [id], onDelete: Restrict)
   /// What the lister typed when the type is "Other (specify)".
-  propertyTypeOther  String?
-  category           PropertyCategory
-  purpose            ListingPurpose
-  priceMinor         BigInt
-  currency           Currency         @default(SLE)
-  rentalPeriod       RentalPeriod?
-  negotiable         Boolean          @default(false)
-  bedrooms           Int?
-  bathrooms          Int?
-  floorArea          Decimal?         @db.Decimal(12, 2)
-  floorAreaUnit      AreaUnit         @default(SQM)
-  plotSize           Decimal?         @db.Decimal(12, 2)
-  plotUnit           AreaUnit?
-  furnishing         Furnishing?
-  waterSupply        WaterSupply?
-  electricity        Electricity?
-  parkingSpaces      Int?
-  securityFeatures   String[]
-  locationId         String
-  location           Location         @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  propertyTypeOther   String?
+  category            PropertyCategory
+  purpose             ListingPurpose
+  priceMinor          BigInt
+  currency            Currency           @default(SLE)
+  rentalPeriod        RentalPeriod?
+  negotiable          Boolean            @default(false)
+  bedrooms            Int?
+  bathrooms           Int?
+  floorArea           Decimal?           @db.Decimal(12, 2)
+  floorAreaUnit       AreaUnit           @default(SQM)
+  plotSize            Decimal?           @db.Decimal(12, 2)
+  plotUnit            AreaUnit?
+  furnishing          Furnishing?
+  waterSupply         WaterSupply?
+  electricity         Electricity?
+  parkingSpaces       Int?
+  securityFeatures    String[]
+  locationId          String
+  location            Location           @relation(fields: [locationId], references: [id], onDelete: Restrict)
   /// Copy of location.pathIds for indexed hierarchical filtering.
-  locationPathIds    String[]
-  addressLine        String?
-  latitude           Float?
-  longitude          Float?
-  showExactLocation  Boolean          @default(false)
-  availableFrom      DateTime?        @db.Timestamptz(3)
-  videoUrl           String?
-  virtualTourUrl     String?
+  locationPathIds     String[]
+  addressLine         String?
+  latitude            Float?
+  longitude           Float?
+  showExactLocation   Boolean            @default(false)
+  availableFrom       DateTime?          @db.Timestamptz(3)
+  videoUrl            String?
+  virtualTourUrl      String?
   /// Category-specific attributes validated by the shared Zod schemas (land, commercial).
-  attributes         Json             @default("{}")
+  attributes          Json               @default("{}")
   /// Landlord-configured rental terms (advance rent, deposit, responsibilities…).
-  rentalTerms        Json?
-  listingStatus      ListingStatus    @default(DRAFT)
-  availability       Availability     @default(AVAILABLE)
-  documentsStatus    VerificationStatus @default(NOT_SUBMITTED)
-  authorityStatus    VerificationStatus @default(NOT_SUBMITTED)
-  isFeatured         Boolean          @default(false)
+  rentalTerms         Json?
+  listingStatus       ListingStatus      @default(DRAFT)
+  availability        Availability       @default(AVAILABLE)
+  documentsStatus     VerificationStatus @default(NOT_SUBMITTED)
+  authorityStatus     VerificationStatus @default(NOT_SUBMITTED)
+  isFeatured          Boolean            @default(false)
   /// When Sukkot Salone staff last visited and checked the property in person (paid inspection visit).
-  inspectedAt        DateTime?        @db.Timestamptz(3)
-  isDemo             Boolean          @default(false)
-  viewCount          Int              @default(0)
-  saveCount          Int              @default(0)
-  enquiryCount       Int              @default(0)
-  publishedAt        DateTime?        @db.Timestamptz(3)
-  expiresAt          DateTime?        @db.Timestamptz(3)
-  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime         @updatedAt @db.Timestamptz(3)
+  inspectedAt         DateTime?          @db.Timestamptz(3)
+  isDemo              Boolean            @default(false)
+  viewCount           Int                @default(0)
+  saveCount           Int                @default(0)
+  enquiryCount        Int                @default(0)
+  publishedAt         DateTime?          @db.Timestamptz(3)
+  expiresAt           DateTime?          @db.Timestamptz(3)
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
 
-  images            PropertyImage[]
-  video             PropertyVideo?
-  documents         PropertyDocument[]
-  amenities         PropertyAmenity[]
-  statusHistory     PropertyStatusHistory[]
-  savedBy           SavedProperty[]
-  enquiries         Enquiry[]
-  conversations     Conversation[]
-  inspections       Inspection[]
-  availabilityWins  AvailabilityWindow[]
-  applications      RentalApplication[]
-  offers            Offer[]
-  tenancies         Tenancy[]
-  reports           Report[]
-  featuredSlots     FeaturedListing[]
-  verifications     VerificationRequest[]
-  payments          PaymentTransaction[]
-  dailyViews        PropertyViewDaily[]
-  siteVisits        SiteVisit[]
+  images           PropertyImage[]
+  video            PropertyVideo?
+  documents        PropertyDocument[]
+  amenities        PropertyAmenity[]
+  statusHistory    PropertyStatusHistory[]
+  savedBy          SavedProperty[]
+  enquiries        Enquiry[]
+  conversations    Conversation[]
+  inspections      Inspection[]
+  availabilityWins AvailabilityWindow[]
+  applications     RentalApplication[]
+  offers           Offer[]
+  tenancies        Tenancy[]
+  reports          Report[]
+  featuredSlots    FeaturedListing[]
+  verifications    VerificationRequest[]
+  payments         PaymentTransaction[]
+  dailyViews       PropertyViewDaily[]
+  siteVisits       SiteVisit[]
+  serviceFees      ServiceFee[]
+  suggestions      ListingSuggestion[]
 
   @@index([listingStatus, purpose, category])
   @@index([listingStatus, publishedAt])
@@ -748,16 +758,16 @@ model PropertyAmenity {
 }
 
 model PropertyStatusHistory {
-  id         String         @id @default(cuid())
+  id         String   @id @default(cuid())
   propertyId String
-  property   Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   field      String
   fromValue  String?
   toValue    String
   reason     String?
   actorId    String?
-  actor      User?          @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  createdAt  DateTime       @default(now()) @db.Timestamptz(3)
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([propertyId, createdAt])
   @@map("property_status_history")
@@ -903,24 +913,29 @@ model Notification {
 // ────────────────────────────────────────────────── Inspections
 
 model Inspection {
-  id               String           @id @default(cuid())
+  id               String               @id @default(cuid())
   propertyId       String
-  property         Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property         Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   requesterId      String
-  requester        User             @relation("InspectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requester        User                 @relation("InspectionRequester", fields: [requesterId], references: [id], onDelete: Cascade)
   representativeId String
-  representative   User             @relation("InspectionRepresentative", fields: [representativeId], references: [id], onDelete: Restrict)
-  status           InspectionStatus @default(REQUESTED)
-  scheduledAt      DateTime         @db.Timestamptz(3)
-  durationMinutes  Int              @default(30)
-  proposedAt       DateTime?        @db.Timestamptz(3)
+  representative   User                 @relation("InspectionRepresentative", fields: [representativeId], references: [id], onDelete: Restrict)
+  status           InspectionStatus     @default(REQUESTED)
+  scheduledAt      DateTime             @db.Timestamptz(3)
+  durationMinutes  Int                  @default(30)
+  proposedAt       DateTime?            @db.Timestamptz(3)
   proposedById     String?
-  attendees        Int              @default(1)
+  attendees        Int                  @default(1)
   contactPhone     String?
   notes            String?
   responseNote     String?
-  createdAt        DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime         @updatedAt @db.Timestamptz(3)
+  /// Booking fee the requester pays Sukkot Salone before the request is sent on. Null: no fee was due.
+  feeMinor         BigInt?
+  feeCurrency      Currency?
+  feePaidAt        DateTime?            @db.Timestamptz(3)
+  payments         PaymentTransaction[]
+  createdAt        DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @db.Timestamptz(3)
 
   @@index([representativeId, scheduledAt])
   @@index([propertyId, scheduledAt])
@@ -947,28 +962,28 @@ enum SiteVisitStatus {
 /// Completing one gives the listing a dated "Inspected by Sukkot Salone" badge. Not to be confused
 /// with Inspection, which is a viewing booked by a would-be tenant or buyer.
 model SiteVisit {
-  id           String          @id @default(cuid())
+  id           String              @id @default(cuid())
   propertyId   String
-  property     Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property     Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   requesterId  String
-  requester    User            @relation("SiteVisitRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  kind         SiteVisitKind   @default(INSPECTION)
-  status       SiteVisitStatus @default(REQUESTED)
+  requester    User                @relation("SiteVisitRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  kind         SiteVisitKind       @default(INSPECTION)
+  status       SiteVisitStatus     @default(REQUESTED)
   /// What the lister told us when asking for the visit (directions, best times).
   requestNote  String?
   /// The verified or finance-confirmed payment that paid for the visit.
-  paymentId    String?         @unique
+  paymentId    String?             @unique
   payment      PaymentTransaction? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   contactPhone String?
-  scheduledAt  DateTime?       @db.Timestamptz(3)
+  scheduledAt  DateTime?           @db.Timestamptz(3)
   staffId      String?
-  staff        User?           @relation("SiteVisitStaff", fields: [staffId], references: [id], onDelete: SetNull)
+  staff        User?               @relation("SiteVisitStaff", fields: [staffId], references: [id], onDelete: SetNull)
   /// What staff found, shown to the lister.
   staffNote    String?
   cancelReason String?
-  completedAt  DateTime?       @db.Timestamptz(3)
-  createdAt    DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime        @updatedAt @db.Timestamptz(3)
+  completedAt  DateTime?           @db.Timestamptz(3)
+  createdAt    DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime            @updatedAt @db.Timestamptz(3)
 
   @@index([status, createdAt])
   @@index([propertyId])
@@ -976,16 +991,16 @@ model SiteVisit {
 }
 
 model AvailabilityWindow {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  propertyId    String?
-  property      Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  weekday       Int
-  startMinute   Int
-  endMinute     Int
-  slotMinutes   Int       @default(30)
-  maxPerSlot    Int       @default(1)
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String?
+  property    Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+  slotMinutes Int       @default(30)
+  maxPerSlot  Int       @default(1)
 
   @@index([userId])
   @@map("availability_windows")
@@ -994,13 +1009,13 @@ model AvailabilityWindow {
 // ──────────────────────────────────────────────────────── Rentals
 
 model RentalApplication {
-  id                 String            @id @default(cuid())
+  id                 String             @id @default(cuid())
   propertyId         String
-  property           Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property           Property           @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   applicantId        String
-  applicant          User              @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-  status             ApplicationStatus @default(DRAFT)
-  moveInDate         DateTime          @db.Timestamptz(3)
+  applicant          User               @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  status             ApplicationStatus  @default(DRAFT)
+  moveInDate         DateTime           @db.Timestamptz(3)
   leaseMonths        Int
   occupants          Int
   employmentStatus   String
@@ -1012,10 +1027,10 @@ model RentalApplication {
   message            String?
   /// Terms proposed by the landlord when status is OFFER_MADE.
   proposedTerms      Json?
-  submittedAt        DateTime?         @db.Timestamptz(3)
-  decidedAt          DateTime?         @db.Timestamptz(3)
-  createdAt          DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
+  submittedAt        DateTime?          @db.Timestamptz(3)
+  decidedAt          DateTime?          @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @db.Timestamptz(3)
   events             ApplicationEvent[]
   conversation       Conversation?
   tenancy            Tenancy?
@@ -1026,44 +1041,44 @@ model RentalApplication {
 }
 
 model ApplicationEvent {
-  id            String            @id @default(cuid())
+  id            String             @id @default(cuid())
   applicationId String
-  application   RentalApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application   RentalApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   actorId       String?
-  actor         User?             @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actor         User?              @relation(fields: [actorId], references: [id], onDelete: SetNull)
   action        String
   fromStatus    ApplicationStatus?
   toStatus      ApplicationStatus
   note          String?
-  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  createdAt     DateTime           @default(now()) @db.Timestamptz(3)
 
   @@index([applicationId, createdAt])
   @@map("application_events")
 }
 
 model Tenancy {
-  id                String              @id @default(cuid())
-  propertyId        String
-  property          Property            @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  tenantId          String
-  tenant            User                @relation("Tenant", fields: [tenantId], references: [id], onDelete: Restrict)
-  landlordId        String
-  landlord          User                @relation("Landlord", fields: [landlordId], references: [id], onDelete: Restrict)
-  applicationId     String?             @unique
-  application       RentalApplication?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
-  status            TenancyStatus       @default(UPCOMING)
-  startDate         DateTime            @db.Timestamptz(3)
-  endDate           DateTime            @db.Timestamptz(3)
-  rentMinor         BigInt
-  currency          Currency
-  rentalPeriod      RentalPeriod
-  depositMinor      BigInt?
-  advancePeriods    Int                 @default(0)
-  terms             String?
-  createdAt         DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime            @updatedAt @db.Timestamptz(3)
-  schedule          RentScheduleItem[]
-  payments          PaymentTransaction[]
+  id             String               @id @default(cuid())
+  propertyId     String
+  property       Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  tenantId       String
+  tenant         User                 @relation("Tenant", fields: [tenantId], references: [id], onDelete: Restrict)
+  landlordId     String
+  landlord       User                 @relation("Landlord", fields: [landlordId], references: [id], onDelete: Restrict)
+  applicationId  String?              @unique
+  application    RentalApplication?   @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  status         TenancyStatus        @default(UPCOMING)
+  startDate      DateTime             @db.Timestamptz(3)
+  endDate        DateTime             @db.Timestamptz(3)
+  rentMinor      BigInt
+  currency       Currency
+  rentalPeriod   RentalPeriod
+  depositMinor   BigInt?
+  advancePeriods Int                  @default(0)
+  terms          String?
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @db.Timestamptz(3)
+  schedule       RentScheduleItem[]
+  payments       PaymentTransaction[]
 
   @@index([landlordId])
   @@index([tenantId])
@@ -1088,20 +1103,20 @@ model RentScheduleItem {
 // ─────────────────────────────────────────── Sales and negotiation
 
 model Offer {
-  id                 String           @id @default(cuid())
+  id                 String               @id @default(cuid())
   propertyId         String
-  property           Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property           Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   buyerId            String
-  buyer              User             @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  status             OfferStatus      @default(SUBMITTED)
+  buyer              User                 @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  status             OfferStatus          @default(SUBMITTED)
   /// Latest amount on the table (from the most recent offer or counteroffer event).
   currentAmountMinor BigInt
   currency           Currency
   paymentArrangement String
-  inspectionDone     Boolean          @default(false)
-  expiresAt          DateTime?        @db.Timestamptz(3)
-  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime         @updatedAt @db.Timestamptz(3)
+  inspectionDone     Boolean              @default(false)
+  expiresAt          DateTime?            @db.Timestamptz(3)
+  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
   events             OfferEvent[]
   dueDiligence       DueDiligenceItem[]
   conversation       Conversation?
@@ -1153,46 +1168,52 @@ model DueDiligenceItem {
 // ─────────────────────────────────────────── Financial operations
 
 model PaymentTransaction {
-  id                  String          @id @default(cuid())
-  reference           String          @unique
+  id                 String         @id @default(cuid())
+  reference          String         @unique
   /// Client-supplied key; a repeated request returns the same transaction.
-  idempotencyKey      String
-  method              PaymentMethod
-  purpose             PaymentPurpose
-  status              PaymentStatus   @default(CREATED)
-  amountMinor         BigInt
-  currency            Currency
-  payerId             String?
-  payer               User?           @relation("Payer", fields: [payerId], references: [id], onDelete: SetNull)
-  payeeId             String?
-  payee               User?           @relation("Payee", fields: [payeeId], references: [id], onDelete: SetNull)
-  recordedById        String?
-  recordedBy          User?           @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
-  payerPhone          String?
-  propertyId          String?
-  property            Property?       @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  tenancyId           String?
-  tenancy             Tenancy?        @relation(fields: [tenancyId], references: [id], onDelete: SetNull)
-  offerId             String?
-  offer               Offer?          @relation(fields: [offerId], references: [id], onDelete: SetNull)
-  subscriptionId      String?
-  subscription        Subscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  idempotencyKey     String
+  method             PaymentMethod
+  purpose            PaymentPurpose
+  status             PaymentStatus  @default(CREATED)
+  amountMinor        BigInt
+  currency           Currency
+  payerId            String?
+  payer              User?          @relation("Payer", fields: [payerId], references: [id], onDelete: SetNull)
+  payeeId            String?
+  payee              User?          @relation("Payee", fields: [payeeId], references: [id], onDelete: SetNull)
+  recordedById       String?
+  recordedBy         User?          @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  payerPhone         String?
+  propertyId         String?
+  property           Property?      @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  tenancyId          String?
+  tenancy            Tenancy?       @relation(fields: [tenancyId], references: [id], onDelete: SetNull)
+  offerId            String?
+  offer              Offer?         @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  subscriptionId     String?
+  subscription       Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  inspectionId       String?
+  inspection         Inspection?    @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
+  serviceFeeId       String?
+  serviceFee         ServiceFee?    @relation("ServiceFeePayments", fields: [serviceFeeId], references: [id], onDelete: SetNull)
+  /// The rent or sale payment a service fee was charged on.
+  feeCharged         ServiceFee?    @relation("ServiceFeeSource")
   /// Provider-side id; unique per method so duplicate callbacks are detected.
-  providerReference   String?
-  providerVerified    Boolean         @default(false)
-  externalReference   String?
-  paidAt              DateTime?       @db.Timestamptz(3)
-  notes               String?
-  nextAction          Json?
+  providerReference  String?
+  providerVerified   Boolean        @default(false)
+  externalReference  String?
+  paidAt             DateTime?      @db.Timestamptz(3)
+  notes              String?
+  nextAction         Json?
   /// Provider tokens needed to verify callbacks (e.g. Orange Money pay_token / notif_token). Never sent to clients.
-  providerData        Json?
+  providerData       Json?
   /// For payments recorded by the payer, the payee confirms receipt.
-  confirmedByPayeeAt  DateTime?       @db.Timestamptz(3)
-  createdAt           DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime        @updatedAt @db.Timestamptz(3)
-  events              PaymentEvent[]
-  refunds             Refund[]
-  siteVisit           SiteVisit?
+  confirmedByPayeeAt DateTime?      @db.Timestamptz(3)
+  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @db.Timestamptz(3)
+  events             PaymentEvent[]
+  refunds            Refund[]
+  siteVisit          SiteVisit?
 
   @@unique([idempotencyKey, payerId])
   @@unique([method, providerReference])
@@ -1235,43 +1256,101 @@ model Refund {
 }
 
 model SubscriptionPlan {
-  id             String         @id @default(cuid())
-  code           String         @unique
-  name           String
-  audience       String
-  description    String
-  priceMinor     BigInt
-  currency       Currency       @default(SLE)
-  periodDays     Int            @default(30)
-  maxListings    Int?
-  featuredSlots  Int            @default(0)
-  features       String[]
-  isActive       Boolean        @default(true)
-  sortOrder      Int            @default(0)
-  createdAt      DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime       @updatedAt @db.Timestamptz(3)
-  subscriptions  Subscription[]
+  id              String         @id @default(cuid())
+  code            String         @unique
+  name            String
+  audience        String
+  description     String
+  priceMinor      BigInt
+  currency        Currency       @default(SLE)
+  periodDays      Int            @default(30)
+  maxListings     Int?
+  featuredSlots   Int            @default(0)
+  /// How far up search results the subscriber's listings move (0 none, higher first).
+  searchBoost     Int            @default(0)
+  /// Listings the subscriber can suggest to people searching in that area, per period.
+  areaSuggestions Int            @default(0)
+  features        String[]
+  isActive        Boolean        @default(true)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(3)
+  subscriptions   Subscription[]
 
   @@map("subscription_plans")
 }
 
 model Subscription {
-  id        String             @id @default(cuid())
-  userId    String
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  planId    String
-  plan      SubscriptionPlan   @relation(fields: [planId], references: [id], onDelete: Restrict)
-  status    SubscriptionStatus @default(PENDING_PAYMENT)
-  startsAt  DateTime?          @db.Timestamptz(3)
-  endsAt    DateTime?          @db.Timestamptz(3)
+  id             String               @id @default(cuid())
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId         String
+  plan           SubscriptionPlan     @relation(fields: [planId], references: [id], onDelete: Restrict)
+  status         SubscriptionStatus   @default(PENDING_PAYMENT)
+  startsAt       DateTime?            @db.Timestamptz(3)
+  endsAt         DateTime?            @db.Timestamptz(3)
   /// When the "your plan ends soon" reminder went out, so it is sent once per period.
-  reminderSentAt DateTime?     @db.Timestamptz(3)
-  createdAt DateTime           @default(now()) @db.Timestamptz(3)
-  payments  PaymentTransaction[]
+  reminderSentAt DateTime?            @db.Timestamptz(3)
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
+  payments       PaymentTransaction[]
 
   @@index([userId, status])
   @@index([status, endsAt])
   @@map("subscriptions")
+}
+
+enum ServiceFeeStatus {
+  DUE
+  PAID
+  WAIVED
+}
+
+/// Sukkot Salone's success fee, owed by the tenant or buyer once rent, lease or purchase money is paid.
+/// Charged automatically on rent and sale payments recorded here, or raised by staff for a deal agreed
+/// through our team. It is Sukkot Salone's own fee; the rent or sale money itself never passes through us.
+model ServiceFee {
+  id              String               @id @default(cuid())
+  reference       String               @unique
+  payerId         String
+  payer           User                 @relation("ServiceFeePayer", fields: [payerId], references: [id], onDelete: Cascade)
+  propertyId      String?
+  property        Property?            @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  /// The recorded rent or sale payment this fee was charged on, if any.
+  sourcePaymentId String?              @unique
+  sourcePayment   PaymentTransaction?  @relation("ServiceFeeSource", fields: [sourcePaymentId], references: [id], onDelete: SetNull)
+  description     String
+  baseMinor       BigInt
+  basisPoints     Int
+  amountMinor     BigInt
+  currency        Currency
+  status          ServiceFeeStatus     @default(DUE)
+  paidAt          DateTime?            @db.Timestamptz(3)
+  waivedReason    String?
+  raisedById      String?
+  raisedBy        User?                @relation("ServiceFeeRaiser", fields: [raisedById], references: [id], onDelete: SetNull)
+  payments        PaymentTransaction[] @relation("ServiceFeePayments")
+  createdAt       DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @db.Timestamptz(3)
+
+  @@index([payerId, status])
+  @@index([status, createdAt])
+  @@map("service_fees")
+}
+
+/// An agent's paid-plan suggestion of one listing to people whose saved searches cover its area.
+model ListingSuggestion {
+  id             String   @id @default(cuid())
+  propertyId     String
+  property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  recipients     Int
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([subscriptionId])
+  @@index([propertyId, createdAt])
+  @@map("listing_suggestions")
 }
 
 model FeaturedListing {
@@ -1382,9 +1461,9 @@ model ContentPage {
 }
 
 model RateLimitBucket {
-  key       String   @id
-  count     Int
-  resetAt   DateTime @db.Timestamptz(3)
+  key     String   @id
+  count   Int
+  resetAt DateTime @db.Timestamptz(3)
 
   @@map("rate_limit_buckets")
 }

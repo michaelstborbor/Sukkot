@@ -4,7 +4,7 @@ import { formatDate, formatMoney, PAYMENT_METHOD_LABELS } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
 import { availableOnlineMethods, isAwaitingFinance, manualChannelOf } from "@/server/payments";
-import { getEntitlements, transferDetails } from "@/server/services/billing";
+import { getEntitlements, planAudience, transferDetails } from "@/server/services/billing";
 import { getSetting } from "@/server/services/settings";
 import { PageHeader } from "@/components/dashboard/shell";
 import { CheckoutButton } from "@/components/dashboard/checkout";
@@ -17,8 +17,9 @@ export const metadata: Metadata = { title: "Plans and billing" };
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ promote?: string }> }) {
   const actor = await requirePagePermission("listing:create", "/dashboard/billing");
   const { promote } = await searchParams;
+  const audience = await planAudience(actor.id);
   const [plans, subs, promoPrice, promoProperty, ent, transfer, myPlatformPayments, slotPrice] = await Promise.all([
-    db.subscriptionPlan.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
+    db.subscriptionPlan.findMany({ where: { isActive: true, audience: audience === "AGENT" ? { in: ["AGENT", "AGENCY"] } : { not: "AGENT" } }, orderBy: { sortOrder: "asc" } }),
     db.subscription.findMany({ where: { userId: actor.id }, include: { plan: true }, orderBy: { createdAt: "desc" }, take: 10 }),
     getSetting("promotion.featured7d"),
     promote ? db.property.findFirst({ where: { id: promote, listingStatus: "PUBLISHED", OR: [{ listerId: actor.id }, { ownerId: actor.id }] }, select: { id: true, title: true, isFeatured: true } }) : null,
@@ -35,10 +36,17 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Plans and billing" description="Plans, promotions, inspection visits and extra listing slots are the only payments Sukkot Salone collects. Rent and sale money always goes directly between the parties." />
+      <PageHeader
+        title="Plans and billing"
+        description={
+          audience === "AGENT"
+            ? "Agent packages: your first 2 listings are free. Each package lifts your listings in search, adds featured listings and lets you suggest listings to people searching in the area. Rent and sale money always goes directly between the parties."
+            : "Plans, promotions, inspection visits, photo shoots and extra listing slots are what listers pay Sukkot Salone for. Rent and sale money always goes directly between the parties."
+        }
+      />
       {methods.length === 0 && !transfer && <Notice tone="warning" className="mb-6">Payments are not switched on for this site yet. An administrator needs to add Sukkot Salone&apos;s payment details or configure Orange Money or Afrimoney.</Notice>}
 
-      <section className="card mb-6 grid gap-4 p-5 sm:grid-cols-3">
+      <section className={`card mb-6 grid gap-4 p-5 ${ent.suggestions ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3"}`}>
         <div>
           <p className="text-xs font-bold tracking-wider text-muted uppercase">Your plan</p>
           <p className="mt-1 text-lg font-bold text-navy-900">{ent.plan?.name ?? "No plan"}</p>
@@ -60,6 +68,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             {ent.featuredSlots ? <>{slotsLeft}<span className="text-sm font-normal text-muted"> of {ent.featuredSlots} left this period</span></> : "None on this plan"}
           </p>
         </div>
+        {ent.suggestions > 0 && (
+          <div>
+            <p className="text-xs font-bold tracking-wider text-muted uppercase">Area suggestions</p>
+            <p className="mt-1 text-lg font-bold text-navy-900">
+              {Math.max(0, ent.suggestions - ent.suggestionsUsed)}<span className="text-sm font-normal text-muted"> of {ent.suggestions} left this period</span>
+            </p>
+            <p className="text-sm text-muted">Send one from a published listing&apos;s page.</p>
+          </div>
+        )}
       </section>
 
       {awaiting.length > 0 && (
@@ -120,7 +137,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         </section>
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={`grid gap-4 md:grid-cols-2 ${plans.length > 3 ? "xl:grid-cols-4" : "lg:grid-cols-3"}`}>
         {plans.map((p) => {
           const current = active?.planId === p.id || (!active && p.id === ent.plan?.id);
           return (

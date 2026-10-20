@@ -11,7 +11,7 @@ import { publicImageUrl } from "@/server/storage";
 import { getListingVideo, videoDto } from "@/server/services/video";
 import { visitsForListing } from "@/server/services/site-visits";
 import { getSetting } from "@/server/services/settings";
-import { transferDetails } from "@/server/services/billing";
+import { getEntitlements, transferDetails } from "@/server/services/billing";
 import { availableOnlineMethods } from "@/server/payments";
 import { CheckoutButton } from "@/components/dashboard/checkout";
 import { InspectedBadge } from "@/components/property/badges";
@@ -53,6 +53,8 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
   const ownerActions = (["submit", "pause", "resume", "remove"] as const).filter((a) => listingMachine.can(p.listingStatus, a, "OWNER"));
   const canBookVisit = isManager && ["DRAFT", "PENDING_REVIEW", "CHANGES_REQUESTED", "PUBLISHED", "PAUSED"].includes(p.listingStatus);
   const [visits, visitPrice, transfer] = tab === "overview" && canBookVisit ? await Promise.all([visitsForListing(actor, p.id), getSetting("visit.inspection"), transferDetails()]) : [[], null, null];
+  const ent = tab === "overview" && isManager && p.listingStatus === "PUBLISHED" ? await getEntitlements(actor.id) : null;
+  const suggestionsLeft = ent ? Math.max(0, ent.suggestions - ent.suggestionsUsed) : 0;
   const openVisit = visits.find((v) => v.kind === "INSPECTION" && (v.status === "REQUESTED" || v.status === "SCHEDULED"));
   const inspected = inspectionStillValid(p.inspectedAt);
 
@@ -149,6 +151,16 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
               <h2 className="font-bold text-navy-900">Promote this listing</h2>
               <p className="text-sm text-muted">Featured listings appear in the homepage carousel and at the top of matching searches. Promotion never changes verification status.</p>
               {p.isFeatured ? <StatusBadge status="ACTIVE" /> : <ButtonLink href={`/dashboard/billing?promote=${p.id}`} variant="accent" size="sm">Feature for 7 days</ButtonLink>}
+              {ent && ent.suggestions > 0 && (
+                <div className="space-y-2 border-t border-line pt-3">
+                  <p className="text-sm text-muted">
+                    Send this listing to people whose saved searches cover {p.location.name}. Your plan includes {ent.suggestions} suggestion{ent.suggestions === 1 ? "" : "s"} each period; {suggestionsLeft} left.
+                  </p>
+                  {suggestionsLeft > 0 && (
+                    <ActionButton path="/billing/suggest" body={{ propertyId: p.id }} label="Suggest to people searching nearby" confirm="Send this listing to people searching in this area? This uses one of your suggestions." success="Suggestion sent" />
+                  )}
+                </div>
+              )}
             </section>
           )}
 

@@ -29,13 +29,14 @@ export function listingPlace(p: { locationLabel: string; district: string | null
 
 /** The message typed into a WhatsApp chat started from a listing, naming the property so the team knows which one. */
 export function listingEnquiry(
-  p: { title: string; typeName: string; locationLabel: string; district: string | null; price: { formatted: string } },
+  p: { title: string; typeName: string; locationLabel: string; district: string | null; price: { formatted: string }; reference?: string },
   link?: string,
 ) {
   return [
     `Hello Sukkot Salone, I saw this ${p.typeName.toLowerCase()} and I'd like to know more about it.`,
     "",
     p.title,
+    ...(p.reference ? [`Reference: ${p.reference}`] : []),
     `Type: ${p.typeName}`,
     `Location: ${listingPlace(p)}`,
     `Price: ${p.price.formatted}`,
