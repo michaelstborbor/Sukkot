@@ -143,7 +143,9 @@ describe("agent packages", () => {
     await expect(buy(owner, premium.id)).rejects.toMatchObject({ code: "BAD_REQUEST" });
     const prices = await db.subscriptionPlan.findMany({ where: { code: { in: ["agent-basic", "agent-premium", "agent-premium-pro"] } }, orderBy: { sortOrder: "asc" } });
     expect(prices.map((p) => p.priceMinor)).toEqual([50_000n, 100_000n, 200_000n]);
-    expect((await db.subscriptionPlan.findUniqueOrThrow({ where: { code: "agent-pro" } })).isActive).toBe(false);
+    // Agent Pro, which older databases still hold, is no longer on sale.
+    const onSale = await db.subscriptionPlan.findMany({ where: { audience: "AGENT", isActive: true }, orderBy: { sortOrder: "asc" } });
+    expect(onSale.map((p) => p.code)).toEqual(["agent-free", "agent-basic", "agent-premium", "agent-premium-pro"]);
   });
 
   it("lifts a paying agent's listings in search and lets them suggest a listing to people searching nearby", async () => {
