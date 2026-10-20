@@ -53,6 +53,13 @@ export default function AccountScreen() {
         <ContactRow icon="call-outline" label="Call us" detail={SUPPORT_CONTACT.phone} url={telLink(SUPPORT_CONTACT.phone)} last />
       </Card>
 
+      <Card style={{ padding: 0, gap: 0 }}>
+        <WebRow icon="document-text-outline" label="Terms of use" path="/terms" />
+        <WebRow icon="lock-closed-outline" label="Privacy policy" path="/privacy" />
+        <WebRow icon="cash-outline" label="Refund policy" path="/refunds" />
+        <WebRow icon="information-circle-outline" label="Cookie policy" path="/cookies" last />
+      </Card>
+
       <Text style={[ui.muted, { fontSize: 12 }]}>{NOTICES.noEscrow}</Text>
       <Button title="Sign out" variant="outline" onPress={signOut} />
     </ScrollView>

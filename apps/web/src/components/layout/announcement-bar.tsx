@@ -7,7 +7,7 @@ export async function AnnouncementBar() {
   const a = await getSetting("site.announcement");
   if (!a?.enabled && !env.demoMode) return null;
   return (
-    <div className="bg-navy-950 text-[13px] text-white/90">
+    <aside aria-label="Site notice" className="bg-navy-950 text-[13px] text-white/90">
       <div className="container-page flex min-h-9 flex-wrap items-center justify-center gap-x-3 gap-y-0.5 py-1.5 text-center">
         {a?.enabled && (
           <span className="inline-flex items-center gap-1.5">
@@ -23,6 +23,6 @@ export async function AnnouncementBar() {
         )}
         {env.demoMode && <span className="rounded-full bg-gold-500/20 px-2 py-0.5 text-[11px] font-semibold text-gold-100">Demo mode · sample listings are fictional</span>}
       </div>
-    </div>
+    </aside>
   );
 }

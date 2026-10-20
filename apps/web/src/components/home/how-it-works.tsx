@@ -38,7 +38,7 @@ export function HowItWorks() {
           <li key={s.title} className="card animate-[fade-up_0.35s_ease-out_both] p-6" style={{ animationDelay: `${i * 70}ms` }}>
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><s.icon className="h-5 w-5" aria-hidden /></span>
-              <span className="text-sm font-bold text-gold-600">Step {i + 1}</span>
+              <span className="text-sm font-bold text-gold-700">Step {i + 1}</span>
             </div>
             <h3 className="mt-4 text-lg font-semibold text-navy-900">{s.title}</h3>
             <p className="mt-1.5 text-[15px] text-muted">{s.body}</p>

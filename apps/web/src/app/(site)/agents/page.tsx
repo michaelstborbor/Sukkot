@@ -30,6 +30,7 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
   return (
     <div className="container-page py-10 sm:py-14">
       <SectionHeading
+        as="h1"
         eyebrow="Professionals"
         title="Property agents"
         body="Agents who list on Sukkot Salone. Look for the Verified Agent badge, and always confirm who you are dealing with."

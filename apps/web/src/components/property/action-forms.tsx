@@ -1,5 +1,6 @@
 "use client";
 
+import { PrivacyNote } from "@/components/legal/privacy-note";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -40,6 +41,7 @@ function EnquiryForm({ propertyId, onDone }: { propertyId: string; onDone: (conv
       <Field id="enq-phone" label="Phone number" optional hint="Shared with the lister so they can call you back." error={f.errors.contactPhone}>
         <Input id="enq-phone" type="tel" inputMode="tel" placeholder="076 123 456" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={!!f.errors.contactPhone} />
       </Field>
+      <PrivacyNote>We share your message and phone number only with this listing&apos;s owner or agent.</PrivacyNote>
       <FormError message={f.formError} />
       <Button type="submit" variant="secondary" className="w-full" loading={f.pending}>Send enquiry</Button>
     </form>
@@ -155,6 +157,7 @@ function ApplicationForm({ propertyId, onDone }: { propertyId: string; onDone: (
       </div>
       <Field id="app-msg" label="Message to the landlord" optional><Textarea id="app-msg" value={v.message} onChange={set("message")} className="min-h-20" /></Field>
       <Notice tone="info">{NOTICES.rentalTermsReview}</Notice>
+      <PrivacyNote>We share your application only with this listing&apos;s owner or agent.</PrivacyNote>
       <FormError message={f.formError} />
       <Button type="submit" variant="secondary" className="w-full" loading={f.pending}>Submit application</Button>
     </form>
@@ -181,6 +184,7 @@ export function ReportForm({ propertyId, reportedUserId, onDone, signedIn }: { p
           <Input id="rep-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
       )}
+      <PrivacyNote>Only our safety team sees your report. We do not tell the person you reported who sent it.</PrivacyNote>
       <FormError message={f.formError} />
       <Button type="submit" variant="danger" className="w-full" loading={f.pending}>Send report</Button>
     </form>
@@ -238,7 +242,7 @@ export function PropertyActions({
             href={whatsappLink(brand.supportWhatsapp, whatsappMessage)}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonClasses("primary", "lg", "bg-[#1ebe5b] hover:bg-[#19a64f]")}
+            className={buttonClasses("primary", "lg", "bg-[#118645] hover:bg-[#0f7a3d]")}
           >
             <WhatsAppIcon className="h-5 w-5" /> WhatsApp
           </a>

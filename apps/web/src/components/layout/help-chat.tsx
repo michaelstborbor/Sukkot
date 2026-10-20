@@ -208,6 +208,7 @@ export function HelpChat() {
             <div>
               <p className="font-semibold">{brand.shortName} assistant</p>
               <p className="text-xs text-white/70">{ai ? "AI assistant · not a person · can make mistakes" : "Automatic answers · not a person"}</p>
+              <p className="text-xs text-white/70">Do not share passwords or ID numbers. <a href="/privacy" target="_blank" className="underline">Privacy</a></p>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close assistant" className="rounded-full p-1 hover:bg-white/10">
               <X className="h-5 w-5" />

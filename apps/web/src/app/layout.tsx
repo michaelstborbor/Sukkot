@@ -36,8 +36,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en-SL" className={`${figtree.variable} ${dmSerif.variable} ${fraunces.variable}`}>
       <body>
         {children}
-        <HelpChat />
-        <WhatsAppButton />
+        <aside aria-label="Help and contact">
+          <HelpChat />
+          <WhatsAppButton />
+        </aside>
         <Toaster position="top-center" richColors closeButton toastOptions={{ duration: 4500 }} />
       </body>
     </html>
