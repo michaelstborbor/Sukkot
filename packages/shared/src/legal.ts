@@ -63,7 +63,7 @@ export const NOTICES = {
   verificationLimits:
     "Verification badges show which checks our team has completed. They do not certify legal title and do not replace an official search or a lawyer's advice.",
   inspectionSafety:
-    "Meet in daylight, bring someone with you, and confirm the representative's identity before entering a property. Never pay money before you have inspected the property and checked the ownership documents.",
+    "Meet in daylight, bring someone with you, and confirm the representative's identity before entering a property. Never pay the owner or agent any money before you have inspected the property and checked the ownership documents.",
   paymentHonesty:
     "A payment is shown as paid only after the payment provider confirms it. Payments recorded manually are marked as recorded, not verified.",
   noEscrow:

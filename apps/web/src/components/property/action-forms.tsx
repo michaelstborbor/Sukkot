@@ -55,7 +55,8 @@ function InspectionForm({ propertyId, viewingFee, onDone }: { propertyId: string
     success: viewingFee ? `Inspection saved. Pay the ${viewingFee} booking fee to send it.` : "Inspection requested. We'll notify you when it's confirmed.",
     onSuccess: onDone,
   });
-  const min = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 16);
+  // Round up to a quarter hour: the browser only accepts times a whole number of steps after `min`.
+  const min = new Date(Math.ceil((Date.now() + 2 * 3600_000) / 900_000) * 900_000).toISOString().slice(0, 16);
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); f.submit({ propertyId, scheduledAt: freetownLocalToIso(when), notes, attendees, contactPhone: phone }); }}>
       <Field id="insp-when" label="Preferred date and time" hint="Freetown time (GMT)." error={f.errors.scheduledAt}>
