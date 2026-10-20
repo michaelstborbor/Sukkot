@@ -1,7 +1,8 @@
-import { BadgeCheck, Building2, Camera, ClipboardList, CreditCard, Flag, LayoutDashboard, ListChecks, MapPin, Percent, Settings, Shapes, Users, Briefcase } from "lucide-react";
+import { BadgeCheck, Building2, Camera, ClipboardList, CreditCard, FileSpreadsheet, Flag, LayoutDashboard, ListChecks, MapPin, Percent, Settings, Shapes, Users, Briefcase } from "lucide-react";
 import { hasPermission, type Permission } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
+import { datasetsFor } from "@/server/services/data-reports";
 import { DashboardNav, type NavItem } from "@/components/dashboard/shell";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/settings", label: "Site settings", icon: icon(Settings), perm: "admin:settings.manage" },
     { href: "/admin/audit", label: "Audit log", icon: icon(ClipboardList), perm: "admin:audit.view" },
   ];
-  const items = all.filter((i) => hasPermission(actor.roles, i.perm));
+  const items: NavItem[] = all.filter((i) => hasPermission(actor.roles, i.perm));
+  // Open to staff who may see at least one of its datasets, so it is placed by hand, before the audit log.
+  if (datasetsFor(actor).length) {
+    const at = items.findIndex((i) => i.href === "/admin/audit");
+    items.splice(at === -1 ? items.length : at, 0, { href: "/admin/data-reports", label: "Data reports", icon: icon(FileSpreadsheet) });
+  }
   return (
     <div className="container-page grid gap-6 py-6 lg:grid-cols-[230px_1fr] lg:gap-10 lg:py-10">
       <DashboardNav items={items} title="Administration" />

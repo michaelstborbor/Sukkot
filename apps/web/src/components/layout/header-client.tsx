@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Shield, X } from "lucide-react";
+import { Bell, Building2, ChevronDown, LayoutDashboard, LogOut, Menu, MessageSquare, Plus, Shield, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { buttonClasses } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/misc";
@@ -31,8 +31,15 @@ function CountDot({ n }: { n: number }) {
   return <span className="absolute -top-1 -right-1 min-w-[18px] rounded-full bg-clay-600 px-1 text-center text-[11px] leading-[18px] font-bold text-white">{n > 99 ? "99+" : n}</span>;
 }
 
+/** Where "My listings" goes: the lister's own listings, or sign-in first. Hidden for signed-in accounts that cannot list. */
+function myListingsHref(user: HeaderUser | null) {
+  if (!user) return `/auth/sign-in?next=${encodeURIComponent("/dashboard/properties")}`;
+  return user.canList ? "/dashboard/properties" : null;
+}
+
 export function HeaderClient({ user }: { user: HeaderUser | null }) {
   const pathname = usePathname();
+  const myListings = myListingsHref(user);
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -90,6 +97,12 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
             <Link href={user?.canList ? "/dashboard/properties/new" : "/list-your-property"} className={buttonClasses("outline", "sm", "hidden sm:inline-flex")}>
               <Plus className="h-4 w-4" aria-hidden /> List a property
             </Link>
+            {/* Between lg and xl the main links leave no room for it; it is in the account menu there too. */}
+            {myListings && (
+              <Link href={myListings} aria-current={pathname === "/dashboard/properties" ? "page" : undefined} className={buttonClasses("outline", "sm", "hidden sm:inline-flex lg:hidden xl:inline-flex")}>
+                <Building2 className="h-4 w-4" aria-hidden /> My listings
+              </Link>
+            )}
             {user ? (
               <>
                 <Link href="/dashboard/messages" className="relative hidden rounded-full p-2 text-navy-800 hover:bg-navy-50 sm:inline-flex" aria-label={`Messages${user.unreadMessages ? `, ${user.unreadMessages} unread` : ""}`}>
@@ -109,6 +122,7 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
                     <div role="menu" className="absolute right-0 mt-2 w-60 animate-[fade-up_0.18s_ease-out] rounded-xl border border-line bg-surface p-1.5 shadow-[var(--shadow-pop)]">
                       <p className="truncate px-3 py-2 text-sm font-semibold text-navy-900">{user.name}</p>
                       <MenuLink href="/dashboard" icon={<LayoutDashboard className="h-4 w-4" />}>Dashboard</MenuLink>
+                      {user.canList && <MenuLink href="/dashboard/properties" icon={<Building2 className="h-4 w-4" />}>My listings</MenuLink>}
                       <MenuLink href="/dashboard/messages" icon={<MessageSquare className="h-4 w-4" />}>Messages</MenuLink>
                       {user.isStaff && <MenuLink href="/admin" icon={<Shield className="h-4 w-4" />}>Administration</MenuLink>}
                       <button type="button" role="menuitem" onClick={signOut} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-ink hover:bg-navy-50">
@@ -145,6 +159,11 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
             <Link href={user?.canList ? "/dashboard/properties/new" : "/list-your-property"} className={buttonClasses("accent", "lg", "w-full")}>
               <Plus className="h-5 w-5" /> List a property
             </Link>
+            {myListings && (
+              <Link href={myListings} className={buttonClasses("outline", "lg", "mt-2 w-full")}>
+                <Building2 className="h-5 w-5" /> My listings
+              </Link>
+            )}
             {user ? (
               <>
                 <Link href="/dashboard" className="rounded-lg px-3 py-3 font-medium hover:bg-navy-50">Dashboard</Link>

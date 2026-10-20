@@ -1,22 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { GENERAL_ENQUIRY, whatsappLink } from "@sukkot/shared";
+import { whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
-import { LISTING_MESSAGE_ID } from "@/lib/whatsapp";
+import { LISTING_MESSAGE_ID, whatsappMessageFor } from "@/lib/whatsapp";
 import { WhatsAppIcon } from "./whatsapp-icon";
 
-/** A "Chat on WhatsApp" button in the corner of every page. On a listing it names the property. */
+/** A "Chat on WhatsApp" button in the corner of every page. Its message fits the page; on a listing it names the property. */
 export function WhatsAppButton() {
   const pathname = usePathname();
   // These screens keep their own buttons (send, next, submit) in that corner.
   if (["/dashboard/messages/", "/dashboard/properties/", "/admin"].some((p) => pathname.startsWith(p))) return null;
   return (
     <a
-      href={whatsappLink(brand.supportWhatsapp, GENERAL_ENQUIRY)}
+      href={whatsappLink(brand.supportWhatsapp, whatsappMessageFor(pathname))}
       onClick={(e) => {
+        // Read at click time, so it is the listing on screen now.
         const listing = document.getElementById(LISTING_MESSAGE_ID)?.dataset.message;
-        e.currentTarget.href = whatsappLink(brand.supportWhatsapp, listing || GENERAL_ENQUIRY);
+        e.currentTarget.href = whatsappLink(brand.supportWhatsapp, whatsappMessageFor(pathname, listing));
       }}
       target="_blank"
       rel="noopener noreferrer"

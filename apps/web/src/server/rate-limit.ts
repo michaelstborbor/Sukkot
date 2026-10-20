@@ -36,6 +36,8 @@ export const LIMITS = {
   upload: { limit: 60, window: 60 * 60 },
   offer: { limit: 20, window: 60 * 60 },
   webhook: { limit: 600, window: 60 },
+  /** CSV downloads of user and listing data by staff. */
+  dataReport: { limit: 30, window: 60 * 60 },
   /** Transfers waiting for finance; each one notifies staff. */
   manualPayment: { limit: 10, window: 60 * 60 },
   /** AI assistant questions: a short burst limit and a daily cap, since each one costs money. */
