@@ -32,7 +32,7 @@ export async function register(
     },
   });
   await audit({ actorId: user.id, action: "auth.register", targetType: "User", targetId: user.id, ipHash: meta.ipHash });
-  await issueEmailVerification(user.id, user.email);
+  await issueEmailVerification(user.id, user.email, data.fullName);
   const session = await createSession(user.id, meta);
   return { userId: user.id, ...session };
 }
@@ -78,13 +78,69 @@ async function issueToken(userId: string, type: "EMAIL_VERIFICATION" | "PASSWORD
   return token;
 }
 
-export async function issueEmailVerification(userId: string, email: string) {
-  const token = await issueToken(userId, "EMAIL_VERIFICATION", 60 * 24 * 3);
+/*
+ * Email verification
+ *
+ * 1. Sign-up creates the account, signs the person in and emails a single-use link (valid 3 days).
+ * 2. They can browse, save, enquire and message straight away. Until the address is confirmed the
+ *    dashboard shows a banner with a "Send the link again" button (3 an hour); each new link
+ *    cancels the earlier ones.
+ * 3. Opening the link confirms the address. Only a hash of the token is stored.
+ * 4. Submitting a listing for review, asking for a photo shoot, making an offer, applying to rent
+ *    and paying Sukkot Salone need a confirmed address (see `requireVerifiedEmail`). This is enforced
+ *    whenever the site can actually send email, or when REQUIRE_EMAIL_VERIFICATION=true.
+ */
+
+const VERIFY_TTL_MINUTES = 60 * 24 * 3;
+
+/** Whether actions that need a confirmed email are blocked for unconfirmed accounts. */
+export function emailVerificationRequired() {
+  const flag = process.env.REQUIRE_EMAIL_VERIFICATION;
+  if (flag === "true" || flag === "false") return flag === "true";
+  // Without a real email service nobody could confirm, so the requirement would lock everyone out.
+  return env.emailDriver !== "console";
+}
+
+/** Throws a clear error when a signed-in person still has to confirm their email address. */
+export async function requireVerifiedEmail(userId: string, doing: string) {
+  if (!emailVerificationRequired()) return;
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, emailVerifiedAt: true } });
+  if (user && !user.emailVerifiedAt) {
+    throw new AppError("FORBIDDEN", `Confirm your email address before you ${doing}. We sent a link to ${user.email}; you can send it again from your dashboard.`);
+  }
+}
+
+/** Email a new confirmation link, cancelling any earlier ones. Returns the link so demo sites without email can show it. */
+export async function issueEmailVerification(userId: string, email: string, name?: string) {
+  await db.authToken.updateMany({ where: { userId, type: "EMAIL_VERIFICATION", usedAt: null }, data: { usedAt: new Date() } });
+  const token = await issueToken(userId, "EMAIL_VERIFICATION", VERIFY_TTL_MINUTES);
+  const link = `${env.appUrl}/auth/verify-email?token=${token}`;
   await sendEmail({
     to: email,
-    subject: "Confirm your Sukkot Salone email",
-    text: `Confirm your email address by opening this link:\n${env.appUrl}/auth/verify-email?token=${token}\n\nThe link expires in 3 days.`,
+    subject: "Confirm your email for Sukkot Salone",
+    text: [
+      `Hello${name ? ` ${name}` : ""},`,
+      "",
+      "Welcome to Sukkot Salone. Please confirm this is your email address by opening the link below:",
+      link,
+      "",
+      "The link works once and expires in 3 days. You need a confirmed email to submit a listing, make an offer, apply to rent or pay for a service.",
+      "",
+      "If you did not create a Sukkot Salone account, ignore this email and the account stays unconfirmed.",
+    ].join("\n"),
   });
+  return link;
+}
+
+/** Send the link again from the dashboard banner or the expired-link page. */
+export async function resendEmailVerification(userId: string) {
+  const user = await db.user.findUnique({ where: { id: userId }, select: { email: true, emailVerifiedAt: true, profile: { select: { fullName: true } } } });
+  if (!user) throw new AppError("NOT_FOUND", "Account not found");
+  if (user.emailVerifiedAt) return { alreadyVerified: true as const, email: user.email, demoLink: null };
+  const link = await issueEmailVerification(userId, user.email, user.profile?.fullName);
+  await audit({ actorId: userId, action: "auth.email_verification_resent", targetType: "User", targetId: userId });
+  // A demo site without an email service shows the link on screen instead, so the flow can be tried.
+  return { alreadyVerified: false as const, email: user.email, demoLink: env.demoMode && env.emailDriver === "console" ? link : null };
 }
 
 export async function verifyEmail(token: string) {
@@ -92,10 +148,13 @@ export async function verifyEmail(token: string) {
   if (!row || row.type !== "EMAIL_VERIFICATION" || row.usedAt || row.expiresAt < new Date()) {
     throw new AppError("BAD_REQUEST", "This link is invalid or has expired");
   }
+  const now = new Date();
   await db.$transaction([
-    db.authToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
-    db.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: new Date() } }),
+    db.authToken.update({ where: { id: row.id }, data: { usedAt: now } }),
+    db.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: now } }),
   ]);
+  await audit({ actorId: row.userId, action: "auth.email_verified", targetType: "User", targetId: row.userId });
+  return { userId: row.userId };
 }
 
 /** Always succeeds from the caller's point of view, so it cannot be used to discover accounts. */

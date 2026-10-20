@@ -92,7 +92,7 @@ export function SignUpForm() {
     setError(null);
     try {
       await api("/auth/register", { body: v });
-      toast.success("Account created. Check your email to confirm your address.");
+      toast.success(`Account created. We sent a link to ${v.email} to confirm your email address.`);
       router.push(v.accountType === "USER" ? safeNext(params.get("next")) : "/dashboard/properties/new");
       router.refresh();
     } catch (err) {

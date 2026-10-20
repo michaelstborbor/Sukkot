@@ -20,6 +20,7 @@ import { assertActor } from "../auth/actor";
 import { notify } from "../notify";
 import { audit } from "../audit";
 import { ensureConversation, postSystemMessage } from "./messaging";
+import { requireVerifiedEmail } from "./auth";
 
 const LIVE = ["SUBMITTED", "UNDER_REVIEW", "COUNTEROFFER_RECEIVED", "ACCEPTED_IN_PRINCIPLE", "PENDING_DUE_DILIGENCE", "TRANSACTION_IN_PROGRESS"] as const;
 
@@ -34,6 +35,7 @@ async function createChecklist(tx: Tx, offerId: string) {
 export async function createOffer(actorIn: Actor | null, input: unknown) {
   const actor = assertActor(actorIn);
   const data = offerSchema.parse(input);
+  await requireVerifiedEmail(actor.id, "make an offer");
   const property = await db.property.findUnique({
     where: { id: data.propertyId },
     select: { id: true, title: true, reference: true, listerId: true, ownerId: true, listingStatus: true, purpose: true, currency: true, availability: true, category: true },

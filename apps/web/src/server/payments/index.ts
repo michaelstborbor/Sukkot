@@ -31,6 +31,7 @@ import { afrimoneyProvider } from "./providers/afrimoney";
 import { orangeMoneyProvider } from "./providers/orange-money";
 import { sandboxProvider } from "./providers/sandbox";
 import { WebhookSignatureError, type PaymentProvider, type StoredTransaction } from "./types";
+import { requireVerifiedEmail } from "../services/auth";
 
 const PROVIDERS: Partial<Record<PaymentMethod, PaymentProvider>> = {
   ORANGE_MONEY: orangeMoneyProvider,
@@ -150,6 +151,7 @@ const SITE_VISIT_LISTING_STATUSES: string[] = ["DRAFT", "PENDING_REVIEW", "CHANG
 export async function initiatePayment(actorIn: Actor | null, input: unknown) {
   const actor = assertActor(actorIn);
   const data = paymentInitiateSchema.parse(input);
+  await requireVerifiedEmail(actor.id, "pay for a service");
 
   const existing = await db.paymentTransaction.findUnique({
     where: { idempotencyKey_payerId: { idempotencyKey: data.idempotencyKey, payerId: actor.id } },
@@ -392,6 +394,7 @@ export const isAwaitingFinance = (p: Pick<PaymentTransaction, "status" | "payeeI
 export async function submitManualPlatformPayment(actorIn: Actor | null, input: unknown) {
   const actor = assertActor(actorIn);
   const data = manualPlatformPaymentSchema.parse(input);
+  await requireVerifiedEmail(actor.id, "pay for a service");
   const existing = await db.paymentTransaction.findUnique({ where: { idempotencyKey_payerId: { idempotencyKey: data.idempotencyKey, payerId: actor.id } } });
   if (existing) return toPaymentDto(existing);
   const settings = await getSetting("billing.manual");

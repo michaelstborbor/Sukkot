@@ -3,14 +3,20 @@ import { hasPermission } from "@sukkot/shared";
 import { requirePageActor } from "@/server/auth/actor";
 import { unreadMessageCount } from "@/server/services/messaging";
 import { unreadNotificationCount } from "@/server/services/notifications";
+import { db } from "@/server/db";
 import { DashboardNav, type NavItem } from "@/components/dashboard/shell";
+import { EmailVerifyBanner } from "@/components/dashboard/email-verify-banner";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const actor = await requirePageActor("/dashboard");
   const lister = hasPermission(actor.roles, "listing:create");
-  const [unread, notes] = await Promise.all([unreadMessageCount(actor.id), unreadNotificationCount(actor.id)]);
+  const [unread, notes, me] = await Promise.all([
+    unreadMessageCount(actor.id),
+    unreadNotificationCount(actor.id),
+    db.user.findUnique({ where: { id: actor.id }, select: { email: true, emailVerifiedAt: true } }),
+  ]);
   const icon = (I: typeof Home) => <I className="h-4 w-4" />;
   const items: NavItem[] = [
     { href: "/dashboard", label: "Overview", icon: icon(LayoutDashboard) },
@@ -31,7 +37,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="container-page grid gap-6 py-6 lg:grid-cols-[230px_1fr] lg:gap-10 lg:py-10">
       <DashboardNav items={items} title="Dashboard" />
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0">
+        {me && !me.emailVerifiedAt && <EmailVerifyBanner email={me.email} className="mb-6" />}
+        {children}
+      </div>
     </div>
   );
 }

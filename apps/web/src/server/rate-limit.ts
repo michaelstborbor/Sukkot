@@ -28,6 +28,8 @@ export const LIMITS = {
   loginIp: { limit: 60, window: 15 * 60 },
   register: { limit: 5, window: 60 * 60 },
   passwordReset: { limit: 5, window: 60 * 60 },
+  /** "Send the link again": each one sends an email. */
+  verifyResend: { limit: 3, window: 60 * 60 },
   enquiry: { limit: 20, window: 60 * 60 },
   message: { limit: 60, window: 10 * 60 },
   report: { limit: 10, window: 60 * 60 },
