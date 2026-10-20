@@ -10,6 +10,7 @@ import {
   listingMachine,
   parseMajorToMinor,
   hidePhoneNumbers,
+  CATEGORY_ATTRIBUTE_GROUP,
   propertyInputSchema,
   slugify,
   validatePropertyForCategory,
@@ -386,7 +387,8 @@ async function prepareData(input: unknown) {
             : undefined,
         }
       : undefined;
-  const attributes = type.category === "LAND" ? (data.land ?? {}) : type.category === "COMMERCIAL" ? (data.commercial ?? {}) : {};
+  const group = CATEGORY_ATTRIBUTE_GROUP[type.category];
+  const attributes = group ? (data[group] ?? {}) : {};
   const noBuilding = type.category === "LAND" && !LAND_WITH_BUILDING_TYPE_SLUGS.includes(type.slug);
   const fields = {
     title: data.title,
@@ -401,7 +403,7 @@ async function prepareData(input: unknown) {
     negotiable: data.negotiable,
     bedrooms: noBuilding ? null : (data.bedrooms ?? null),
     bathrooms: noBuilding ? null : (data.bathrooms ?? null),
-    floorArea: data.floorArea ?? null,
+    floorArea: noBuilding ? null : (data.floorArea ?? null),
     floorAreaUnit: data.floorAreaUnit,
     plotSize: data.plotSize ?? null,
     plotUnit: data.plotUnit ?? null,
@@ -420,6 +422,8 @@ async function prepareData(input: unknown) {
     videoUrl: data.videoUrl ?? null,
     virtualTourUrl: data.virtualTourUrl ?? null,
     listerCapacity: data.listerCapacity,
+    privateContactPhone: data.privateContactPhone ?? null,
+    privateContactEmail: data.privateContactEmail ?? null,
     attributes: attributes as Prisma.InputJsonValue,
     rentalTerms: rentalTerms ? (rentalTerms as Prisma.InputJsonValue) : Prisma.DbNull,
   };

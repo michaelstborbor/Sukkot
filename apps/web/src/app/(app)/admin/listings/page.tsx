@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { formatDateTime, formatMoney, LISTING_STATUSES, LISTING_STATUS_LABELS, listingMachine, type ListingStatus } from "@sukkot/shared";
+import { formatDateTime, formatMoney, formatSlPhone, LISTING_STATUSES, LISTING_STATUS_LABELS, listingMachine, type ListingStatus } from "@sukkot/shared";
 import { requirePagePermission, can } from "@/server/auth/actor";
 import { db } from "@/server/db";
 import { publicImageUrl } from "@/server/storage";
@@ -83,6 +83,14 @@ export default async function AdminListingsPage({ searchParams }: { searchParams
                       Lister: {p.lister.profile?.fullName ?? p.lister.email} ({p.lister.email})
                       {p.lister.verificationRequests.length ? ` · verified: ${p.lister.verificationRequests.map((v) => v.kind.toLowerCase()).join(", ")}` : " · not verified"}
                     </p>
+                    {(p.privateContactPhone || p.privateContactEmail) && (
+                      <p className="text-muted">
+                        Private contact (staff only):{" "}
+                        {p.privateContactPhone && <a className="link" href={`tel:${p.privateContactPhone}`}>{formatSlPhone(p.privateContactPhone)}</a>}
+                        {p.privateContactPhone && p.privateContactEmail && " · "}
+                        {p.privateContactEmail && <a className="link" href={`mailto:${p.privateContactEmail}`}>{p.privateContactEmail}</a>}
+                      </p>
+                    )}
                     <p className="line-clamp-3 text-ink">{p.description}</p>
                     <p className="text-xs text-muted">Updated {formatDateTime(p.updatedAt)}</p>
                     <div className="flex flex-wrap gap-2 pt-2">

@@ -9,6 +9,8 @@ export interface SettingTypes {
   "promotion.featured7d": { priceMinor: string; currency: Currency } | null;
   /** Price of a visit by Sukkot Salone staff that earns the "Inspected by Sukkot" badge. Null: not on sale. */
   "visit.inspection": { priceMinor: string; currency: Currency } | null;
+  /** Price of a professional photo and video shoot for a new listing, which is non-refundable. Null: not on sale. */
+  "visit.photoShoot": { priceMinor: string; currency: Currency } | null;
   /** Price of one extra listing slot on top of the plan's allowance. Null: not on sale. */
   "listing.extraSlot": { priceMinor: string; currency: Currency } | null;
   "listing.autoExpireDays": number;
@@ -51,6 +53,7 @@ export const SETTING_DEFAULTS: SettingTypes = {
   },
   "promotion.featured7d": null,
   "visit.inspection": null,
+  "visit.photoShoot": null,
   "listing.extraSlot": null,
   "listing.autoExpireDays": 90,
   "inspection.maxPerDay": 8,

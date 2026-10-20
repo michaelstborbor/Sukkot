@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const all: (NavItem & { perm: Permission })[] = [
     { href: "/admin", label: "Overview", icon: icon(LayoutDashboard), perm: "admin:access" },
     { href: "/admin/listings", label: "Listing moderation", icon: icon(Building2), perm: "admin:listings.moderate", badge: pending },
-    { href: "/admin/visits", label: "Inspection visits", icon: icon(Camera), perm: "admin:listings.moderate", badge: visits },
+    { href: "/admin/visits", label: "Visits and photos", icon: icon(Camera), perm: "admin:listings.moderate", badge: visits },
     { href: "/admin/verification", label: "Verification queue", icon: icon(BadgeCheck), perm: "admin:verification.review", badge: verif },
     { href: "/admin/reports", label: "Reports", icon: icon(Flag), perm: "admin:reports.handle", badge: reports },
     { href: "/admin/users", label: "Users", icon: icon(Users), perm: "admin:users.manage" },

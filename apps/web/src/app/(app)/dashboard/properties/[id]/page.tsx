@@ -53,7 +53,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
   const ownerActions = (["submit", "pause", "resume", "remove"] as const).filter((a) => listingMachine.can(p.listingStatus, a, "OWNER"));
   const canBookVisit = isManager && ["DRAFT", "PENDING_REVIEW", "CHANGES_REQUESTED", "PUBLISHED", "PAUSED"].includes(p.listingStatus);
   const [visits, visitPrice, transfer] = tab === "overview" && canBookVisit ? await Promise.all([visitsForListing(actor, p.id), getSetting("visit.inspection"), transferDetails()]) : [[], null, null];
-  const openVisit = visits.find((v) => v.status === "REQUESTED" || v.status === "SCHEDULED");
+  const openVisit = visits.find((v) => v.kind === "INSPECTION" && (v.status === "REQUESTED" || v.status === "SCHEDULED"));
   const inspected = inspectionStillValid(p.inspectedAt);
 
   return (

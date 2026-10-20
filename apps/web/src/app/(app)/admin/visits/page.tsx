@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { formatDateTime, formatMoney, SITE_VISIT_STATUS_LABELS, type SiteVisitStatus } from "@sukkot/shared";
+import { formatDateTime, formatMoney, formatSlPhone, SITE_VISIT_KIND_LABELS, SITE_VISIT_STATUS_LABELS, type SiteVisitStatus } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
 import { publicImageUrl } from "@/server/storage";
@@ -13,7 +13,7 @@ import { PhotoManager } from "@/components/dashboard/media-manager";
 import { Badge, EmptyState, Notice } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Inspection visits" };
+export const metadata: Metadata = { title: "Visits and photo shoots" };
 
 const TONE: Record<SiteVisitStatus, "gold" | "verified" | "danger" | "neutral"> = { REQUESTED: "gold", SCHEDULED: "neutral", COMPLETED: "verified", CANCELLED: "danger" };
 
@@ -41,7 +41,7 @@ export default async function AdminVisitsPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <PageHeader title="Inspection visits" description="Listers pay for staff to visit, check the property matches the listing, and take the photos and video. Marking a visit done gives the listing a dated &ldquo;Inspected by Sukkot&rdquo; badge for a year." />
+      <PageHeader title="Visits and photo shoots" description="Inspection visits: listers pay for staff to check the property matches the listing and take the photos and video; marking one done gives a dated &ldquo;Inspected by Sukkot&rdquo; badge for a year. Photo shoots: listers ask us to take the photos and video for a new listing; upload them here, then mark the shoot done." />
       <nav className="mb-4 flex flex-wrap gap-1" aria-label="Status">
         {tabs.map((t) => (
           <Link key={t.label} href={t.key ? `?status=${t.key}` : "?"} className={cn("rounded-full px-3 py-1 text-sm font-medium", t.key === status ? "bg-navy-900 text-white" : "bg-surface ring-1 ring-line")}>
@@ -50,12 +50,13 @@ export default async function AdminVisitsPage({ searchParams }: { searchParams: 
         ))}
       </nav>
       {visits.length === 0 ? (
-        <EmptyState title="No visits here" body="Paid visits appear here as soon as the payment is confirmed." />
+        <EmptyState title="No visits here" body="Paid inspection visits appear here once the payment is confirmed. Photo shoot requests appear as soon as they are sent." />
       ) : (
         <ul className="space-y-4">
           {visits.map((v) => {
             const m = media.get(v.id);
             const open = v.status === "REQUESTED" || v.status === "SCHEDULED";
+            const shoot = v.kind === "PHOTO_SHOOT";
             return (
               <li key={v.id} className="card space-y-3 p-5 text-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -63,12 +64,18 @@ export default async function AdminVisitsPage({ searchParams }: { searchParams: 
                     <Link href={`/properties/${v.property.slug}`} className="font-semibold text-navy-900 hover:underline">{v.property.title}</Link>
                     <p className="text-muted">{v.property.reference} · {v.property.location.name}</p>
                   </div>
-                  <Badge tone={TONE[v.status]}>{SITE_VISIT_STATUS_LABELS[v.status]}</Badge>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge tone={shoot ? "gold" : "neutral"}>{SITE_VISIT_KIND_LABELS[v.kind]}</Badge>
+                    <Badge tone={TONE[v.status]}>{shoot && v.status === "REQUESTED" ? (v.payment ? "Paid, waiting for a date" : "Waiting for a date") : shoot && v.status === "COMPLETED" ? "Photos done" : SITE_VISIT_STATUS_LABELS[v.status]}</Badge>
+                    {shoot && open && !v.payment && <Badge tone="danger">Not paid yet</Badge>}
+                  </div>
                 </div>
                 <p>
                   Lister: {v.requester.profile?.fullName ?? v.requester.email} · {v.requester.email}
-                  {(v.contactPhone ?? v.requester.phone) && <> · <a className="link" href={`tel:${v.contactPhone ?? v.requester.phone}`}>{v.contactPhone ?? v.requester.phone}</a></>}
+                  {(v.contactPhone ?? v.requester.phone) && <> · <a className="link" href={`tel:${v.contactPhone ?? v.requester.phone}`}>{formatSlPhone((v.contactPhone ?? v.requester.phone)!)}</a></>}
                 </p>
+                {v.requestNote && <p><strong>Lister&apos;s note:</strong> {v.requestNote}</p>}
+                {shoot && !v.payment && <p className="text-muted">Requested {formatDateTime(v.createdAt)}. The lister pays from their listing page; you can still agree a date now.</p>}
                 {v.payment && <p className="text-muted">Paid {formatMoney(v.payment.amountMinor, v.payment.currency)} · payment <span className="font-mono">{v.payment.reference}</span> · {formatDateTime(v.createdAt)}</p>}
                 {v.scheduledAt && <p><strong>Visit:</strong> {formatDateTime(v.scheduledAt)}{v.staff?.profile?.fullName ? ` with ${v.staff.profile.fullName}` : ""}</p>}
                 {v.staffNote && <p><strong>Notes:</strong> {v.staffNote}</p>}
@@ -116,9 +123,13 @@ export default async function AdminVisitsPage({ searchParams }: { searchParams: 
                       path={`/admin/visits/${v.id}`}
                       extra={{ action: "complete" }}
                       columns={1}
-                      submitLabel="Mark inspected"
-                      success="Listing marked inspected"
-                      fields={[{ name: "note", label: "What you checked (the lister sees this)", type: "textarea", placeholder: "Rooms, water and power match the listing. Photos and video taken on the day." }]}
+                      submitLabel={shoot ? "Mark photos done" : "Mark inspected"}
+                      success={shoot ? "Photo shoot done; the lister has been told" : "Listing marked inspected"}
+                      fields={[
+                        shoot
+                          ? { name: "note", label: "Note for the lister", type: "textarea", placeholder: "12 photos and a one-minute video added. Check them, then submit the listing for review." }
+                          : { name: "note", label: "What you checked (the lister sees this)", type: "textarea", placeholder: "Rooms, water and power match the listing. Photos and video taken on the day." },
+                      ]}
                     />
                   </div>
                 )}
@@ -129,7 +140,7 @@ export default async function AdminVisitsPage({ searchParams }: { searchParams: 
                     body={{ action: "cancel" }}
                     label="Cancel the visit"
                     variant="ghost"
-                    reason={{ label: "Why is it cancelled? The lister sees this and is told the payment will be refunded.", required: true }}
+                    reason={{ label: v.payment ? "Why is it cancelled? The lister sees this and is told the payment will be refunded." : "Why is it cancelled? The lister sees this.", required: true }}
                     success="Visit cancelled"
                   />
                 )}

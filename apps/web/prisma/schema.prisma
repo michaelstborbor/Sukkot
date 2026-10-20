@@ -257,6 +257,7 @@ enum PaymentPurpose {
   LISTING_PROMOTION
   PLATFORM_FEE
   INSPECTION_VISIT
+  PHOTO_SHOOT
   LISTING_SLOT
   REFUND
   OTHER
@@ -579,6 +580,9 @@ model Property {
   agencyId           String?
   agency             Agency?          @relation(fields: [agencyId], references: [id], onDelete: SetNull)
   listerCapacity     ListerCapacity   @default(OWNER)
+  /// The lister's phone and email for this listing. Only Sukkot Salone staff see them; never published.
+  privateContactPhone String?
+  privateContactEmail String?
   title              String
   description        String
   propertyTypeId     String
@@ -925,6 +929,13 @@ model Inspection {
 }
 
 /// Weekly availability the landlord/agent offers for inspections, in Africa/Freetown local time.
+/// INSPECTION: a paid check that earns the "Inspected by Sukkot" badge. PHOTO_SHOOT: staff take
+/// professional photos and video for a new listing.
+enum SiteVisitKind {
+  INSPECTION
+  PHOTO_SHOOT
+}
+
 enum SiteVisitStatus {
   REQUESTED
   SCHEDULED
@@ -941,7 +952,10 @@ model SiteVisit {
   property     Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   requesterId  String
   requester    User            @relation("SiteVisitRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  kind         SiteVisitKind   @default(INSPECTION)
   status       SiteVisitStatus @default(REQUESTED)
+  /// What the lister told us when asking for the visit (directions, best times).
+  requestNote  String?
   /// The verified or finance-confirmed payment that paid for the visit.
   paymentId    String?         @unique
   payment      PaymentTransaction? @relation(fields: [paymentId], references: [id], onDelete: SetNull)

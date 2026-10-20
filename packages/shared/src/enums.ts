@@ -30,6 +30,35 @@ export type PropertyCategory = (typeof PROPERTY_CATEGORIES)[number];
 export const OTHER_PROPERTY_TYPE_SLUG = "other";
 /** Land types that may also describe a building on the land (bedrooms, bathrooms, floor area). */
 export const LAND_WITH_BUILDING_TYPE_SLUGS: readonly string[] = ["land-with-property"];
+/** Commercial types sold, leased or rented as a going concern with guest rooms. */
+export const HOSPITALITY_TYPE_SLUGS: readonly string[] = ["hotel", "guesthouse", "motel"];
+
+/** Which version of the listing form a property type gets: each asks only what applies to that kind of property. */
+export type ListingFormKind = "EMPTY_LAND" | "LAND_WITH_BUILDING" | "HOUSE" | "APARTMENT" | "SHORT_STAY" | "COMMERCIAL" | "HOSPITALITY" | "OTHER";
+export function listingFormKind(type: { category: PropertyCategory; slug: string } | undefined): ListingFormKind | null {
+  if (!type) return null;
+  switch (type.category) {
+    case "LAND":
+      return LAND_WITH_BUILDING_TYPE_SLUGS.includes(type.slug) ? "LAND_WITH_BUILDING" : "EMPTY_LAND";
+    case "COMMERCIAL":
+      return HOSPITALITY_TYPE_SLUGS.includes(type.slug) ? "HOSPITALITY" : "COMMERCIAL";
+    case "HOUSE":
+    case "APARTMENT":
+    case "SHORT_STAY":
+      return type.category;
+    default:
+      return "OTHER";
+  }
+}
+
+/** The key under which each category's own details are sent by the form and stored in `attributes`. */
+export const CATEGORY_ATTRIBUTE_GROUP: Partial<Record<PropertyCategory, "land" | "commercial" | "house" | "apartment" | "shortStay">> = {
+  LAND: "land",
+  COMMERCIAL: "commercial",
+  HOUSE: "house",
+  APARTMENT: "apartment",
+  SHORT_STAY: "shortStay",
+};
 export const PROPERTY_CATEGORY_LABELS: Record<PropertyCategory, string> = {
   HOUSE: "Houses",
   APARTMENT: "Apartments",
@@ -179,6 +208,13 @@ export function inspectionStillValid(inspectedAt: Date | string | null | undefin
   return now.getTime() - new Date(inspectedAt).getTime() < INSPECTION_BADGE_DAYS * 86400_000;
 }
 
+export const SITE_VISIT_KINDS = ["INSPECTION", "PHOTO_SHOOT"] as const;
+export type SiteVisitKind = (typeof SITE_VISIT_KINDS)[number];
+export const SITE_VISIT_KIND_LABELS: Record<SiteVisitKind, string> = {
+  INSPECTION: "Inspection visit",
+  PHOTO_SHOOT: "Professional photo shoot",
+};
+
 export const SITE_VISIT_STATUSES = ["REQUESTED", "SCHEDULED", "COMPLETED", "CANCELLED"] as const;
 export type SiteVisitStatus = (typeof SITE_VISIT_STATUSES)[number];
 export const SITE_VISIT_STATUS_LABELS: Record<SiteVisitStatus, string> = {
@@ -296,6 +332,7 @@ export const PAYMENT_PURPOSES = [
   "LISTING_PROMOTION",
   "PLATFORM_FEE",
   "INSPECTION_VISIT",
+  "PHOTO_SHOOT",
   "LISTING_SLOT",
   "REFUND",
   "OTHER",
@@ -312,6 +349,7 @@ export const PAYMENT_PURPOSE_LABELS: Record<PaymentPurpose, string> = {
   LISTING_PROMOTION: "Listing promotion",
   PLATFORM_FEE: "Platform fee",
   INSPECTION_VISIT: "Inspection visit",
+  PHOTO_SHOOT: "Professional photos and video",
   LISTING_SLOT: "Extra listing slot",
   REFUND: "Refund",
   OTHER: "Other",
@@ -322,6 +360,7 @@ export const PLATFORM_COLLECTED_PURPOSES: readonly PaymentPurpose[] = [
   "LISTING_PROMOTION",
   "PLATFORM_FEE",
   "INSPECTION_VISIT",
+  "PHOTO_SHOOT",
   "LISTING_SLOT",
 ];
 

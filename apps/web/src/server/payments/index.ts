@@ -113,11 +113,21 @@ async function pricePlatformItem(
     const property = ids.propertyId ? await db.property.findUnique({ where: { id: ids.propertyId }, select: { id: true, reference: true, listerId: true, ownerId: true, listingStatus: true } }) : null;
     if (!property || (property.listerId !== userId && property.ownerId !== userId)) throw notFound("Listing");
     if (!SITE_VISIT_LISTING_STATUSES.includes(property.listingStatus)) throw new AppError("CONFLICT", "This listing cannot be inspected while it is closed, rejected or removed");
-    const open = await db.siteVisit.findFirst({ where: { propertyId: property.id, status: { in: ["REQUESTED", "SCHEDULED"] } }, select: { id: true } });
+    const open = await db.siteVisit.findFirst({ where: { propertyId: property.id, kind: "INSPECTION", status: { in: ["REQUESTED", "SCHEDULED"] } }, select: { id: true } });
     if (open) throw new AppError("CONFLICT", "An inspection visit is already booked for this listing");
     const price = await getSetting("visit.inspection");
     if (!price) throw new AppError("NOT_CONFIGURED", "Inspection visits are not on sale yet");
     return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: `Inspection visit for ${property.reference}`, propertyId: property.id };
+  }
+  if (purpose === "PHOTO_SHOOT") {
+    const property = ids.propertyId ? await db.property.findUnique({ where: { id: ids.propertyId }, select: { id: true, reference: true, listerId: true, ownerId: true } }) : null;
+    if (!property || (property.listerId !== userId && property.ownerId !== userId)) throw notFound("Listing");
+    const shoot = await db.siteVisit.findFirst({ where: { propertyId: property.id, kind: "PHOTO_SHOOT", status: { in: ["REQUESTED", "SCHEDULED"] } }, select: { paymentId: true } });
+    if (!shoot) throw new AppError("CONFLICT", "Ask for the photo shoot first");
+    if (shoot.paymentId) throw new AppError("CONFLICT", "This photo shoot is already paid for");
+    const price = await getSetting("visit.photoShoot");
+    if (!price) throw new AppError("NOT_CONFIGURED", "Professional photos are not available yet");
+    return { amountMinor: BigInt(price.priceMinor), currency: price.currency, description: `Professional photos and video for ${property.reference}`, propertyId: property.id };
   }
   if (purpose === "LISTING_SLOT") {
     const ent = await getEntitlements(userId);
@@ -231,9 +241,20 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
   if (p.purpose === "INSPECTION_VISIT" && p.propertyId && p.payerId) {
     const already = await tx.siteVisit.findUnique({ where: { paymentId: p.id }, select: { id: true } });
     if (!already) {
-      await tx.siteVisit.create({ data: { propertyId: p.propertyId, requesterId: p.payerId, paymentId: p.id, contactPhone: p.payerPhone } });
+      await tx.siteVisit.create({ data: { kind: "INSPECTION", propertyId: p.propertyId, requesterId: p.payerId, paymentId: p.id, contactPhone: p.payerPhone } });
       const staff = await tx.userRoleAssignment.findMany({ where: { role: { in: ["MODERATOR", "SUPER_ADMIN"] }, user: { status: "ACTIVE" } }, select: { userId: true }, distinct: ["userId"] });
       await notify(staff.map((s) => ({ userId: s.userId, type: "visit.requested", title: "Inspection visit to arrange", body: "A lister has paid for an inspection visit. Agree a date with them.", link: "/admin/visits" })), tx);
+    }
+  }
+  if (p.purpose === "PHOTO_SHOOT" && p.propertyId && p.payerId) {
+    // Pay for the open request; if staff closed it meanwhile, open a new one so the payment is not lost.
+    const linked = await tx.siteVisit.findUnique({ where: { paymentId: p.id }, select: { id: true } });
+    if (!linked) {
+      const open = await tx.siteVisit.findFirst({ where: { propertyId: p.propertyId, kind: "PHOTO_SHOOT", paymentId: null, status: { in: ["REQUESTED", "SCHEDULED"] } }, orderBy: { createdAt: "desc" } });
+      if (open) await tx.siteVisit.update({ where: { id: open.id }, data: { paymentId: p.id } });
+      else await tx.siteVisit.create({ data: { kind: "PHOTO_SHOOT", propertyId: p.propertyId, requesterId: p.payerId, paymentId: p.id, contactPhone: p.payerPhone } });
+      const staff = await tx.userRoleAssignment.findMany({ where: { role: { in: ["MODERATOR", "SUPER_ADMIN"] }, user: { status: "ACTIVE" } }, select: { userId: true }, distinct: ["userId"] });
+      await notify(staff.map((s) => ({ userId: s.userId, type: "visit.photo_paid", title: "Photo shoot paid", body: `The ${formatMoney(p.amountMinor, p.currency)} photo shoot fee (${p.reference}) is confirmed. Agree a date with the lister.`, link: "/admin/visits" })), tx);
     }
   }
   if (p.purpose === "LISTING_SLOT" && p.payerId) {

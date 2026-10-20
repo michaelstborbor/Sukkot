@@ -4,16 +4,17 @@ import { GENERAL_ENQUIRY, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { ProsePage } from "@/components/layout/prose-page";
 
-export const metadata: Metadata = { title: "Refund policy", description: "When you get your money back for plans, featured listings, inspection visits and extra listing slots." };
+export const metadata: Metadata = { title: "Refund policy", description: "When you get your money back for plans, featured listings, inspection visits, photo shoots and extra listing slots." };
 
 export default function RefundsPage() {
   return (
-    <ProsePage eyebrow="Legal" title="Refund policy" updated="18 October 2026" intro="Draft for legal review. This covers the things you pay Sukkot Salone for. It does not cover rent, deposits or sale money, which you pay directly to the other party.">
+    <ProsePage eyebrow="Legal" title="Refund policy" updated="20 October 2026" intro="Draft for legal review. This covers the things you pay Sukkot Salone for. It does not cover rent, deposits or sale money, which you pay directly to the other party.">
       <h2>1. What we charge for</h2>
       <ul>
         <li>Monthly plans for landlords and agents.</li>
         <li>Featured listings for 7 days.</li>
         <li>Inspection visits, where our staff check and photograph a property.</li>
+        <li>Professional photos and video for a new listing (photo shoots).</li>
         <li>Extra listing slots.</li>
       </ul>
       <p>
@@ -31,6 +32,7 @@ export default function RefundsPage() {
       <ul>
         <li>A plan or featured period that has started and run as described.</li>
         <li>An inspection visit that took place, or that failed on the day because nobody let our staff in.</li>
+        <li>A photo shoot. Its fee is non-refundable, unless you were charged twice or the wrong amount, or we cancel the shoot ourselves.</li>
         <li>An extra listing slot, unless you were charged in error.</li>
         <li>A listing taken down for breaking our <Link href="/terms">terms of use</Link>.</li>
       </ul>
