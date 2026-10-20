@@ -152,7 +152,7 @@ export function SignUpForm() {
         id="terms"
         checked={v.acceptTerms}
         onChange={(e) => setV((c) => ({ ...c, acceptTerms: e.target.checked }))}
-        label={<>I agree to the <Link href="/terms" className="link" target="_blank">terms of use</Link> and <Link href="/privacy" className="link" target="_blank">privacy policy</Link>.</>}
+        label={<>I am 18 or over and agree to the <Link href="/terms" className="link" target="_blank">terms of use</Link> and <Link href="/privacy" className="link" target="_blank">privacy policy</Link>.</>}
       />
       {errors.acceptTerms && <p className="text-xs text-danger">{errors.acceptTerms}</p>}
       {error && <p role="alert" className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger">{error}</p>}

@@ -1,5 +1,6 @@
 "use client";
 
+import { PrivacyNote } from "@/components/legal/privacy-note";
 import { useState } from "react";
 import { useApiForm } from "@/hooks/use-api-form";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export function SupportForm({ signedIn }: { signedIn: boolean }) {
           <Input id="sup-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </Field>
       )}
+      <PrivacyNote />
       {f.formError && <Notice tone="danger">{f.formError}</Notice>}
       <Button type="submit" loading={f.pending}>Send</Button>
     </form>

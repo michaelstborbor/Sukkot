@@ -16,7 +16,7 @@ export default async function LocationsPage() {
   ]);
   return (
     <div className="container-page py-10 sm:py-14">
-      <SectionHeading eyebrow="Explore" title="Property across Sierra Leone" body="Choose a district or town to see what is available there." />
+      <SectionHeading as="h1" eyebrow="Explore" title="Property across Sierra Leone" body="Choose a district or town to see what is available there." />
       <div className="space-y-10">
         {provinces.map((prov) => {
           const ds = districts.filter((d) => d.parentId === prov.id);

@@ -108,7 +108,7 @@ export function AvatarUpload({ current }: { current: string | null }) {
       ) : (
         <div className="h-16 w-16 rounded-full bg-navy-100" aria-hidden />
       )}
-      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="avatar" onChange={(e) => upload(e.target.files?.[0])} />
+      <input ref={ref} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" id="avatar" aria-label="Choose a profile photo" tabIndex={-1} onChange={(e) => upload(e.target.files?.[0])} />
       <Button variant="outline" size="sm" loading={busy} onClick={() => ref.current?.click()}>Change photo</Button>
     </div>
   );

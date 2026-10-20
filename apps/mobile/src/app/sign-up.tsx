@@ -58,9 +58,9 @@ export default function SignUpScreen() {
         <Input value={v.password} onChangeText={set("password")} secureTextEntry autoComplete="new-password" />
       </Field>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Switch value={accept} onValueChange={setAccept} trackColor={{ true: colors.emerald600 }} accessibilityLabel="Accept the terms and privacy policy" />
+        <Switch value={accept} onValueChange={setAccept} trackColor={{ true: colors.emerald600 }} accessibilityLabel="I am 18 or over and accept the terms and privacy policy" />
         <Text style={[ui.body, { flex: 1 }]}>
-          I accept the{" "}
+          I am 18 or over and accept the{" "}
           <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => WebBrowser.openBrowserAsync(`${API_URL}/terms`)}>
             terms
           </Text>{" "}

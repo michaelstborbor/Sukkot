@@ -111,12 +111,12 @@ export function Avatar({ name, url, size = 40 }: { name: string; url?: string | 
   );
 }
 
-export function SectionHeading({ eyebrow, title, body, action, className }: { eyebrow?: string; title: string; body?: string; action?: React.ReactNode; className?: string }) {
+export function SectionHeading({ eyebrow, title, body, action, className, as: Heading = "h2" }: { eyebrow?: string; title: string; body?: string; action?: React.ReactNode; className?: string; as?: "h1" | "h2" }) {
   return (
     <div className={cn("mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="max-w-2xl">
-        {eyebrow && <p className="mb-2 text-xs font-bold tracking-[0.14em] text-clay-600 uppercase">{eyebrow}</p>}
-        <h2 className="font-display text-3xl text-ink sm:text-4xl">{title}</h2>
+        {eyebrow && <p className="mb-2 text-xs font-bold tracking-[0.14em] text-clay-700 uppercase">{eyebrow}</p>}
+        <Heading className="font-display text-3xl text-ink sm:text-4xl">{title}</Heading>
         {body && <p className="mt-3 text-base text-muted">{body}</p>}
       </div>
       {action}

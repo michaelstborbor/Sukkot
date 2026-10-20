@@ -11,7 +11,7 @@ export function TeamContactButtons({ message, label = "Questions? Talk to the Su
     <div className={cn("rounded-xl border border-line bg-surface p-4", className)}>
       <p className="mb-2 text-sm text-muted">{label}</p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <a href={whatsappLink(brand.supportWhatsapp, message)} target="_blank" rel="noopener noreferrer" className={buttonClasses("primary", "md", "bg-[#1ebe5b] hover:bg-[#19a64f]")}>
+        <a href={whatsappLink(brand.supportWhatsapp, message)} target="_blank" rel="noopener noreferrer" className={buttonClasses("primary", "md", "bg-[#118645] hover:bg-[#0f7a3d]")}>
           <WhatsAppIcon className="h-4 w-4" /> Chat with us on WhatsApp
         </a>
         <a href={telLink(brand.supportPhone)} className={buttonClasses("outline", "md")}>

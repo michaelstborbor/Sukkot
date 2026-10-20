@@ -115,7 +115,7 @@ export function HeaderClient({ user }: { user: HeaderUser | null }) {
                   <CountDot n={user.unreadNotifications} />
                 </Link>
                 <div className="relative hidden lg:block" ref={menuRef}>
-                  <button type="button" onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-haspopup="menu" className="flex items-center gap-2 rounded-full border border-line py-1 pr-2.5 pl-1 transition hover:border-navy-600">
+                  <button type="button" onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-haspopup="menu" aria-label={`Account menu for ${user.name}`} className="flex items-center gap-2 rounded-full border border-line py-1 pr-2.5 pl-1 transition hover:border-navy-600">
                     <Avatar name={user.name} size={30} />
                     <ChevronDown className={cn("h-4 w-4 text-muted transition-transform", menu && "rotate-180")} />
                   </button>

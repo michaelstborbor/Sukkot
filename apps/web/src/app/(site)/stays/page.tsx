@@ -28,6 +28,7 @@ export default async function StaysPage({ searchParams }: { searchParams: Promis
   return (
     <div className="container-page py-10 sm:py-14">
       <SectionHeading
+        as="h1"
         eyebrow="Book a stay"
         title="Hotels, guest houses, motels and short-stay homes"
         body={`Ask for your dates and we check with the property for you. Once they confirm, you pay Sukkot Salone and get a receipt with your room and the address. Book at least ${late.noticeDays} days ahead; later bookings are possible for ${late.surchargePercent}% more.`}
@@ -53,6 +54,8 @@ export default async function StaysPage({ searchParams }: { searchParams: Promis
           action={<Link href="/properties?purpose=SHORT_STAY" className={buttonClasses("secondary")}>See all short-stay listings</Link>}
         />
       ) : (
+        <>
+          <h2 className="sr-only">Places you can book</h2>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {stays.map((s) => {
             const p = byId.get(s.id);
@@ -71,6 +74,7 @@ export default async function StaysPage({ searchParams }: { searchParams: Promis
             );
           })}
         </div>
+        </>
       )}
       <p className="mt-10 text-sm text-muted">
         Looking for something else? <Link href="/properties?purpose=SHORT_STAY" className="link">See all short-stay listings</Link>, including places that take enquiries rather than bookings.
