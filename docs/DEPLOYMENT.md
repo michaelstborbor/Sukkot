@@ -83,6 +83,15 @@ Neon's free database holds about 0.5 GB, so before it fills up add the R2 settin
 and change `STORAGE_DRIVER` to `s3`. For real email, add the Resend settings and change
 `EMAIL_DRIVER` to `resend`.
 
+### Email verification
+
+Sign-up emails a confirmation link. Until people open it they can browse, save, enquire and message,
+but they cannot submit a listing for review, ask for a photo shoot, make an offer, apply to rent or
+pay Sukkot Salone. That rule is on whenever `EMAIL_DRIVER=resend`, because only then can people
+receive the link. With `EMAIL_DRIVER=console` it is off, and on a demo site the dashboard's "Send the
+link again" button shows the link on screen instead. Set `REQUIRE_EMAIL_VERIFICATION=true` or `false`
+to override this either way.
+
 ### Before real users arrive
 
 Do not turn the test site into the live one by editing it. Create the live site from `render.yaml`

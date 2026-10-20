@@ -17,12 +17,14 @@ import type { Actor } from "../auth/session";
 import { assertActor } from "../auth/actor";
 import { notify } from "../notify";
 import { ensureConversation, postSystemMessage } from "./messaging";
+import { requireVerifiedEmail } from "./auth";
 
 const PERIOD_MONTHS: Record<RentalPeriod, number> = { DAY: 0, WEEK: 0, MONTH: 1, QUARTER: 3, HALF_YEAR: 6, YEAR: 12 };
 
 export async function createApplication(actorIn: Actor | null, input: unknown) {
   const actor = assertActor(actorIn);
   const data = rentalApplicationSchema.parse(input);
+  await requireVerifiedEmail(actor.id, "apply to rent");
   const property = await db.property.findUnique({
     where: { id: data.propertyId },
     select: { id: true, title: true, reference: true, listerId: true, ownerId: true, listingStatus: true, purpose: true, availability: true },

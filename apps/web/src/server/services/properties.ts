@@ -34,6 +34,7 @@ import { assertListingCapacity } from "./billing";
 import { alertMatchingSearches } from "./search-alerts";
 import { assertCanEditMedia } from "./media-access";
 import { storeImage, storePrivateDocument } from "../uploads";
+import { requireVerifiedEmail } from "./auth";
 
 /* ------------------------------------------------------------ Includes */
 
@@ -515,6 +516,7 @@ export async function ownerListingAction(actorIn: Actor | null, id: string, acti
   return db.$transaction(async (tx) => {
     const p = await loadManaged(actor, id, tx);
     if (action === "submit") {
+      await requireVerifiedEmail(actor.id, "submit a listing for review");
       const imageCount = await tx.propertyImage.count({ where: { propertyId: id } });
       if (imageCount === 0) throw new AppError("VALIDATION", "Add at least one photo before submitting for review");
     }
