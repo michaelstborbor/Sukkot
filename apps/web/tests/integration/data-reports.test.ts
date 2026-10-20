@@ -51,8 +51,10 @@ describe("admin data reports", () => {
   it("filters users by search, account type, status, confirmed email and joining date", async () => {
     const admin = await makeUser(["SUPER_ADMIN"]);
     const t = tag();
+    // A number no other test uses, so the phone search finds Amina among the newest rows.
+    const digits = String(Math.floor(100_000 + Math.random() * 900_000));
     const [amina, kofi, sia] = await Promise.all([makeUser(["OWNER"], `Amina ${t}`), makeUser(["AGENT"], `Kofi ${t}`), makeUser(["USER"], `Sia ${t}`)]);
-    await db.user.update({ where: { id: amina.id }, data: { emailVerifiedAt: new Date(), createdAt: new Date("2025-03-10T09:00:00Z"), phone: "+23276123456" } });
+    await db.user.update({ where: { id: amina.id }, data: { emailVerifiedAt: new Date(), createdAt: new Date("2025-03-10T09:00:00Z"), phone: `+23276${digits}` } });
     await db.user.update({ where: { id: kofi.id }, data: { status: "SUSPENDED", suspendedReason: "Fake listings", createdAt: new Date("2025-06-01T23:30:00Z") } });
     await db.user.update({ where: { id: sia.id }, data: { createdAt: new Date("2025-09-15T12:00:00Z") } });
 
@@ -67,7 +69,7 @@ describe("admin data reports", () => {
     expect(await names({ joinedFrom: "2025-03-11", joinedTo: "2025-06-01" })).toEqual([`Kofi ${t}`]);
     // Empty form fields are ignored.
     expect(await names({ role: "", status: "", joinedFrom: "" })).toHaveLength(3);
-    expect((await previewReport(admin, { dataset: "users", q: "76 123 456" })).rows.some((r) => r[0] === amina.id)).toBe(true);
+    expect((await previewReport(admin, { dataset: "users", q: `76 ${digits.slice(0, 3)} ${digits.slice(3)}` })).rows.some((r) => r[0] === amina.id)).toBe(true);
     await expect(previewReport(admin, { dataset: "users", joinedFrom: "31/01/2025" })).rejects.toMatchObject({ code: "VALIDATION" });
     await expect(previewReport(admin, { dataset: "users", joinedTo: "2025-02-31" })).rejects.toMatchObject({ code: "VALIDATION", fields: { joinedTo: "Not a real date" } });
 
