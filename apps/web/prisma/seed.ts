@@ -297,6 +297,9 @@ const LISTINGS: DemoListing[] = [
   { title: "Plot with an unfinished 3-bedroom house, Regent", description: "Half town lot in Regent with a three-bedroom house built to roof level. Walls, roof and window openings are done; it needs plastering, doors and fittings. Cool hillside location.", type: "land-with-property", purpose: "SALE", price: 300_000, negotiable: true, beds: 3, baths: 2, floor: 140, plot: 0.5, plotUnit: "TOWN_LOT", location: "regent", lister: "landlord", amenities: ["perimeter-wall"], art: "house", attributes: { landUse: "RESIDENTIAL", accessRoad: "LATERITE", fenced: true, titleDocumentType: "CONVEYANCE" }, daysAgo: 14 },
   { title: "Sea-view apartment for short stays, Lumley", description: "Furnished one-bedroom apartment near Lumley Beach for nightly or weekly stays, with air conditioning, Wi-Fi, standby power and a balcony facing the sea.", type: "short-stay", purpose: "SHORT_STAY", price: 1_800, period: "DAY", beds: 1, baths: 1, floor: 60, furnishing: "FURNISHED", water: "GUMA_MAINS", power: "GRID_WITH_BACKUP", parking: 1, location: "lumley", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["sea-view", "air-conditioning", "internet-ready", "backup-generator", "balcony"], art: "shortstay", daysAgo: 3 },
   { title: "4-bedroom house with a garden, Bo", description: "Four-bedroom family house in Bo with a large garden, a borehole and a fenced compound, close to schools. Available to rent by the year.", type: "house", purpose: "RENT", price: 20_000, period: "MONTH", beds: 4, baths: 2, floor: 190, furnishing: "UNFURNISHED", water: "BOREHOLE", power: "EDSA_GRID", parking: 2, location: "bo", lister: "landlord2", amenities: ["borehole", "garden", "perimeter-wall", "near-school"], art: "house", rentalTerms: { advanceRentPeriods: 12, minLeaseMonths: 12, utilitiesPaidBy: "TENANT", maintenanceBy: "SHARED" }, daysAgo: 19 },
+  { title: "Atlantic View Hotel, Aberdeen", description: "Twenty-four room hotel facing the sea at Aberdeen, with a restaurant, pool bar, conference room and 24-hour power. Rooms have air conditioning, en-suite bathrooms and Wi-Fi.", type: "hotel", purpose: "SHORT_STAY", price: 1_500, period: "DAY", beds: 24, baths: 24, floor: 1400, furnishing: "FURNISHED", water: "BOREHOLE", power: "GRID_WITH_BACKUP", parking: 20, location: "aberdeen", lister: "agent", capacity: "AGENT_FOR_OWNER", amenities: ["sea-view", "air-conditioning", "backup-generator", "security-guard", "parking", "internet-ready"], art: "shortstay", featured: true, daysAgo: 2 },
+  { title: "Mama Kadie's Guest House, Bo", description: "Family-run guest house of eight rooms on a quiet street near Bo town centre. Breakfast is cooked to order and the host lives on site.", type: "guesthouse", purpose: "SHORT_STAY", price: 450, period: "DAY", beds: 8, baths: 6, floor: 300, furnishing: "FURNISHED", water: "BOREHOLE", power: "SOLAR", parking: 3, location: "bo", lister: "landlord2", amenities: ["solar-power", "water-tank", "perimeter-wall", "parking"], art: "shortstay", daysAgo: 6 },
+  { title: "Highway Rest Motel, Mile 91", description: "Clean, simple rooms on the Freetown–Bo highway with parking at the door, a canteen and check-in at any hour. Popular with drivers and traders.", type: "motel", purpose: "SHORT_STAY", price: 300, period: "DAY", beds: 12, baths: 12, floor: 420, furnishing: "FURNISHED", water: "BOREHOLE", power: "GENERATOR", parking: 15, location: "mile-91", lister: "landlord2", amenities: ["parking", "security-guard", "tarred-road-access"], art: "commercial", daysAgo: 4 },
 ];
 
 /** The fictional landlords and agent who list the demo properties, and the agent's agency. */
@@ -387,6 +390,59 @@ async function seedDemoListings(listers: Record<DemoListing["lister"], { id: str
   return created;
 }
 
+/** Demo hotels, a guest house, a motel and two short-stay homes that take bookings, opened by agreement. */
+const DEMO_STAYS: { title: string; kind: "HOTEL" | "GUEST_HOUSE" | "MOTEL" | "SHORT_STAY_HOME"; details: Record<string, unknown>; rooms: { name: string; bedType: string; roomsCount?: number; maxAdults: number; maxChildren?: number; nightly: number; monthly?: number; breakfastIncluded?: boolean; features: string[] }[] }[] = [
+  {
+    title: "Atlantic View Hotel, Aberdeen",
+    kind: "HOTEL",
+    details: { starRating: 4, cancellationPolicy: "MODERATE", breakfast: "INCLUDED", facilities: ["frontDesk24h", "restaurant", "bar", "pool", "conferenceRoom", "airportShuttle", "wifi", "airConditioning", "backupPower", "parking", "securityGuard"], receptionPhone: "+23276000101" },
+    rooms: [
+      { name: "Standard double", bedType: "1 double bed", roomsCount: 14, maxAdults: 2, maxChildren: 1, nightly: 1_500, monthly: 36_000, breakfastIncluded: true, features: ["Air conditioning", "En-suite shower", "Smart TV"] },
+      { name: "Twin room", bedType: "2 single beds", roomsCount: 6, maxAdults: 2, nightly: 1_500, breakfastIncluded: true, features: ["Air conditioning", "En-suite shower", "Desk"] },
+      { name: "Sea-view suite", bedType: "1 king bed and a sofa bed", roomsCount: 4, maxAdults: 2, maxChildren: 2, nightly: 3_200, breakfastIncluded: true, features: ["Balcony facing the sea", "Lounge area", "Bathtub"] },
+    ],
+  },
+  {
+    title: "Mama Kadie's Guest House, Bo",
+    kind: "GUEST_HOUSE",
+    details: { cancellationPolicy: "FLEXIBLE", breakfast: "EXTRA", gateClosesAt: "23:00", facilities: ["hostOnSite", "sharedKitchen", "sharedLounge", "wifi", "backupPower", "securityGuard"], houseRules: "Visitors leave by 21:00. Tell the host if you will arrive after the gate is locked." },
+    rooms: [
+      { name: "Single room", bedType: "1 single bed", roomsCount: 3, maxAdults: 1, nightly: 450, monthly: 9_000, features: ["Fan", "Shared bathroom"] },
+      { name: "Double en-suite", bedType: "1 double bed", roomsCount: 5, maxAdults: 2, maxChildren: 1, nightly: 650, monthly: 13_000, features: ["Fan", "En-suite shower"] },
+    ],
+  },
+  {
+    title: "Highway Rest Motel, Mile 91",
+    kind: "MOTEL",
+    details: { cancellationPolicy: "FLEXIBLE", checkInFrom: "12:00", checkOutBy: "10:00", breakfast: "EXTRA", facilities: ["driveUpParking", "checkIn24h", "securedParking", "restaurant", "backupPower"] },
+    rooms: [{ name: "Drive-up room", bedType: "1 double bed", roomsCount: 12, maxAdults: 2, nightly: 300, features: ["Parking at the door", "Fan", "En-suite shower"] }],
+  },
+  {
+    title: "Beachside studio for short stays, Tokeh",
+    kind: "SHORT_STAY_HOME",
+    details: { cancellationPolicy: "STRICT", minNights: 2, cleaningFee: "150", facilities: ["kitchen", "caretaker", "cleaningService", "wifi", "backupPower"], houseRules: "Quiet after 22:00. Rinse sand off at the outside shower." },
+    rooms: [{ name: "Whole studio", bedType: "1 double bed", maxAdults: 2, nightly: 1_200, monthly: 28_000, features: ["Steps from the beach", "Solar power", "Daily cleaning"] }],
+  },
+  {
+    title: "Sea-view apartment for short stays, Lumley",
+    kind: "SHORT_STAY_HOME",
+    details: { cancellationPolicy: "MODERATE", cleaningFee: "200", facilities: ["kitchen", "washingMachine", "wifi", "airConditioning", "backupPower", "parking", "securityGuard", "workspace"], partiesAllowed: false, houseRules: "No parties. The generator runs 18:00 to 07:00." },
+    rooms: [{ name: "Whole apartment", bedType: "1 double bed and a sofa bed", maxAdults: 3, maxChildren: 1, nightly: 1_800, monthly: 42_000, features: ["Sea-view balcony", "Air conditioning", "Fitted kitchen"] }],
+  },
+];
+
+async function seedDemoStays(created: Record<string, string>) {
+  for (const s of DEMO_STAYS) {
+    const id = created[s.title];
+    if (!id || (await db.stayRoomType.count({ where: { propertyId: id } }))) continue;
+    const details = { kind: s.kind, checkInFrom: "14:00", checkOutBy: "12:00", minNights: 1, maxNights: 90, breakfast: "NONE", childrenWelcome: true, petsAllowed: false, smokingAllowed: false, partiesAllowed: false, idRequired: true, ...s.details };
+    await db.property.update({ where: { id }, data: { stayKind: s.kind, stayDetails: details as Prisma.InputJsonValue, stayArrangedAt: new Date(), stayCommissionBps: 1200 } });
+    await db.stayRoomType.createMany({
+      data: s.rooms.map((r, i) => ({ propertyId: id, name: r.name, bedType: r.bedType, roomsCount: r.roomsCount ?? 1, maxAdults: r.maxAdults, maxChildren: r.maxChildren ?? 0, nightlyPriceMinor: BigInt(r.nightly) * 100n, monthlyPriceMinor: r.monthly ? BigInt(r.monthly) * 100n : null, currency: "SLE" as const, breakfastIncluded: r.breakfastIncluded ?? false, features: r.features, sortOrder: i })),
+    });
+  }
+}
+
 async function seedDemo() {
   const admin = await demoUser("admin@demo.sukkot.sl", "Demo Administrator", ["SUPER_ADMIN"], "+23276000001");
   await demoUser("moderator@demo.sukkot.sl", "Demo Moderator", ["MODERATOR"], "+23276000002");
@@ -412,6 +468,7 @@ async function seedDemo() {
   await verify(agent.id, "AGENT_CREDENTIALS", admin.id);
 
   const created = await seedDemoListings({ landlord, landlord2, agent }, agency.id, { reviewed: true, approverId: admin.id });
+  await seedDemoStays(created);
 
   // A sample enquiry thread, inspection, rental application and offer negotiation.
   const aberdeen = created[LISTINGS[0]!.title]!;
@@ -481,6 +538,7 @@ async function main() {
     // passwords and nothing marked verified or reviewed.
     const { landlord, landlord2, agent, agency } = await seedDemoListers(false);
     const created = await seedDemoListings({ landlord, landlord2, agent }, agency.id, { reviewed: false });
+    await seedDemoStays(created);
     console.log(`Demo listings ready (${Object.keys(created).length}). Their accounts cannot sign in.`);
   } else if (withDemo) {
     await seedDemo();

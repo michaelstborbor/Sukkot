@@ -10,3 +10,4 @@ export * from "./legal";
 export * from "./datetime";
 export * from "./api-types";
 export * from "./contact";
+export * from "./stays";

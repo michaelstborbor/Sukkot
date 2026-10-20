@@ -35,6 +35,9 @@ export const LIMITS = {
   /** Wrong-code guesses, per account. A code has a million possibilities and lasts 10 minutes. */
   phoneCodeCheck: { limit: 5, window: 15 * 60 },
   enquiry: { limit: 20, window: 60 * 60 },
+  /** Hotel and short-stay booking requests: each one sends staff to call the property. */
+  stayRequest: { limit: 10, window: 60 * 60 },
+  stayQuote: { limit: 120, window: 10 * 60 },
   message: { limit: 60, window: 10 * 60 },
   report: { limit: 10, window: 60 * 60 },
   upload: { limit: 60, window: 60 * 60 },

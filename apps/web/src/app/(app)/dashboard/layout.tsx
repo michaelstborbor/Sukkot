@@ -1,4 +1,4 @@
-import { Bell, Building2, CalendarClock, CreditCard, FileText, HandCoins, Heart, Home, Inbox, KeyRound, LayoutDashboard, MessageSquare, Settings, ShieldCheck, Users } from "lucide-react";
+import { Bell, BedDouble, Building2, CalendarClock, CreditCard, FileText, HandCoins, Heart, Home, Inbox, KeyRound, LayoutDashboard, MessageSquare, Settings, ShieldCheck, Users } from "lucide-react";
 import { hasPermission } from "@sukkot/shared";
 import { requirePageActor } from "@/server/auth/actor";
 import { unreadMessageCount } from "@/server/services/messaging";
@@ -22,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard", label: "Overview", icon: icon(LayoutDashboard) },
     ...(lister ? [{ href: "/dashboard/properties", label: "My properties", icon: icon(Building2) }, { href: "/dashboard/enquiries", label: "Enquiries", icon: icon(Inbox) }] : []),
     { href: "/dashboard/messages", label: "Messages", icon: icon(MessageSquare), badge: unread },
+    { href: "/dashboard/stays", label: "Stays and bookings", icon: icon(BedDouble) },
     { href: "/dashboard/inspections", label: "Inspections", icon: icon(CalendarClock) },
     { href: "/dashboard/applications", label: "Applications", icon: icon(FileText) },
     { href: "/dashboard/offers", label: "Offers", icon: icon(HandCoins) },

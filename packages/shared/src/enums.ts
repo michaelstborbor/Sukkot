@@ -336,6 +336,8 @@ export const PAYMENT_PURPOSES = [
   "LISTING_SLOT",
   "VIEWING_FEE",
   "SUCCESS_FEE",
+  "STAY_BOOKING",
+  "STAY_LISTING",
   "REFUND",
   "OTHER",
 ] as const;
@@ -355,6 +357,8 @@ export const PAYMENT_PURPOSE_LABELS: Record<PaymentPurpose, string> = {
   LISTING_SLOT: "Extra listing slot",
   VIEWING_FEE: "Inspection booking fee",
   SUCCESS_FEE: "Sukkot Salone service fee",
+  STAY_BOOKING: "Hotel or short-stay booking",
+  STAY_LISTING: "Listing fee for bookable stays",
   REFUND: "Refund",
   OTHER: "Other",
 };
@@ -368,6 +372,8 @@ export const PLATFORM_COLLECTED_PURPOSES: readonly PaymentPurpose[] = [
   "LISTING_SLOT",
   "VIEWING_FEE",
   "SUCCESS_FEE",
+  "STAY_BOOKING",
+  "STAY_LISTING",
 ];
 
 export const REPORT_TYPES = [

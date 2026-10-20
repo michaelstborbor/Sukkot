@@ -42,7 +42,7 @@ export function SiteFooter() {
         <div className="container-page flex flex-col gap-3 py-6 text-xs sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-start gap-2 sm:max-w-2xl">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-clay-500" aria-hidden />
-            Stay safe: always inspect a property and confirm ownership documents with a lawyer before paying any money. {brand.name} does not hold client funds.
+            Stay safe: always inspect a property and confirm ownership documents with a lawyer before paying any money. {brand.name} does not hold rent, deposits or sale money.
           </p>
           <p>© {new Date().getFullYear()} {brand.name}</p>
         </div>

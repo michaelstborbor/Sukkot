@@ -67,7 +67,9 @@ export const NOTICES = {
   paymentHonesty:
     "A payment is shown as paid only after the payment provider confirms it. Payments recorded manually are marked as recorded, not verified.",
   noEscrow:
-    "Sukkot Salone does not hold client funds or provide escrow. Rent, deposits and sale proceeds are paid directly between the parties.",
+    "Sukkot Salone does not hold client funds or provide escrow. Rent, deposits and sale proceeds are paid directly between the parties. The one exception is hotel and short-stay bookings, which guests pay to Sukkot Salone and we pay the property.",
+  stayPayments:
+    "Hotel, guest house, motel and short-stay bookings are paid to Sukkot Salone, after the property has confirmed the room. We pay the property its share after deducting our agreed commission, and refund guests under the booking's cancellation policy.",
   rentalTermsReview:
     "Rental terms are set by the landlord. Check that advance rent, deposits and conditions comply with applicable tenancy law before agreeing.",
   demoContent: "Demonstration listing with fictional details and illustrative artwork.",

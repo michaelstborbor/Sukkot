@@ -38,7 +38,7 @@ import { requireVerifiedContact } from "./auth";
 
 /* ------------------------------------------------------------ Includes */
 
-const locationChain = {
+export const locationChain = {
   include: { parent: { include: { parent: { include: { parent: true } } } } },
 } satisfies Prisma.LocationDefaultArgs;
 
@@ -78,7 +78,7 @@ type LocationRow = Prisma.LocationGetPayload<typeof locationChain>;
 
 /* --------------------------------------------------------- Serialisers */
 
-function locationParts(loc: LocationRow) {
+export function locationParts(loc: LocationRow) {
   const chain: { name: string; level: string }[] = [];
   let cur: { name: string; level: string; parent?: unknown } | null | undefined = loc;
   while (cur) {
@@ -607,6 +607,9 @@ export async function deleteListingPermanently(actorIn: Actor | null, id: string
   if (!p) throw notFound("Listing");
   if (await db.tenancy.count({ where: { propertyId: id } })) {
     throw new AppError("CONFLICT", "This listing has a tenancy on record, so it cannot be deleted. Remove it instead.");
+  }
+  if (await db.stayBooking.count({ where: { propertyId: id } })) {
+    throw new AppError("CONFLICT", "This listing has bookings on record, so it cannot be deleted. Remove it instead.");
   }
   await db.$transaction(async (tx) => {
     await tx.property.delete({ where: { id } });

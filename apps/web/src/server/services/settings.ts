@@ -17,6 +17,10 @@ export interface SettingTypes {
   "fees.viewing": { priceMinor: string; currency: Currency } | null;
   /** Sukkot Salone's success fee on rent, lease and purchase payments, in hundredths of a percent (500 = 5%). Null: off. */
   "fees.success": { basisPoints: number } | null;
+  /** What a hotel, guest house, motel or short-stay home pays to be listed for bookings, photos and video included. Null: free. */
+  "stay.listingFee": { priceMinor: string; currency: Currency } | null;
+  /** Bookings made less than `noticeDays` before check-in cost `surchargePercent` more. */
+  "stay.lateBooking": { noticeDays: number; surchargePercent: number };
   "listing.autoExpireDays": number;
   "inspection.maxPerDay": number;
   /** Sukkot Salone's own wallet numbers and bank account, shown to customers who pay by transfer. */
@@ -61,6 +65,8 @@ export const SETTING_DEFAULTS: SettingTypes = {
   "listing.extraSlot": null,
   "fees.viewing": null,
   "fees.success": null,
+  "stay.listingFee": null,
+  "stay.lateBooking": { noticeDays: 7, surchargePercent: 10 },
   "listing.autoExpireDays": 90,
   "inspection.maxPerDay": 8,
   "billing.manual": { enabled: false, accountName: "", orangeMoneyNumber: "", afrimoneyNumber: "", bankDetails: "" },

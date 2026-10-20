@@ -14,7 +14,7 @@ const NAV = [
   { href: "/properties?purpose=RENT", label: "Rent", match: "RENT" },
   { href: "/properties?category=LAND", label: "Land", match: "LAND" },
   { href: "/properties?category=COMMERCIAL", label: "Commercial", match: "COMMERCIAL" },
-  { href: "/properties?purpose=SHORT_STAY", label: "Short stays", match: "SHORT_STAY" },
+  { href: "/stays", label: "Short stays", match: "/stays" },
   { href: "/agents", label: "Agents", match: "/agents" },
 ];
 

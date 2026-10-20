@@ -19,7 +19,11 @@ Report vulnerabilities privately to the maintainers. Do not open public issues f
   through short-lived HMAC-signed URLs.
 - **Payments**: no card data is stored or handled. Webhooks are signature-verified, de-duplicated by
   event id, and success is re-confirmed with the provider. The platform never marks rent or sale money
-  as provider-verified, never holds client funds and offers no escrow.
+  as provider-verified, never holds rent, deposit or sale money and offers no escrow. Hotel and
+  short-stay bookings are the one case where guests pay Sukkot Salone: a booking becomes paid only
+  through the same provider or finance check, refunds and payouts to properties need
+  `admin:payments.manage` and are audited, and the platform refund screen refuses stay payments so
+  every refund goes through the booking record.
 - **Audit log**: moderation, verification decisions, role changes, suspensions, payment status
   changes and staff views of private data are recorded.
 - **Demo data**: demo accounts share a published password, so they are refused at sign-in unless

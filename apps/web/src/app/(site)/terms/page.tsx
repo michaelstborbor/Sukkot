@@ -8,9 +8,10 @@ export const metadata: Metadata = { title: "Terms of use" };
 
 export default function TermsPage() {
   return (
-    <ProsePage eyebrow="Legal" title="Terms of use" updated="14 October 2026" intro="Draft for legal review. By using the platform you agree to these terms.">
+    <ProsePage eyebrow="Legal" title="Terms of use" updated="20 October 2026" intro="Draft for legal review. By using the platform you agree to these terms.">
       <h2>1. The service</h2>
       <p>{brand.name} is a marketplace where owners and agents advertise property and tenants and buyers contact them. We are not a party to any tenancy or sale, and we are not an estate agent, lawyer or escrow agent.</p>
+      <p>For hotels, guest houses, motels and short-stay homes we also take bookings on the guest&apos;s behalf: we ask the property to hold the room, and once it confirms, the guest pays us and we pay the property. The property provides the stay and is responsible for it.</p>
       <h2>2. Accounts</h2>
       <p>You must give accurate information and keep your password secure. You are responsible for activity on your account.</p>
       <h2>3. Listings</h2>
@@ -22,6 +23,7 @@ export default function TermsPage() {
       <h2>4. Offers, applications and payments</h2>
       <p>{NOTICES.offerNotLegal}</p>
       <p>{NOTICES.noEscrow}</p>
+      <p>{NOTICES.stayPayments}</p>
       <p>{NOTICES.paymentHonesty}</p>
       <h2>5. Verification</h2>
       <p>{NOTICES.verificationLimits}</p>
