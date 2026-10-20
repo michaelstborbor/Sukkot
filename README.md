@@ -81,6 +81,10 @@ see [Free testing setup](docs/DEPLOYMENT.md#free-testing-setup-render-free-plan-
 - Offers accepted on the platform are agreements in principle only. They never transfer ownership.
 - Sukkot Salone does not hold client money or provide escrow. Rent and sale money is paid between the
   parties and can only be **recorded**; it is never shown as provider-verified.
+- **Exception: hotel and short-stay bookings.** Guests pay the whole stay to Sukkot Salone once the
+  property has confirmed the room. A booking is marked paid only after the provider confirms an online
+  payment or finance approves a transfer. Staff record each payout to the property (minus the agreed
+  commission) and each refund, so every booking shows money received, refunds and payouts.
 - Online payments (subscriptions, listing promotion) are marked paid only after a signed provider
   callback or a provider status check.
 - Verification badges say which checks were done; they do not certify legal title.

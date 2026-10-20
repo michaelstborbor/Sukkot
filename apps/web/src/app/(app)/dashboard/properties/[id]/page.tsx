@@ -82,6 +82,15 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
         </Notice>
       )}
 
+      {p.purpose === "SHORT_STAY" && (isManager || can(actor, "admin:bookings.manage")) && (
+        <Notice tone="info" className="mb-4" title={p.stayKind ? "Bookings through Sukkot Salone" : "Take bookings through Sukkot Salone"}>
+          {p.stayKind
+            ? "Change your rooms, prices, check-in times and house rules, and see whether the listing is taking bookings. "
+            : "Hotels, guest houses, motels and short-stay homes can let guests book and pay through us. We check each booking with you, take the payment and pay you. "}
+          <Link href={`/dashboard/properties/${p.id}/stay`} className="link font-semibold">{p.stayKind ? "Manage bookings set-up" : "Set up bookings"}</Link>
+        </Notice>
+      )}
+
       <nav aria-label="Listing sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
         {TABS.map(([key, label]) => (
           <Link

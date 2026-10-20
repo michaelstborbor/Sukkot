@@ -29,7 +29,7 @@ const CATEGORIES = [
   { href: "/properties?category=APARTMENT", label: "Apartments", icon: Building2, blurb: "Flats, rooms and studios" },
   { href: "/properties?category=LAND", label: "Land", icon: Trees, blurb: "Plots and farmland" },
   { href: "/properties?category=COMMERCIAL", label: "Commercial", icon: Landmark, blurb: "Shops, offices, warehouses" },
-  { href: "/properties?purpose=SHORT_STAY", label: "Short stays", icon: Hotel, blurb: "Nightly and weekly" },
+  { href: "/stays", label: "Short stays", icon: Hotel, blurb: "Book hotels, guest houses and homes" },
 ];
 
 /** Photo rows on the home page, one per kind of property. Rows with no photographed listing are left out. */

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bath, BedDouble, CalendarDays, Car, Droplets, Eye, Hash, MapPin, Ruler, Sofa, Zap } from "lucide-react";
 import {
+  STAY_KIND_LABELS,
   AVAILABILITY_LABELS,
   ELECTRICITY_LABELS,
   FURNISHING_LABELS,
@@ -22,6 +23,8 @@ import {
 import { getCurrentActor } from "@/server/auth/actor";
 import { getPropertyDetail, recordView, similarProperties } from "@/server/services/properties";
 import { getSetting } from "@/server/services/settings";
+import { stayTeaser } from "@/server/services/stays";
+import { buttonClasses } from "@/components/ui/button";
 import { brand } from "@/config/brand";
 import { Gallery } from "@/components/property/gallery";
 import { PropertyActions } from "@/components/property/action-forms";
@@ -100,7 +103,7 @@ export default async function PropertyPage({ params }: Props) {
   if (p.listingStatus === "PUBLISHED") await recordView(p.id).catch(() => undefined);
   const similar = await similarProperties({ id: p.id, category: p.category, purpose: p.purpose, district: p.district });
   const isOwn = actor?.id === p.lister.id;
-  const [fee, successFee] = await Promise.all([getSetting("fees.viewing"), getSetting("fees.success")]);
+  const [fee, successFee, stay] = await Promise.all([getSetting("fees.viewing"), getSetting("fees.success"), p.purpose === "SHORT_STAY" ? stayTeaser(p.id) : null]);
   const available = p.availability === "AVAILABLE" || p.availability === "UNDER_OFFER";
   const whatsappMessage = listingEnquiry(p, process.env.APP_URL ? `${process.env.APP_URL}/properties/${p.slug}` : undefined);
 
@@ -154,6 +157,7 @@ export default async function PropertyPage({ params }: Props) {
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <Badge tone="neutral">{LISTING_PURPOSE_LABELS[p.purpose]}</Badge>
             <Badge tone="neutral">{p.typeName}</Badge>
+            {stay && <Badge tone="gold">{STAY_KIND_LABELS[stay.kind]} · book online</Badge>}
             {p.featured && <FeaturedBadge />}
             {p.inspectedAt && <InspectedBadge date={p.inspectedAt} />}
             {p.documentsReviewed && <VerificationBadge kind="PROPERTY_DOCUMENTS" />}
@@ -290,6 +294,16 @@ export default async function PropertyPage({ params }: Props) {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {stay && !isOwn && (
+            <div className="card space-y-3 border-emerald-600 p-5">
+              <p className="text-xs font-semibold tracking-wide text-emerald-800 uppercase">Book through {brand.name}</p>
+              <p>
+                <span className="font-semibold text-navy-900">{STAY_KIND_LABELS[stay.kind]}</span> · from <strong>{stay.fromNightly}</strong> a night
+              </p>
+              <p className="text-sm text-muted">Check-in from {stay.details.checkInFrom}, check-out by {stay.details.checkOutBy}. We confirm with the property, then you pay us and get a receipt.</p>
+              <Link href={`/stays/${stay.slug}/book`} className={buttonClasses("primary", "lg", "w-full justify-center")}>Choose dates and book</Link>
+            </div>
+          )}
           <div className="card p-5">
             <div className="hidden lg:block">
               <p className="text-3xl font-bold text-navy-900">{p.price.formatted}</p>

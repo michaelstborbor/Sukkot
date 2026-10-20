@@ -37,6 +37,8 @@ export function CheckoutButton({
   propertyId,
   inspectionId,
   serviceFeeId,
+  stayBookingId,
+  transferHint,
   variant = "primary",
 }: {
   label: string;
@@ -49,6 +51,9 @@ export function CheckoutButton({
   propertyId?: string;
   inspectionId?: string;
   serviceFeeId?: string;
+  stayBookingId?: string;
+  /** Extra guidance shown with the transfer details, e.g. for paying from abroad. */
+  transferHint?: string;
   variant?: ButtonVariant;
 }) {
   const router = useRouter();
@@ -114,10 +119,10 @@ export function CheckoutButton({
               e.preventDefault();
               if (mode === "online") {
                 if (!method) return;
-                online.submit({ method, purpose, subscriptionPlanId, propertyId, inspectionId, serviceFeeId, payerPhone: needsPhone ? phone : undefined, idempotencyKey: key });
+                online.submit({ method, purpose, subscriptionPlanId, propertyId, inspectionId, serviceFeeId, stayBookingId, payerPhone: needsPhone ? phone : undefined, idempotencyKey: key });
               } else {
                 if (!channel) return;
-                manual.submit({ channel, purpose, subscriptionPlanId, propertyId, inspectionId, serviceFeeId, externalReference: txId, payerPhone: phone || undefined, idempotencyKey: key });
+                manual.submit({ channel, purpose, subscriptionPlanId, propertyId, inspectionId, serviceFeeId, stayBookingId, externalReference: txId, payerPhone: phone || undefined, idempotencyKey: key });
               }
             }}
           >
@@ -172,6 +177,7 @@ export function CheckoutButton({
                         </label>
                       ))}
                     </fieldset>
+                    {transferHint && <p className="text-muted">{transferHint}</p>}
                   </div>
                   <Field id="co-txid" label="Transaction ID" error={form.errors.externalReference} hint="From the SMS or bank receipt, for example CI231014.1234.A56789">
                     <Input id="co-txid" required minLength={4} maxLength={60} value={txId} onChange={(e) => setTxId(e.target.value)} />

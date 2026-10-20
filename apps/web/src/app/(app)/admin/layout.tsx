@@ -1,4 +1,4 @@
-import { BadgeCheck, Building2, Camera, ClipboardList, CreditCard, FileSpreadsheet, Flag, LayoutDashboard, ListChecks, MapPin, Percent, Settings, Shapes, Users, Briefcase } from "lucide-react";
+import { BadgeCheck, BedDouble, Building2, Camera, ClipboardList, CreditCard, FileSpreadsheet, Flag, LayoutDashboard, ListChecks, MapPin, Percent, Settings, Shapes, Users, Briefcase } from "lucide-react";
 import { hasPermission, type Permission } from "@sukkot/shared";
 import { requirePagePermission } from "@/server/auth/actor";
 import { db } from "@/server/db";
@@ -9,12 +9,13 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const actor = await requirePagePermission("admin:access", "/admin");
-  const [pending, visits, verif, reports, feesDue] = await Promise.all([
+  const [pending, visits, verif, reports, feesDue, stays] = await Promise.all([
     db.property.count({ where: { listingStatus: "PENDING_REVIEW" } }),
     db.siteVisit.count({ where: { status: "REQUESTED" } }),
     db.verificationRequest.count({ where: { status: "PENDING_REVIEW" } }),
     db.report.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
     db.serviceFee.count({ where: { status: "DUE" } }),
+    db.stayBooking.count({ where: { status: "REQUESTED" } }),
   ]);
   const icon = (I: typeof Users) => <I className="h-4 w-4" />;
   const all: (NavItem & { perm: Permission })[] = [
@@ -22,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/listings", label: "Listing moderation", icon: icon(Building2), perm: "admin:listings.moderate", badge: pending },
     { href: "/admin/visits", label: "Visits and photos", icon: icon(Camera), perm: "admin:listings.moderate", badge: visits },
     { href: "/admin/verification", label: "Verification queue", icon: icon(BadgeCheck), perm: "admin:verification.review", badge: verif },
+    { href: "/admin/stays", label: "Bookings", icon: icon(BedDouble), perm: "admin:bookings.manage", badge: stays },
     { href: "/admin/reports", label: "Reports", icon: icon(Flag), perm: "admin:reports.handle", badge: reports },
     { href: "/admin/users", label: "Users", icon: icon(Users), perm: "admin:users.manage" },
     { href: "/admin/agencies", label: "Agencies", icon: icon(Briefcase), perm: "admin:users.manage" },

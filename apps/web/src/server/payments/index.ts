@@ -28,6 +28,7 @@ import { getSetting } from "../services/settings";
 import { assertPlanAudience, FEATURED_PERIOD_DAYS, featuredStart, getEntitlements, refreshListerBoost, renewalStart } from "../services/billing";
 import { chargeServiceFee, settleServiceFee } from "../services/service-fees";
 import { markViewingFeePaid } from "../services/inspections";
+import { priceStayBooking, priceStayListing, settleStayBooking, settleStayListing } from "../services/stays";
 import { loadMobileMoneyConfig } from "./config";
 import { afrimoneyProvider } from "./providers/afrimoney";
 import { orangeMoneyProvider } from "./providers/orange-money";
@@ -92,13 +93,14 @@ interface PricedItem {
   propertyId?: string;
   inspectionId?: string;
   serviceFeeId?: string;
+  stayBookingId?: string;
 }
 
 /** Price a plan or promotion on the server. Whatever amount a client sends is never used. */
 async function pricePlatformItem(
   userId: string,
   purpose: PaymentPurpose,
-  ids: { subscriptionPlanId?: string; propertyId?: string; inspectionId?: string; serviceFeeId?: string },
+  ids: { subscriptionPlanId?: string; propertyId?: string; inspectionId?: string; serviceFeeId?: string; stayBookingId?: string },
 ): Promise<PricedItem> {
   if (purpose === "PLATFORM_SUBSCRIPTION") {
     const plan = ids.subscriptionPlanId ? await db.subscriptionPlan.findFirst({ where: { id: ids.subscriptionPlanId, isActive: true } }) : null;
@@ -158,6 +160,8 @@ async function pricePlatformItem(
     if (fee.status !== "DUE") throw new AppError("CONFLICT", fee.status === "PAID" ? "This service fee is already paid" : "This service fee was cancelled");
     return { amountMinor: fee.amountMinor, currency: fee.currency, description: `Service fee ${fee.reference}`, propertyId: fee.propertyId ?? undefined, serviceFeeId: fee.id };
   }
+  if (purpose === "STAY_BOOKING") return priceStayBooking(userId, ids.stayBookingId);
+  if (purpose === "STAY_LISTING") return priceStayListing(userId, ids.propertyId);
   throw new AppError("NOT_CONFIGURED", "Platform fees are not enabled");
 }
 
@@ -191,7 +195,7 @@ export async function initiatePayment(actorIn: Actor | null, input: unknown) {
   }
 
   const item = await pricePlatformItem(actor.id, data.purpose, data);
-  const { amountMinor, currency, description, propertyId, inspectionId, serviceFeeId } = item;
+  const { amountMinor, currency, description, propertyId, inspectionId, serviceFeeId, stayBookingId } = item;
   const subscriptionId = item.planId
     ? (await db.subscription.create({ data: { userId: actor.id, planId: item.planId, status: "PENDING_PAYMENT" } })).id
     : undefined;
@@ -212,6 +216,7 @@ export async function initiatePayment(actorIn: Actor | null, input: unknown) {
       propertyId,
       inspectionId,
       serviceFeeId,
+      stayBookingId,
       events: { create: { type: "created", source: "api", statusAfter: "CREATED" } },
     },
   });
@@ -285,6 +290,8 @@ async function fulfil(tx: Tx, p: PaymentTransaction) {
   }
   if (p.purpose === "VIEWING_FEE" && p.inspectionId) await markViewingFeePaid(tx, p);
   if (p.purpose === "SUCCESS_FEE") await settleServiceFee(tx, p);
+  if (p.purpose === "STAY_BOOKING") await settleStayBooking(tx, p);
+  if (p.purpose === "STAY_LISTING") await settleStayListing(tx, p);
   if (p.purpose === "LISTING_SLOT" && p.payerId) {
     await tx.user.update({ where: { id: p.payerId }, data: { extraListingSlots: { increment: 1 } } });
   }
@@ -453,6 +460,7 @@ export async function submitManualPlatformPayment(actorIn: Actor | null, input: 
         propertyId: item.propertyId,
         inspectionId: item.inspectionId,
         serviceFeeId: item.serviceFeeId,
+        stayBookingId: item.stayBookingId,
         externalReference,
         notes: item.description,
         providerData: { manualChannel: data.channel },
@@ -643,6 +651,7 @@ export async function recordPlatformRefund(actorIn: Actor | null, id: string, in
   return db.$transaction(async (tx) => {
     const p = await tx.paymentTransaction.findUnique({ where: { id } });
     if (!p || p.payeeId !== null || !PLATFORM_COLLECTED_PURPOSES.includes(p.purpose)) throw notFound("Payment");
+    if (p.purpose === "STAY_BOOKING") throw new AppError("CONFLICT", "Record refunds for bookings under Bookings, where the cancellation policy and any part refund are tracked");
     if (!canMovePayment(p.status, "REFUNDED") || (p.status !== "SUCCEEDED" && p.status !== "RECORDED")) throw new AppError("CONFLICT", "Only a confirmed payment can be refunded");
     const updated = await tx.paymentTransaction.update({
       where: { id, status: p.status },

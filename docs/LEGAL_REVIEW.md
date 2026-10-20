@@ -39,3 +39,10 @@ qualified in Sierra Leone before the platform takes real users or money.
     purchase money once it is paid, and Le 250 to book an inspection. Confirm whether charging the
     tenant or buyer this way needs an estate agency licence or registration, how it must be disclosed
     before an inspection or offer, and that the refund terms in `/refunds` are fair.
+11. **Hotel and short-stay bookings**: guests pay the full stay to Sukkot Salone, which pays the
+    property after deducting a commission. Confirm whether collecting and holding guests' money for a
+    third party needs Bank of Sierra Leone authorisation or a separate client account, whether
+    Sukkot Salone needs a tourism or travel agency licence (National Tourist Board), who is liable if
+    a confirmed property fails to honour a booking, whether GST and any tourism levy are charged on
+    the room price, the commission or both, and that the cancellation policies (Flexible, Moderate,
+    Strict, Non-refundable), the late booking charge and no-show rules are fair to consumers.

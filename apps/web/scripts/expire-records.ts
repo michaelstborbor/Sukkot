@@ -6,6 +6,8 @@
  * - expires verification badges past their validity date
  * - ends paid plans that have run out, and reminds subscribers a few days before (once per period)
  * - drops the search lift of plans that have run out (or moves it to a renewal that has started)
+ * - releases hotel and short-stay bookings that were confirmed but not paid by their deadline
+ *   (a transfer waiting for a finance check holds the booking)
  * - removes expired sessions, auth tokens and rate-limit buckets
  * Pending payments are never expired here: a late provider confirmation must still be able to land.
  */
@@ -78,13 +80,27 @@ async function main() {
       await db.user.update({ where: { id: u.id }, data: { searchBoost: boost, searchBoostUntil: boost ? current!.endsAt : null } });
     }
 
+    const unpaidStays = await db.stayBooking.findMany({
+      where: { status: "CONFIRMED", paymentDueAt: { lt: now }, payments: { none: { status: { in: ["PENDING", "CREATED"] } } } },
+      select: { id: true, reference: true, guestId: true, property: { select: { title: true } } },
+    });
+    for (const b of unpaidStays) {
+      await db.$transaction(async (tx) => {
+        const moved = await tx.stayBooking.updateMany({ where: { id: b.id, status: "CONFIRMED" }, data: { status: "EXPIRED" } });
+        if (!moved.count) return;
+        await tx.notification.create({
+          data: { userId: b.guestId, type: "stay.expired", title: `Booking ${b.reference} expired`, body: `We did not receive payment for your stay at ${b.property.title} in time, so the room has been released. You can ask for the dates again.`, link: `/dashboard/stays/${b.reference}` },
+        });
+      });
+    }
+
     const badges = await db.verificationRequest.updateMany({ where: { status: "VERIFIED", expiresAt: { lt: now } }, data: { status: "EXPIRED" } });
     const sessions = await db.session.deleteMany({ where: { expiresAt: { lt: now } } });
     const tokens = await db.authToken.deleteMany({ where: { expiresAt: { lt: now } } });
     const buckets = await db.rateLimitBucket.deleteMany({ where: { resetAt: { lt: now } } });
 
     console.log(
-      JSON.stringify({ at: now.toISOString(), offersExpired: offers.length, promotionsEnded: unfeatured, plansReminded: reminded, plansEnded: ended.length, searchLiftsUpdated: lifted.length, badgesExpired: badges.count, sessions: sessions.count, tokens: tokens.count, rateLimitBuckets: buckets.count }),
+      JSON.stringify({ at: now.toISOString(), offersExpired: offers.length, promotionsEnded: unfeatured, plansReminded: reminded, plansEnded: ended.length, searchLiftsUpdated: lifted.length, staysExpired: unpaidStays.length, badgesExpired: badges.count, sessions: sessions.count, tokens: tokens.count, rateLimitBuckets: buckets.count }),
     );
   } finally {
     await db.$disconnect();

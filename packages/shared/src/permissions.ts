@@ -13,6 +13,8 @@ export const PERMISSIONS = [
   "admin:listings.moderate",
   /** Edit any listing's details and photos, and delete listings permanently. Super administrators only. */
   "admin:listings.edit",
+  /** Handle hotel and short-stay bookings: check availability with the property, confirm, assign rooms. */
+  "admin:bookings.manage",
   "admin:verification.review",
   "admin:reports.handle",
   "admin:users.manage",
@@ -40,6 +42,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   MODERATOR: [
     "admin:access",
     "admin:listings.moderate",
+    "admin:bookings.manage",
     "admin:reports.handle",
     "admin:messages.moderate",
     "admin:catalog.manage",
@@ -48,8 +51,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "admin:audit.view",
   ],
   VERIFICATION_OFFICER: ["admin:access", "admin:verification.review", "admin:documents.view", "admin:audit.view"],
-  SUPPORT: ["admin:access", "admin:reports.handle", "admin:users.manage", "admin:messages.moderate"],
-  FINANCE: ["admin:access", "admin:payments.view", "admin:payments.manage", "admin:plans.manage", "admin:audit.view"],
+  SUPPORT: ["admin:access", "admin:bookings.manage", "admin:reports.handle", "admin:users.manage", "admin:messages.moderate"],
+  FINANCE: ["admin:access", "admin:bookings.manage", "admin:payments.view", "admin:payments.manage", "admin:plans.manage", "admin:audit.view"],
 };
 
 export function permissionsFor(roles: readonly Role[]): Set<Permission> {

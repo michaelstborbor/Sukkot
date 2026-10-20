@@ -26,7 +26,7 @@ export const metadata: Metadata = { title: "Site settings" };
 export default async function AdminSettingsPage() {
   await requirePagePermission("admin:settings.manage", "/admin/settings");
   clearMobileMoneyConfig();
-  const [announcement, promo, visit, shoot, slot, manual, mobileMoney, mm, hero, viewing, success] = await Promise.all([
+  const [announcement, promo, visit, shoot, slot, manual, mobileMoney, mm, hero, viewing, success, stayFee, stayLate] = await Promise.all([
     getSetting("site.announcement"),
     getSetting("promotion.featured7d"),
     getSetting("visit.inspection"),
@@ -38,6 +38,8 @@ export default async function AdminSettingsPage() {
     getSetting("site.heroImage"),
     getSetting("fees.viewing"),
     getSetting("fees.success"),
+    getSetting("stay.listingFee"),
+    getSetting("stay.lateBooking"),
   ]);
   const om = mobileMoney.orangeMoney;
   const am = mobileMoney.afrimoney;
@@ -48,6 +50,7 @@ export default async function AdminSettingsPage() {
     { key: "visitPrice", title: "Inspection visit price", hint: "What a lister pays for staff to visit, check and photograph a property, earning the dated \u201cInspected by Sukkot\u201d badge. Leave empty to stop selling visits.", value: visit },
     { key: "photoShootPrice", title: "Photo shoot price (per property)", hint: "What a lister pays, non-refundable, for our team to take the photos and video for a new listing. Leave empty to stop offering photo shoots.", value: shoot },
     { key: "viewingFee", title: "Inspection booking fee", hint: "What a tenant or buyer pays Sukkot Salone to book an inspection of a listing. The request reaches the lister once it is paid. Leave empty to make booking free.", value: viewing },
+    { key: "stayListingFee", title: "Listing fee for hotels and short stays", hint: "What a hotel, guest house, motel or short-stay home pays to be listed for bookings, including professional photos and video. Places listed by agreement with their management can be opened for bookings without it under Bookings. Leave empty to make it free.", value: stayFee },
     { key: "slotPrice", title: "Extra listing slot price", hint: "A one-off payment for one more active listing on top of the plan's allowance. The slot never expires. Leave empty to stop selling slots.", value: slot },
   ];
   return (
@@ -92,6 +95,19 @@ export default async function AdminSettingsPage() {
         <JsonForm
           path="/admin/settings"
           fields={[{ name: "successFee.percent", label: "Percentage", optional: true, defaultValue: success ? String(success.basisPoints / 100) : "", placeholder: "5" }]}
+        />
+      </section>
+      <section className="card p-5">
+        <h2 className="mb-1 font-bold text-navy-900">Late hotel and short-stay bookings</h2>
+        <p className="mb-3 text-sm text-muted">
+          Guests should book at least this many days before check-in. Later bookings are still taken, for an extra charge on the price of the stay that is not refunded if they cancel. Set the charge to 0 to take late bookings at the normal price.
+        </p>
+        <JsonForm
+          path="/admin/settings"
+          fields={[
+            { name: "stayLateBooking.noticeDays", label: "Days of notice", type: "number", defaultValue: String(stayLate.noticeDays) },
+            { name: "stayLateBooking.surchargePercent", label: "Late booking charge (%)", type: "number", defaultValue: String(stayLate.surchargePercent) },
+          ]}
         />
       </section>
       <section className="card p-5">

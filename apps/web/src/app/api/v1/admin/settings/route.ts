@@ -32,6 +32,9 @@ const schema = z.object({
   photoShootPrice: price,
   slotPrice: price,
   viewingFee: price,
+  stayListingFee: price,
+  /** Notice period in days and the extra charge for later bookings, as typed. */
+  stayLateBooking: z.object({ noticeDays: z.coerce.number().int().min(0, "0 or more").max(60, "At most 60 days"), surchargePercent: z.coerce.number().min(0).max(100, "At most 100") }).optional(),
   /** Percentage as typed, e.g. "5" or "2.5". Empty switches the fee off. */
   successFee: z.object({ percent: z.string().trim().max(6) }).optional(),
   billingManual: z
@@ -79,6 +82,8 @@ export const POST = handler(async (ctx) => {
   if (input.photoShootPrice !== undefined) await setSetting("visit.photoShoot", toPrice(input.photoShootPrice));
   if (input.slotPrice !== undefined) await setSetting("listing.extraSlot", toPrice(input.slotPrice));
   if (input.viewingFee !== undefined) await setSetting("fees.viewing", toPrice(input.viewingFee));
+  if (input.stayListingFee !== undefined) await setSetting("stay.listingFee", toPrice(input.stayListingFee));
+  if (input.stayLateBooking) await setSetting("stay.lateBooking", input.stayLateBooking);
   if (input.successFee) await setSetting("fees.success", toBasisPoints(input.successFee.percent));
   if (input.billingManual) await setSetting("billing.manual", input.billingManual);
   if (input.orangeMoney || input.afrimoney) {

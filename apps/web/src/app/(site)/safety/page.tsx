@@ -28,7 +28,7 @@ export default function SafetyPage() {
         <li>Record the payment in your Sukkot Salone dashboard so both sides have the same record.</li>
       </ul>
       <h2>What Sukkot Salone does and does not do</h2>
-      <p>We review listings before they go live, check identity and documents for verified badges, and remove listings and accounts that break our rules. We do not hold money, act as an escrow agent, or guarantee legal title.</p>
+      <p>We review listings before they go live, check identity and documents for verified badges, and remove listings and accounts that break our rules. We do not hold rent, deposits or sale money, act as an escrow agent, or guarantee legal title. The only payments we take on someone else&apos;s behalf are hotel and short-stay bookings, after the property has confirmed the room.</p>
       <p>If something feels wrong, <Link href="/help#report">tell us</Link>.</p>
     </ProsePage>
   );

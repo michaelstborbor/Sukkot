@@ -261,6 +261,8 @@ enum PaymentPurpose {
   LISTING_SLOT
   VIEWING_FEE
   SUCCESS_FEE
+  STAY_BOOKING
+  STAY_LISTING
   REFUND
   OTHER
 }
@@ -371,6 +373,7 @@ model User {
   appEvents            ApplicationEvent[]
   siteVisitsRequested  SiteVisit[]               @relation("SiteVisitRequester")
   siteVisitsHandled    SiteVisit[]               @relation("SiteVisitStaff")
+  stayBookings         StayBooking[]             @relation("StayGuest")
 
   @@index([status])
   @@map("users")
@@ -634,6 +637,16 @@ model Property {
   documentsStatus     VerificationStatus @default(NOT_SUBMITTED)
   authorityStatus     VerificationStatus @default(NOT_SUBMITTED)
   isFeatured          Boolean            @default(false)
+  /// Set when the listing takes bookings through Sukkot Salone: hotel, guest house, motel or short-stay home.
+  stayKind            StayKind?
+  /// Facilities, check-in times and house rules for a bookable stay (validated by stayDetailsSchema).
+  stayDetails         Json?
+  /// When the property paid Sukkot Salone's listing fee for bookable stays (listing, photos and video).
+  stayListingPaidAt   DateTime?          @db.Timestamptz(3)
+  /// When staff opened bookings under an agreement with the property's management, without the fee.
+  stayArrangedAt      DateTime?          @db.Timestamptz(3)
+  /// Sukkot Salone's commission agreed with the property, in hundredths of a percent (1000 = 10%).
+  stayCommissionBps   Int?
   /// When Sukkot Salone staff last visited and checked the property in person (paid inspection visit).
   inspectedAt         DateTime?          @db.Timestamptz(3)
   isDemo              Boolean            @default(false)
@@ -664,6 +677,8 @@ model Property {
   payments         PaymentTransaction[]
   dailyViews       PropertyViewDaily[]
   siteVisits       SiteVisit[]
+  stayRooms        StayRoomType[]
+  stayBookings     StayBooking[]
   serviceFees      ServiceFee[]
   suggestions      ListingSuggestion[]
 
@@ -990,6 +1005,139 @@ model SiteVisit {
   @@map("site_visits")
 }
 
+enum StayKind {
+  HOTEL
+  GUEST_HOUSE
+  MOTEL
+  SHORT_STAY_HOME
+}
+
+/// What a guest gets back if they cancel a paid booking. The late booking charge is never refunded.
+enum CancellationPolicy {
+  /// Full refund up to 1 day before check-in.
+  FLEXIBLE
+  /// Full refund up to 7 days before check-in, half after that.
+  MODERATE
+  /// Half refunded up to 14 days before check-in, nothing after that.
+  STRICT
+  NON_REFUNDABLE
+}
+
+enum StayBookingStatus {
+  /// The guest asked; Sukkot Salone is checking availability with the property.
+  REQUESTED
+  /// The property confirmed the room; waiting for the guest to pay.
+  CONFIRMED
+  /// Payment confirmed by the provider or by finance. The receipt is issued.
+  PAID
+  COMPLETED
+  NO_SHOW
+  /// The property could not take the booking.
+  UNAVAILABLE
+  CANCELLED
+  /// Not paid by the deadline.
+  EXPIRED
+}
+
+/// A kind of room a hotel, guest house or motel offers, or the whole place for a short-stay home.
+model StayRoomType {
+  id                String        @id @default(cuid())
+  propertyId        String
+  property          Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  name              String
+  description       String?
+  bedType           String?
+  /// How many rooms of this kind the property has.
+  roomsCount        Int           @default(1)
+  maxAdults         Int           @default(2)
+  maxChildren       Int           @default(0)
+  nightlyPriceMinor BigInt
+  /// Price for 30 nights, when the property offers a monthly rate.
+  monthlyPriceMinor BigInt?
+  currency          Currency      @default(SLE)
+  breakfastIncluded Boolean       @default(false)
+  features          String[]
+  isActive          Boolean       @default(true)
+  sortOrder         Int           @default(0)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(3)
+  bookings          StayBooking[]
+
+  @@index([propertyId, isActive])
+  @@map("stay_room_types")
+}
+
+/// A guest's booking of a hotel, guest house, motel or short-stay home through Sukkot Salone. Staff check
+/// availability with the property, the guest pays Sukkot Salone, and Sukkot Salone pays the property.
+model StayBooking {
+  id                   String               @id @default(cuid())
+  /// Human-readable reference, e.g. BK-LZ3K9-4F2A.
+  reference            String               @unique
+  propertyId           String
+  property             Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  roomTypeId           String
+  roomType             StayRoomType         @relation(fields: [roomTypeId], references: [id], onDelete: Restrict)
+  guestId              String
+  guest                User                 @relation("StayGuest", fields: [guestId], references: [id], onDelete: Restrict)
+  status               StayBookingStatus    @default(REQUESTED)
+  checkIn              DateTime             @db.Date
+  checkOut             DateTime             @db.Date
+  nights               Int
+  rooms                Int                  @default(1)
+  adults               Int
+  children             Int                  @default(0)
+  guestName            String
+  guestPhone           String
+  guestEmail           String
+  guestCountry         String?
+  arrivalTime          String?
+  /// Answers to the questions for this kind of stay (airport pickup, parking, purpose of stay…).
+  extras               Json                 @default("{}")
+  specialRequests      String?
+  /// Days between booking and check-in; under the notice period the booking is late.
+  leadDays             Int
+  isLate               Boolean              @default(false)
+  /// How the price was worked out, as shown to the guest.
+  priceBreakdown       Json
+  stayAmountMinor      BigInt
+  lateFeeMinor         BigInt               @default(0)
+  cleaningFeeMinor     BigInt               @default(0)
+  totalMinor           BigInt
+  currency             Currency
+  cancellationPolicy   CancellationPolicy
+  confirmedAt          DateTime?            @db.Timestamptz(3)
+  confirmedById        String?
+  /// Who at the property confirmed, or the property's own booking number.
+  propertyConfirmation String?
+  paymentDueAt         DateTime?            @db.Timestamptz(3)
+  roomNumber           String?
+  /// Shown to the guest.
+  staffNote            String?
+  /// Staff only.
+  internalNote         String?
+  paidAt               DateTime?            @db.Timestamptz(3)
+  cancelledAt          DateTime?            @db.Timestamptz(3)
+  cancelledBy          String?
+  cancelReason         String?
+  /// What the cancellation policy says the guest gets back.
+  refundDueMinor       BigInt?
+  refundedMinor        BigInt               @default(0)
+  completedAt          DateTime?            @db.Timestamptz(3)
+  /// What Sukkot Salone paid the property for this booking, and how.
+  payoutMinor          BigInt?
+  payoutReference      String?
+  payoutAt             DateTime?            @db.Timestamptz(3)
+  payoutById           String?
+  createdAt            DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @db.Timestamptz(3)
+  payments             PaymentTransaction[]
+
+  @@index([status, createdAt])
+  @@index([guestId, createdAt])
+  @@index([propertyId, checkIn])
+  @@map("stay_bookings")
+}
+
 model AvailabilityWindow {
   id          String    @id @default(cuid())
   userId      String
@@ -1195,6 +1343,8 @@ model PaymentTransaction {
   inspectionId       String?
   inspection         Inspection?    @relation(fields: [inspectionId], references: [id], onDelete: SetNull)
   serviceFeeId       String?
+  stayBookingId      String?
+  stayBooking        StayBooking?   @relation(fields: [stayBookingId], references: [id], onDelete: SetNull)
   serviceFee         ServiceFee?    @relation("ServiceFeePayments", fields: [serviceFeeId], references: [id], onDelete: SetNull)
   /// The rent or sale payment a service fee was charged on.
   feeCharged         ServiceFee?    @relation("ServiceFeeSource")
@@ -1220,6 +1370,7 @@ model PaymentTransaction {
   @@index([status])
   @@index([payeeId])
   @@index([tenancyId])
+  @@index([stayBookingId])
   @@map("payment_transactions")
 }
 
