@@ -5,6 +5,7 @@ import {
   CURRENCIES,
   ELECTRICITY,
   FURNISHING,
+  HOSPITALITY_TYPE_SLUGS,
   LAND_WITH_BUILDING_TYPE_SLUGS,
   LISTING_PURPOSES,
   OTHER_PROPERTY_TYPE_SLUG,
@@ -116,9 +117,32 @@ export const landAttributesSchema = z.object({
 
 export const commercialAttributesSchema = z.object({
   permittedUse: optionalText(200),
+  /** Hotels, guesthouses and motels: guest rooms. */
+  rooms: optionalInt(1, 2000),
   floors: optionalInt(0, 100),
   loadingAccess: z.boolean().optional(),
   wheelchairAccessible: z.boolean().optional(),
+});
+
+export const houseAttributesSchema = z.object({
+  houseStyle: z.enum(["BUNGALOW", "STOREY", "DUPLEX", "TERRACED", "SEMI_DETACHED", "OTHER"]).optional(),
+  storeys: optionalInt(1, 20),
+  boysQuarters: z.boolean().optional(),
+  walledCompound: z.boolean().optional(),
+});
+
+export const apartmentAttributesSchema = z.object({
+  floorLevel: optionalInt(0, 100),
+  buildingFloors: optionalInt(1, 100),
+  selfContained: z.boolean().optional(),
+  lift: z.boolean().optional(),
+});
+
+export const shortStayAttributesSchema = z.object({
+  maxGuests: optionalInt(1, 50),
+  minNights: optionalInt(1, 90),
+  checkIn: z.string().trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 14:00").optional().or(z.literal("").transform(() => undefined)),
+  checkOut: z.string().trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use a time like 11:00").optional().or(z.literal("").transform(() => undefined)),
 });
 
 export const propertyInputSchema = z
@@ -157,6 +181,12 @@ export const propertyInputSchema = z
     rentalTerms: rentalTermsSchema.optional(),
     land: landAttributesSchema.optional(),
     commercial: commercialAttributesSchema.optional(),
+    house: houseAttributesSchema.optional(),
+    apartment: apartmentAttributesSchema.optional(),
+    shortStay: shortStayAttributesSchema.optional(),
+    /** Seen only by Sukkot Salone staff, never by people browsing listings. */
+    privateContactPhone: phoneSchema.optional().or(z.literal("").transform(() => undefined)),
+    privateContactEmail: emailSchema.optional().or(z.literal("").transform(() => undefined)),
   })
   .superRefine((v, ctx) => {
     if (v.purpose !== "SALE" && !v.rentalPeriod) {
@@ -193,8 +223,15 @@ export function validatePropertyForCategory(
     if (!landWithBuilding && input.bedrooms !== undefined && input.bedrooms > 0)
       errors.push({ path: "bedrooms", message: "Land listings should not have bedrooms" });
   }
-  if (category === "COMMERCIAL" && input.floorArea === undefined && input.plotSize === undefined) {
+  const hospitality = typeSlug !== undefined && HOSPITALITY_TYPE_SLUGS.includes(typeSlug);
+  if (category === "COMMERCIAL" && !hospitality && input.floorArea === undefined && input.plotSize === undefined) {
     errors.push({ path: "floorArea", message: "Enter the usable floor area" });
+  }
+  if (hospitality && input.commercial?.rooms === undefined) {
+    errors.push({ path: "commercial.rooms", message: "Enter the number of guest rooms" });
+  }
+  if (category === "SHORT_STAY" && input.shortStay?.maxGuests === undefined) {
+    errors.push({ path: "shortStay.maxGuests", message: "Enter how many guests it sleeps" });
   }
   if (category === "SHORT_STAY" && input.purpose !== "SHORT_STAY") {
     errors.push({ path: "purpose", message: "Short-stay properties must be listed as short stay" });
@@ -336,7 +373,7 @@ export const reportSchema = z
 /* ------------------------------------------------------------- Payments */
 
 /** What a customer can buy from Sukkot Salone at checkout. Everything else is paid between users. */
-export const PLATFORM_CHECKOUT_PURPOSES = ["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION", "INSPECTION_VISIT", "LISTING_SLOT"] as const;
+export const PLATFORM_CHECKOUT_PURPOSES = ["PLATFORM_SUBSCRIPTION", "LISTING_PROMOTION", "INSPECTION_VISIT", "PHOTO_SHOOT", "LISTING_SLOT"] as const;
 export type PlatformCheckoutPurpose = (typeof PLATFORM_CHECKOUT_PURPOSES)[number];
 
 export const paymentInitiateSchema = z.object({

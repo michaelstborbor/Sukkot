@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-const LAND_LABELS: Record<string, string> = {
+const ATTRIBUTE_LABELS: Record<string, string> = {
   landUse: "Land use",
   accessRoad: "Access road",
   fenced: "Fenced",
@@ -59,6 +59,19 @@ const LAND_LABELS: Record<string, string> = {
   floors: "Floors",
   loadingAccess: "Loading access",
   wheelchairAccessible: "Wheelchair accessible",
+  rooms: "Guest rooms",
+  houseStyle: "House style",
+  storeys: "Storeys",
+  boysQuarters: "Boys' quarters",
+  walledCompound: "Walled compound",
+  floorLevel: "Floor",
+  buildingFloors: "Floors in the building",
+  selfContained: "Self-contained",
+  lift: "Lift",
+  maxGuests: "Sleeps",
+  minNights: "Minimum stay (nights)",
+  checkIn: "Check-in from",
+  checkOut: "Check-out by",
 };
 
 const TERMS_LABELS: Record<string, string> = {
@@ -218,8 +231,8 @@ export default async function PropertyPage({ params }: Props) {
               <dl className="mt-3 divide-y divide-line rounded-xl border border-line bg-surface">
                 {attributes.map(([k, v]) => (
                   <div key={k} className="flex justify-between gap-4 px-4 py-3 text-sm">
-                    <dt className="text-muted">{LAND_LABELS[k] ?? k}</dt>
-                    <dd className="text-right font-medium">{humanise(v)}</dd>
+                    <dt className="text-muted">{ATTRIBUTE_LABELS[k] ?? k}</dt>
+                    <dd className="text-right font-medium">{k === "floorLevel" && v === 0 ? "Ground floor" : k === "checkIn" || k === "checkOut" ? String(v) : humanise(v)}</dd>
                   </div>
                 ))}
               </dl>

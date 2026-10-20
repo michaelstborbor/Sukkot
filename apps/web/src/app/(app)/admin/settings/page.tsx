@@ -26,10 +26,11 @@ export const metadata: Metadata = { title: "Site settings" };
 export default async function AdminSettingsPage() {
   await requirePagePermission("admin:settings.manage", "/admin/settings");
   clearMobileMoneyConfig();
-  const [announcement, promo, visit, slot, manual, mobileMoney, mm, hero] = await Promise.all([
+  const [announcement, promo, visit, shoot, slot, manual, mobileMoney, mm, hero] = await Promise.all([
     getSetting("site.announcement"),
     getSetting("promotion.featured7d"),
     getSetting("visit.inspection"),
+    getSetting("visit.photoShoot"),
     getSetting("listing.extraSlot"),
     getSetting("billing.manual"),
     getSetting("payments.mobileMoney"),
@@ -43,6 +44,7 @@ export default async function AdminSettingsPage() {
   const prices = [
     { key: "promotionPrice", title: "Featured listing price (7 days)", hint: "Leave the amount empty to stop selling promotions.", value: promo },
     { key: "visitPrice", title: "Inspection visit price", hint: "What a lister pays for staff to visit, check and photograph a property, earning the dated \u201cInspected by Sukkot\u201d badge. Leave empty to stop selling visits.", value: visit },
+    { key: "photoShootPrice", title: "Photo shoot price (per property)", hint: "What a lister pays, non-refundable, for our team to take the photos and video for a new listing. Leave empty to stop offering photo shoots.", value: shoot },
     { key: "slotPrice", title: "Extra listing slot price", hint: "A one-off payment for one more active listing on top of the plan's allowance. The slot never expires. Leave empty to stop selling slots.", value: slot },
   ];
   return (

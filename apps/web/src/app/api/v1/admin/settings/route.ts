@@ -21,6 +21,7 @@ const schema = z.object({
   announcement: z.object({ text: z.string().trim().max(200), link: z.string().max(200).optional(), enabled: z.boolean() }).optional(),
   promotionPrice: price,
   visitPrice: price,
+  photoShootPrice: price,
   slotPrice: price,
   billingManual: z
     .object({
@@ -64,6 +65,7 @@ export const POST = handler(async (ctx) => {
   if (input.announcement) await setSetting("site.announcement", input.announcement);
   if (input.promotionPrice !== undefined) await setSetting("promotion.featured7d", toPrice(input.promotionPrice));
   if (input.visitPrice !== undefined) await setSetting("visit.inspection", toPrice(input.visitPrice));
+  if (input.photoShootPrice !== undefined) await setSetting("visit.photoShoot", toPrice(input.photoShootPrice));
   if (input.slotPrice !== undefined) await setSetting("listing.extraSlot", toPrice(input.slotPrice));
   if (input.billingManual) await setSetting("billing.manual", input.billingManual);
   if (input.orangeMoney || input.afrimoney) {

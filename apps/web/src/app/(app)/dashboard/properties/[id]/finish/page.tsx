@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { LISTING_PURPOSE_LABELS, listingMachine, NOTICES } from "@sukkot/shared";
+import { formatDateTime, formatMoney, formatSlPhone, LISTING_PURPOSE_LABELS, listingMachine, NOTICES } from "@sukkot/shared";
 import { requirePageActor } from "@/server/auth/actor";
 import { AppError } from "@/server/errors";
 import { getManagedProperty, getPropertyDetail } from "@/server/services/properties";
 import { publicImageUrl } from "@/server/storage";
 import { getListingVideo, videoDto } from "@/server/services/video";
+import { getSetting } from "@/server/services/settings";
+import { openPhotoShoot } from "@/server/services/site-visits";
+import { transferDetails } from "@/server/services/billing";
+import { availableOnlineMethods } from "@/server/payments";
+import { db } from "@/server/db";
+import { CheckoutButton } from "@/components/dashboard/checkout";
+import { PhotoChoice } from "@/components/dashboard/photo-choice";
+import { TeamContactButtons } from "@/components/layout/team-contact";
 import { PageHeader } from "@/components/dashboard/shell";
 import { ListingSteps } from "@/components/dashboard/listing-steps";
 import { PhotoManager } from "@/components/dashboard/media-manager";
@@ -41,11 +49,13 @@ export default async function FinishListingPage({ params, searchParams }: { para
   const manage = `/dashboard/properties/${id}`;
   const video = videoDto(await getListingVideo(p.id));
 
+  const help = `Hello Sukkot Salone, I need help with my listing ${p.reference}: ${p.title}`;
+
   if (!review) {
-    return (
-      <div className="max-w-4xl">
-        <PageHeader title="Add photos or a video" description={`${p.reference} · ${p.title}`} />
-        <ListingSteps current={2} />
+    const [price, shoot] = await Promise.all([getSetting("visit.photoShoot"), openPhotoShoot(p.id)]);
+    const fee = price ? formatMoney(BigInt(price.priceMinor), price.currency) : null;
+    const photos = (
+      <>
         <PhotoManager
           key={p.images.map((i) => i.id).join(",")}
           propertyId={p.id}
@@ -54,8 +64,53 @@ export default async function FinishListingPage({ params, searchParams }: { para
         />
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
           <ButtonLink href={`${manage}?tab=details`} variant="outline"><ArrowLeft className="h-4 w-4" /> Back to details</ButtonLink>
-          <ButtonLink href="?step=review">Next: review <ArrowRight className="h-4 w-4" /></ButtonLink>
+          <ButtonLink href="?step=review">Next: review and submit <ArrowRight className="h-4 w-4" /></ButtonLink>
         </div>
+      </>
+    );
+
+    if (shoot) {
+      const paid = !!shoot.paymentId;
+      const [methods, transfer] = paid || !price ? [[], null] : await Promise.all([availableOnlineMethods(), transferDetails()]);
+      return (
+        <div className="max-w-4xl space-y-6">
+          <PageHeader title="Professional photos requested" description={`${p.reference} · ${p.title}`} />
+          <ListingSteps current={2} />
+          <section className="card space-y-3 p-5 sm:p-6">
+            <Notice tone={paid ? "success" : "info"} title={shoot.status === "SCHEDULED" ? "Photo shoot booked" : paid ? "Paid, we will call you to agree a date" : "Request sent to our team"}>
+              {shoot.status === "SCHEDULED" && shoot.scheduledAt
+                ? `Our team will come on ${formatDateTime(shoot.scheduledAt)}.${shoot.staffNote ? ` ${shoot.staffNote}` : ""}`
+                : `We will call you on ${shoot.contactPhone ? formatSlPhone(shoot.contactPhone) : "your number"}.`}{" "}
+              Once the photos and video are on your listing, we let you know and you submit it for review.
+            </Notice>
+            {!paid && fee && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm">The fee is <strong>{fee}</strong>, non-refundable. {shoot.payment?.status === "PENDING" ? "Your payment is being checked." : "It is not paid yet."}</p>
+                {shoot.payment?.status !== "PENDING" && (
+                  <CheckoutButton label={`Pay ${fee}`} title="Pay for professional photos" amountLabel={fee} methods={methods} transfer={transfer} purpose="PHOTO_SHOOT" propertyId={p.id} />
+                )}
+              </div>
+            )}
+          </section>
+          <TeamContactButtons message={help} />
+          <details className="card p-5 sm:p-6">
+            <summary className="cursor-pointer font-semibold text-navy-900">Upload your own photos instead</summary>
+            <div className="mt-4">{photos}</div>
+          </details>
+        </div>
+      );
+    }
+
+    const me = await db.user.findUnique({ where: { id: actor.id }, select: { phone: true } });
+    const defaultPhone = p.privateContactPhone ?? me?.phone;
+    return (
+      <div className="max-w-4xl space-y-6">
+        <PageHeader title="Add photos or a video" description={`${p.reference} · ${p.title}`} />
+        <ListingSteps current={2} />
+        <PhotoChoice propertyId={p.id} fee={fee} defaultPhone={defaultPhone ? formatSlPhone(defaultPhone) : ""} hasPhotos={p.images.length > 0}>
+          <div>{photos}</div>
+        </PhotoChoice>
+        <TeamContactButtons message={help} />
       </div>
     );
   }
@@ -127,9 +182,10 @@ export default async function FinishListingPage({ params, searchParams }: { para
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         <ButtonLink href="?" variant="outline"><ArrowLeft className="h-4 w-4" /> Back to photos and video</ButtonLink>
         {hasPhoto && (
-          <ActionButton path={`/properties/${p.id}/status`} body={{ action: "submit" }} label="Submit for approval" variant="primary" size="md" success="Submitted for approval" redirectTo={manage} />
+          <ActionButton path={`/properties/${p.id}/status`} body={{ action: "submit" }} label="Submit for review" variant="primary" size="md" success="Submitted for review" redirectTo={manage} />
         )}
       </div>
+      <TeamContactButtons message={help} className="mt-6" />
     </div>
   );
 }

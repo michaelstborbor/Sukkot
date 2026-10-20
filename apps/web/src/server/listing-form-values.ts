@@ -1,6 +1,6 @@
 import "server-only";
 import type { Property } from "@prisma/client";
-import { minorToMajorString } from "@sukkot/shared";
+import { CATEGORY_ATTRIBUTE_GROUP, minorToMajorString } from "@sukkot/shared";
 import type { ListingFormValues } from "@/components/dashboard/listing-form";
 
 /** Map a stored property back into the flat values the listing form edits. */
@@ -39,12 +39,14 @@ export function listingFormValues(p: Property & { amenities: { amenityId: string
     videoUrl: s(p.videoUrl),
     virtualTourUrl: s(p.virtualTourUrl),
     listerCapacity: p.listerCapacity,
+    privateContactPhone: s(p.privateContactPhone),
+    privateContactEmail: s(p.privateContactEmail),
   };
   for (const [k, val] of Object.entries(terms)) {
     values[`rentalTerms.${k}`] =
       k === "securityDeposit" && val ? minorToMajorString(BigInt(String(val)), p.currency) : typeof val === "boolean" ? val : s(val);
   }
-  const prefix = p.category === "LAND" ? "land" : p.category === "COMMERCIAL" ? "commercial" : null;
+  const prefix = CATEGORY_ATTRIBUTE_GROUP[p.category] ?? null;
   if (prefix) for (const [k, val] of Object.entries(attrs)) values[`${prefix}.${k}`] = typeof val === "boolean" ? val : s(val);
   return values;
 }
