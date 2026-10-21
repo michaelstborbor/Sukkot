@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { Link, router } from "expo-router";
 import { useAuth } from "@/lib/auth";
 import { ApiError, errorMessage } from "@/lib/api";
+import { HouseMark } from "@/components/house-mark";
 import { Button, Field, FormScreen, Input, Notice, styles as ui } from "@/components/ui";
 
 export default function SignInScreen() {
@@ -30,6 +31,9 @@ export default function SignInScreen() {
 
   return (
     <FormScreen>
+      <View style={{ alignItems: "center", paddingTop: 8 }}>
+        <HouseMark size={72} build />
+      </View>
       <Text style={ui.h1}>Welcome back</Text>
       {error ? <Notice tone="danger">{error}</Notice> : null}
       <Field label="Email" error={fields.email}>

@@ -5,6 +5,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/lib/auth";
 import { API_URL, ApiError, errorMessage } from "@/lib/api";
 import { colors } from "@/lib/theme";
+import { HouseMark } from "@/components/house-mark";
 import { Button, ChipGroup, Field, FormScreen, Input, Notice, styles as ui } from "@/components/ui";
 
 const ACCOUNT_TYPES = [
@@ -40,6 +41,9 @@ export default function SignUpScreen() {
 
   return (
     <FormScreen>
+      <View style={{ alignItems: "center", paddingTop: 8 }}>
+        <HouseMark size={72} build />
+      </View>
       <Text style={ui.h1}>Create your account</Text>
       {error ? <Notice tone="danger">{error}</Notice> : null}
       <Field label="I am" error={fields.accountType}>

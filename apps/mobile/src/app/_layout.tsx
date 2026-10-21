@@ -1,7 +1,8 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { StartupIntro } from "@/components/startup-intro";
 import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
@@ -34,7 +35,13 @@ export default function RootLayout() {
           <Stack.Screen name="activity/payments" options={{ title: "Payments" }} />
           <Stack.Screen name="activity/notifications" options={{ title: "Notifications" }} />
         </Stack>
+        <Intro />
       </AuthProvider>
     </SafeAreaProvider>
   );
+}
+
+function Intro() {
+  const { ready } = useAuth();
+  return <StartupIntro ready={ready} />;
 }

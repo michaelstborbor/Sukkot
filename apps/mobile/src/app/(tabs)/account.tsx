@@ -1,10 +1,10 @@
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { router, type Href } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
 import { GENERAL_ENQUIRY, NOTICES, SUPPORT_CONTACT, telLink, VERIFICATION_BADGES, whatsappLink } from "@sukkot/shared";
-import { absoluteUrl, API_URL } from "@/lib/api";
+import { absoluteUrl, api, API_URL, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { colors } from "@/lib/theme";
 import { SignedOut } from "@/components/signed-out";
@@ -62,7 +62,32 @@ export default function AccountScreen() {
 
       <Text style={[ui.muted, { fontSize: 12 }]}>{NOTICES.noEscrow}</Text>
       <Button title="Sign out" variant="outline" onPress={signOut} />
+      <Button title="Delete my account" variant="ghost" onPress={() => confirmDelete(signOut)} />
     </ScrollView>
+  );
+}
+
+/** Closing an account removes the person's name, contact details and live listings, and signs them out. */
+function confirmDelete(signOut: () => Promise<void>) {
+  Alert.alert(
+    "Delete your account?",
+    "Your name, email, phone number and listings are removed, and you are signed out. Records we must keep by law, such as payments, stay with us without your details. This can't be undone.",
+    [
+      { text: "Keep my account", style: "cancel" },
+      {
+        text: "Delete account",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api("/me", { method: "DELETE" });
+            await signOut();
+            Alert.alert("Account deleted", "Your account has been closed.");
+          } catch (e) {
+            Alert.alert("Account not deleted", errorMessage(e));
+          }
+        },
+      },
+    ],
   );
 }
 
