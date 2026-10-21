@@ -2,8 +2,13 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import type { ApiErrorBody } from "@sukkot/shared";
 
-/** Base URL of the web app that serves /api/v1. Set EXPO_PUBLIC_API_URL per build. */
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000").replace(/\/$/, "");
+/**
+ * Base URL of the web app that serves /api/v1. Store builds take it from eas.json; localhost is only a
+ * fallback while developing, so a release build without the setting fails loudly instead of silently.
+ */
+const configuredUrl = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? "http://localhost:3000" : "");
+if (!configuredUrl) throw new Error("EXPO_PUBLIC_API_URL is not set for this build. Add it to the build profile in eas.json.");
+export const API_URL = configuredUrl.replace(/\/$/, "");
 
 const TOKEN_KEY = "sukkot.session";
 let memoryToken: string | null = null;
