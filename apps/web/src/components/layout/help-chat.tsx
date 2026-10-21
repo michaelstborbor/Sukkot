@@ -7,6 +7,7 @@ import { MessageCircleQuestion, Send, X } from "lucide-react";
 import { GENERAL_ENQUIRY, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { api, ApiError } from "@/lib/api";
+import { safeNext } from "@/lib/safe-next";
 import { cn } from "@/lib/utils";
 
 /**
@@ -104,7 +105,7 @@ const WELCOME: Message = { from: "bot", text: `Hi, I'm the ${brand.shortName} as
 
 /** Only site paths and a few well-known sites may be linked from an answer. */
 function safeHref(url: string): string | null {
-  if (/^\/(?!\/)/.test(url)) return url;
+  if (url.startsWith("/")) return safeNext(url, "") || null;
   try {
     const u = new URL(url);
     return u.protocol === "https:" && ["wa.me", "api.whatsapp.com"].includes(u.hostname) ? url : null;

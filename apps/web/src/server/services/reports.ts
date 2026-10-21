@@ -12,7 +12,9 @@ import { notify } from "../notify";
 export async function createReport(actor: Actor | null, input: unknown) {
   const data = reportSchema.parse(input);
   if (!actor && !data.contactEmail) throw new AppError("VALIDATION", "Enter an email so we can follow up", { contactEmail: "Required" });
-  if (data.messageId && actor) {
+  if (data.messageId) {
+    // Only someone in the conversation can attach one of its messages.
+    if (!actor) throw new AppError("UNAUTHENTICATED", "Sign in to report a message");
     const msg = await db.message.findUnique({ where: { id: data.messageId }, include: { conversation: { include: { participants: true } } } });
     if (!msg || !msg.conversation.participants.some((p) => p.userId === actor.id)) throw notFound("Message");
   }

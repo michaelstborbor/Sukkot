@@ -26,6 +26,7 @@ export const LIMITS = {
   login: { limit: 10, window: 15 * 60 },
   /** Per-IP ceiling across all accounts (shared networks and NAT are common, so it is generous). */
   loginIp: { limit: 60, window: 15 * 60 },
+  loginAccount: { limit: 30, window: 60 * 60 },
   register: { limit: 5, window: 60 * 60 },
   passwordReset: { limit: 5, window: 60 * 60 },
   /** "Send the link again": each one sends an email. */

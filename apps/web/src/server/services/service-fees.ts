@@ -182,6 +182,9 @@ export async function recordServiceFeeReceived(actorIn: Actor | null, id: string
 export async function waiveServiceFee(actorIn: Actor | null, id: string, input: unknown, ipHash?: string | null) {
   const actor = assertPermission(actorIn, "admin:payments.manage");
   const { reason } = z.object({ reason: z.string().trim().min(5).max(500) }).parse(input);
+  const owed = await db.serviceFee.findUnique({ where: { id }, select: { payerId: true } });
+  if (!owed) throw notFound("Service fee");
+  if (owed.payerId === actor.id) throw forbidden("You cannot waive a fee you owe");
   return db.$transaction(async (tx) => {
     const moved = await tx.serviceFee.updateMany({ where: { id, status: "DUE" }, data: { status: "WAIVED", waivedReason: reason } });
     if (!moved.count) throw new AppError("CONFLICT", "Only a fee that is due can be waived");

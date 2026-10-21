@@ -88,11 +88,13 @@ const SCENES: Record<Kind, typeof house> = {
   farm,
 };
 
+const escapeXml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 export function demoSvg(kind: Kind, seed: number, label: string): string {
   const r = rng(seed * 7919 + kind.length);
   const p = PALETTES[seed % PALETTES.length]!;
   const scene = SCENES[kind](r, p);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="1600" height="1200" role="img" aria-label="Illustrative image: ${label}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="1600" height="1200" role="img" aria-label="Illustrative image: ${escapeXml(label)}">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.sky1}"/><stop offset="1" stop-color="${p.sky2}"/></linearGradient>
   </defs>

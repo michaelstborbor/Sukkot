@@ -23,6 +23,11 @@ export const env = {
   emailDriver: read("EMAIL_DRIVER", "console") as "console" | "resend",
   emailFrom: read("EMAIL_FROM", "Sukkot Salone <no-reply@example.sl>"),
   smsDriver: read("SMS_DRIVER", "console") as "console" | "twilio",
+  /**
+   * How many proxies in front of the app append to X-Forwarded-For. The client's address is that many
+   * entries from the right; anything further left was sent by the client and cannot be trusted.
+   */
+  trustedProxyHops: Math.max(1, Number(process.env.TRUSTED_PROXY_HOPS) || 1),
   /** Demo mode shows sample-data notices. It is forced off in production unless explicitly set. */
   demoMode: (process.env.DEMO_MODE ?? (isProd ? "false" : "true")) === "true",
   paymentMethodsEnabled: read("PAYMENT_METHODS_ENABLED", "SANDBOX,BANK_TRANSFER,CASH,MANUAL")
