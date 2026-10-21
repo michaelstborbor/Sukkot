@@ -4,6 +4,7 @@ import { GENERAL_ENQUIRY, telLink, whatsappLink } from "@sukkot/shared";
 import { brand } from "@/config/brand";
 import { WhatsAppIcon } from "@/components/layout/whatsapp-icon";
 import { Logo } from "@/components/ui/logo";
+import { inIosApp } from "@/server/ios-app";
 
 const COLS = [
   { title: "Discover", links: [["Home", "/"], ["Homes for rent", "/properties?purpose=RENT"], ["Homes for sale", "/properties?purpose=SALE"], ["Land", "/properties?category=LAND"], ["Commercial", "/properties?category=COMMERCIAL"], ["Locations", "/locations"], ["Agents", "/agents"]] },
@@ -11,7 +12,9 @@ const COLS = [
   { title: "Help", links: [["Help centre", "/help"], ["Safety guidance", "/safety"], ["Report a problem", "/help#report"], ["Takedown requests", "/takedown"], ["Refund policy", "/refunds"], ["Get the app", "/get-the-app"], ["Privacy policy", "/privacy"], ["Cookie policy", "/cookies"], ["Terms of use", "/terms"]] },
 ] as const;
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  // Inside the iPhone app, paid plans are not offered (Apple in-app purchase rules).
+  const iosApp = await inIosApp();
   return (
     <footer className="mt-24 bg-navy-900 text-[#f9f4ec]/80">
       <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
@@ -29,7 +32,7 @@ export function SiteFooter() {
           <div key={c.title}>
             <h2 className="text-sm font-bold tracking-wide text-white uppercase">{c.title}</h2>
             <ul className="mt-4 space-y-2.5 text-sm">
-              {c.links.map(([label, href]) => (
+              {c.links.filter(([, href]) => !(iosApp && href === "/dashboard/billing")).map(([label, href]) => (
                 <li key={href}>
                   <Link href={href} className="transition hover:text-white">{label}</Link>
                 </li>

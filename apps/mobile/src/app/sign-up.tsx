@@ -3,7 +3,7 @@ import { Switch, Text, View } from "react-native";
 import { Link, router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useAuth } from "@/lib/auth";
-import { API_URL, ApiError, errorMessage } from "@/lib/api";
+import { ApiError, errorMessage, webUrl } from "@/lib/api";
 import { colors } from "@/lib/theme";
 import { HouseMark } from "@/components/house-mark";
 import { Button, ChipGroup, Field, FormScreen, Input, Notice, styles as ui } from "@/components/ui";
@@ -65,11 +65,11 @@ export default function SignUpScreen() {
         <Switch value={accept} onValueChange={setAccept} trackColor={{ true: colors.emerald600 }} accessibilityLabel="I am 18 or over and accept the terms and privacy policy" />
         <Text style={[ui.body, { flex: 1 }]}>
           I am 18 or over and accept the{" "}
-          <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => WebBrowser.openBrowserAsync(`${API_URL}/terms`)}>
+          <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => WebBrowser.openBrowserAsync(webUrl("/terms"))}>
             terms
           </Text>{" "}
           and{" "}
-          <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => WebBrowser.openBrowserAsync(`${API_URL}/privacy`)}>
+          <Text style={{ fontWeight: "700", textDecorationLine: "underline" }} onPress={() => WebBrowser.openBrowserAsync(webUrl("/privacy"))}>
             privacy policy
           </Text>
         </Text>

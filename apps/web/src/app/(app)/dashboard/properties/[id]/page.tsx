@@ -24,6 +24,7 @@ import { StatusBadge } from "@/components/dashboard/status-badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
+import { inIosApp } from "@/server/ios-app";
 
 export const metadata: Metadata = { title: "Manage listing" };
 
@@ -41,6 +42,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
   const { tab: rawTab } = await searchParams;
   const tab: Tab = (TABS.map((t) => t[0]) as string[]).includes(rawTab ?? "") ? (rawTab as Tab) : "overview";
   const actor = await requirePageActor(`/dashboard/properties/${id}`);
+  const iosApp = await inIosApp();
   const p = await getManagedProperty(actor, id).catch((e) => {
     if (e instanceof AppError && (e.code === "NOT_FOUND" || e.code === "FORBIDDEN")) notFound();
     throw e;
@@ -159,7 +161,7 @@ export default async function ManagePropertyPage({ params, searchParams }: { par
             <section className="card space-y-3 p-5">
               <h2 className="font-bold text-navy-900">Promote this listing</h2>
               <p className="text-sm text-muted">Featured listings appear in the homepage carousel and at the top of matching searches. Promotion never changes verification status.</p>
-              {p.isFeatured ? <StatusBadge status="ACTIVE" /> : <ButtonLink href={`/dashboard/billing?promote=${p.id}`} variant="accent" size="sm">Feature for 7 days</ButtonLink>}
+              {p.isFeatured ? <StatusBadge status="ACTIVE" /> : iosApp ? <p className="text-sm text-muted">Promotion isn&apos;t available in the app.</p> : <ButtonLink href={`/dashboard/billing?promote=${p.id}`} variant="accent" size="sm">Feature for 7 days</ButtonLink>}
               {ent && ent.suggestions > 0 && (
                 <div className="space-y-2 border-t border-line pt-3">
                   <p className="text-sm text-muted">

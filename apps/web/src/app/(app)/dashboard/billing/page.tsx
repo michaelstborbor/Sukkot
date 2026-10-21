@@ -11,11 +11,20 @@ import { CheckoutButton } from "@/components/dashboard/checkout";
 import { ActionButton } from "@/components/dashboard/action-button";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import { Notice } from "@/components/ui/misc";
+import { inIosApp } from "@/server/ios-app";
 
 export const metadata: Metadata = { title: "Plans and billing" };
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ promote?: string }> }) {
   const actor = await requirePagePermission("listing:create", "/dashboard/billing");
+  if (await inIosApp()) {
+    return (
+      <>
+        <PageHeader title="Plans and billing" />
+        <Notice tone="info">Plans, promotions and extra listing slots aren&apos;t available in the app.</Notice>
+      </>
+    );
+  }
   const { promote } = await searchParams;
   const audience = await planAudience(actor.id);
   const [plans, subs, promoPrice, promoProperty, ent, transfer, myPlatformPayments, slotPrice] = await Promise.all([
