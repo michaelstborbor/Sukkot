@@ -10,6 +10,7 @@ import { transferDetails } from "@/server/services/billing";
 import { getStaySetup } from "@/server/services/stays";
 import { PageHeader } from "@/components/dashboard/shell";
 import { CheckoutButton } from "@/components/dashboard/checkout";
+import { inIosApp } from "@/server/ios-app";
 import { JsonForm, type JsonField } from "@/components/dashboard/json-form";
 import { ActionButton } from "@/components/dashboard/action-button";
 import { StayDetailsForm } from "@/components/stays/stay-details-form";
@@ -39,11 +40,14 @@ function roomFields(whole: boolean, r?: { name: string; description: string | nu
 export default async function StaySetupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requirePageActor(`/dashboard/properties/${id}/stay`);
+  const iosApp = await inIosApp();
   const setup = await getStaySetup(actor, id).catch((e) => {
     if (e instanceof AppError && e.code === "NOT_FOUND") notFound();
     throw e;
   });
   const { property: p, details, rooms, bookable, missing, feeSettled, fee } = setup;
+  // The listing fee is a digital purchase, which the iPhone app does not offer (Apple in-app purchase rules).
+  const shownMissing = iosApp ? missing.filter((m) => !m.endsWith("listing fee")) : missing;
   const isManager = p.listerId === actor.id || p.ownerId === actor.id;
   const staff = can(actor, "admin:bookings.manage");
   const whole = p.stayKind ? stayBooksWholePlace(p.stayKind) : false;
@@ -67,11 +71,11 @@ export default async function StaySetupPage({ params }: { params: Promise<{ id: 
         <Notice tone="success" title="Taking bookings">Guests can book this {p.stayKind ? STAY_KIND_LABELS[p.stayKind].toLowerCase() : "place"} now. We will call or message you to confirm each booking before the guest pays.</Notice>
       ) : (
         <Notice tone="info" title="Not taking bookings yet">
-          To start: {missing.join("; ").toLowerCase().replace(/^./, (c) => c.toUpperCase())}.
+          {shownMissing.length ? <>To start: {shownMissing.join("; ").toLowerCase().replace(/^./, (c) => c.toUpperCase())}.</> : "The listing fee is not paid yet."}
         </Notice>
       )}
 
-      {p.stayKind && !feeSettled && fee && (
+      {p.stayKind && !feeSettled && fee && !iosApp && (
         <section className="card space-y-3 border-gold-500 p-5">
           <h2 className="font-bold text-navy-900">Listing fee: {feeLabel}</h2>
           <p className="text-sm text-muted">One payment to list your {STAY_KIND_LABELS[p.stayKind].toLowerCase()} for bookings. It includes a visit from our team to take professional photos and video; we call you to agree a date once it is paid.</p>

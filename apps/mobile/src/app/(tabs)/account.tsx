@@ -4,7 +4,7 @@ import { router, type Href } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
 import { GENERAL_ENQUIRY, NOTICES, SUPPORT_CONTACT, telLink, VERIFICATION_BADGES, whatsappLink } from "@sukkot/shared";
-import { absoluteUrl, api, API_URL, errorMessage } from "@/lib/api";
+import { absoluteUrl, api, errorMessage, webUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { colors } from "@/lib/theme";
 import { SignedOut } from "@/components/signed-out";
@@ -104,7 +104,7 @@ function Row({ icon, label, href, count, last }: { icon: IconName; label: string
 
 function WebRow({ icon, label, path, last }: { icon: IconName; label: string; path: string; last?: boolean }) {
   return (
-    <Pressable style={[s.row, !last && s.border]} onPress={() => WebBrowser.openBrowserAsync(`${API_URL}${path}`)} accessibilityRole="link" accessibilityHint="Opens the Sukkot Salone website">
+    <Pressable style={[s.row, !last && s.border]} onPress={() => WebBrowser.openBrowserAsync(webUrl(path))} accessibilityRole="link" accessibilityHint="Opens the Sukkot Salone website">
       <Ionicons name={icon} size={20} color={colors.navy900} />
       <Text style={[ui.body, { flex: 1 }]}>{label}</Text>
       <Ionicons name="open-outline" size={16} color={colors.muted} />

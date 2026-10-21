@@ -4,6 +4,7 @@ import { requirePageActor } from "@/server/auth/actor";
 import { unreadMessageCount } from "@/server/services/messaging";
 import { unreadNotificationCount } from "@/server/services/notifications";
 import { db } from "@/server/db";
+import { inIosApp } from "@/server/ios-app";
 import { DashboardNav, type NavItem } from "@/components/dashboard/shell";
 import { EmailVerifyBanner } from "@/components/dashboard/email-verify-banner";
 
@@ -12,10 +13,11 @@ export const dynamic = "force-dynamic";
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const actor = await requirePageActor("/dashboard");
   const lister = hasPermission(actor.roles, "listing:create");
-  const [unread, notes, me] = await Promise.all([
+  const [unread, notes, me, iosApp] = await Promise.all([
     unreadMessageCount(actor.id),
     unreadNotificationCount(actor.id),
     db.user.findUnique({ where: { id: actor.id }, select: { email: true, emailVerifiedAt: true, phoneVerifiedAt: true } }),
+    inIosApp(),
   ]);
   const icon = (I: typeof Home) => <I className="h-4 w-4" />;
   const items: NavItem[] = [
@@ -32,7 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/notifications", label: "Notifications", icon: icon(Bell), badge: notes },
     { href: "/dashboard/verification", label: "Verification", icon: icon(ShieldCheck) },
     ...(actor.roles.includes("AGENT") ? [{ href: "/dashboard/agency", label: "Agency and team", icon: icon(Users) }] : []),
-    ...(lister ? [{ href: "/dashboard/billing", label: "Plans and billing", icon: icon(CreditCard) }] : []),
+    ...(lister && !iosApp ? [{ href: "/dashboard/billing", label: "Plans and billing", icon: icon(CreditCard) }] : []),
     { href: "/dashboard/settings", label: "Account settings", icon: icon(Settings) },
   ];
   return (
