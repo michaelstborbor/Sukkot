@@ -44,6 +44,16 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
 }
 
 /** Turn a relative URL from the API (e.g. an image path) into an absolute one. */
+/**
+ * A page on the website, opened from the app. On iPhone the site is told it is inside the app, so it
+ * hides plans, promotions, listing slots and listing fees, which Apple only allows through its own
+ * in-app purchases.
+ */
+export function webUrl(path: string): string {
+  if (Platform.OS !== "ios") return `${API_URL}${path}`;
+  return `${API_URL}${path}${path.includes("?") ? "&" : "?"}app=ios`;
+}
+
 export function absoluteUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
   return /^https?:\/\//.test(path) ? path : `${API_URL}${path}`;

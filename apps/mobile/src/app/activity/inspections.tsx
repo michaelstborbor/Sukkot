@@ -1,7 +1,8 @@
-import { FlatList, Linking, RefreshControl, Text } from "react-native";
+import { FlatList, RefreshControl, Text } from "react-native";
 import { Link } from "expo-router";
 import { formatDateTime, formatMoney, type InspectionDTO } from "@sukkot/shared";
-import { API_URL } from "@/lib/api";
+import { webUrl } from "@/lib/api";
+import * as WebBrowser from "expo-web-browser";
 import { useApi } from "@/lib/use-api";
 import { StatusBadge } from "@/components/status";
 import { WorkflowActions } from "@/components/workflow-actions";
@@ -29,7 +30,7 @@ export default function InspectionsScreen() {
           <Text style={ui.muted}>{i.myRole === "REQUESTER" ? "You requested this viewing" : `Requested by ${i.requester.name}`}</Text>
           {i.notes ? <Text style={ui.muted}>“{i.notes}”</Text> : null}
           {i.myRole === "REQUESTER" && i.fee && !i.fee.paid && ["REQUESTED", "RESCHEDULE_PROPOSED", "CONFIRMED"].includes(i.status) ? (
-            <Text style={[ui.body, { fontWeight: "700" }]} onPress={() => Linking.openURL(`${API_URL}/dashboard/inspections`)}>
+            <Text style={[ui.body, { fontWeight: "700" }]} onPress={() => WebBrowser.openBrowserAsync(webUrl("/dashboard/inspections"))}>
               Pay the {formatMoney(BigInt(i.fee.amountMinor), i.fee.currency)} booking fee on the website to send this request →
             </Text>
           ) : null}
