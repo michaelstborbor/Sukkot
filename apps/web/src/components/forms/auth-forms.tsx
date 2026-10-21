@@ -10,10 +10,8 @@ import { Checkbox, Field, Input } from "@/components/ui/form";
 import { Notice } from "@/components/ui/misc";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { safeNext } from "@/lib/safe-next";
 
-function safeNext(next: string | null) {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-}
 
 function PasswordInput({ id, value, onChange, autoComplete, invalid }: { id: string; value: string; onChange: (v: string) => void; autoComplete: string; invalid?: boolean }) {
   const [show, setShow] = useState(false);

@@ -372,8 +372,9 @@ export async function handleWebhook(method: PaymentMethod, req: { headers: Heade
       },
     });
     if (!move) return { status: fresh.status, duplicate: false };
-    const updated = await tx.paymentTransaction.update({
-      where: { id: fresh.id },
+    // Guarded on the status we read, so a status check running at the same time cannot fulfil twice.
+    const moved = await tx.paymentTransaction.updateMany({
+      where: { id: fresh.id, status: fresh.status },
       data: {
         status: target,
         providerVerified: target === "SUCCEEDED",
@@ -381,6 +382,8 @@ export async function handleWebhook(method: PaymentMethod, req: { headers: Heade
         providerReference: fresh.providerReference ?? result.providerReference ?? null,
       },
     });
+    const updated = await tx.paymentTransaction.findUniqueOrThrow({ where: { id: fresh.id } });
+    if (!moved.count) return { status: updated.status, duplicate: false };
     if (target === "SUCCEEDED") await fulfil(tx, updated);
     return { status: updated.status, duplicate: false };
   });
@@ -397,10 +400,14 @@ export async function refreshPaymentStatus(actorIn: Actor | null, id: string) {
   const status = await provider.queryStatus(toStored(p));
   if (status === p.status || !canMovePayment(p.status, status)) return toPaymentDto(p);
   const updated = await db.$transaction(async (tx) => {
-    const u = await tx.paymentTransaction.update({
-      where: { id },
-      data: { status, providerVerified: status === "SUCCEEDED", paidAt: status === "SUCCEEDED" ? new Date() : null, events: { create: { type: "status_query", source: p.method, statusBefore: p.status, statusAfter: status } } },
+    // Guarded on the status we read: parallel refreshes, or a callback arriving now, fulfil only once.
+    const moved = await tx.paymentTransaction.updateMany({
+      where: { id, status: p.status },
+      data: { status, providerVerified: status === "SUCCEEDED", paidAt: status === "SUCCEEDED" ? new Date() : null },
     });
+    const u = await tx.paymentTransaction.findUniqueOrThrow({ where: { id } });
+    if (!moved.count) return u;
+    await tx.paymentEvent.create({ data: { transactionId: id, type: "status_query", source: p.method, statusBefore: p.status, statusAfter: status } });
     if (status === "SUCCEEDED") await fulfil(tx, u);
     return u;
   });
@@ -433,16 +440,20 @@ export async function submitManualPlatformPayment(actorIn: Actor | null, input: 
   const settings = await getSetting("billing.manual");
   if (!settings.enabled) throw new AppError("NOT_CONFIGURED", "Paying by transfer is not available yet");
 
-  const externalReference = data.externalReference.replace(/\s+/g, "").toUpperCase();
-  const reused = await db.paymentTransaction.findFirst({
-    where: { externalReference, payeeId: null, purpose: { in: [...PLATFORM_COLLECTED_PURPOSES] }, status: { notIn: ["FAILED", "CANCELLED", "EXPIRED"] } },
-    select: { id: true },
-  });
-  if (reused) throw new AppError("CONFLICT", "This transaction ID has already been submitted", { externalReference: "Already used" });
+  // Letters and digits only, so "OM-123" and "om 123" are the same transaction ID.
+  const externalReference = data.externalReference.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (externalReference.length < 4) throw new AppError("VALIDATION", "Enter the transaction ID from your receipt", { externalReference: "Too short" });
 
   const item = await pricePlatformItem(actor.id, data.purpose, data);
   const method: PaymentMethod = data.channel === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MANUAL";
   const p = await db.$transaction(async (tx) => {
+    // Hold a lock on this transaction ID so two people submitting it at once cannot both pass the check.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`transfer-ref:${externalReference}`}))`;
+    const reused = await tx.paymentTransaction.findFirst({
+      where: { externalReference, payeeId: null, purpose: { in: [...PLATFORM_COLLECTED_PURPOSES] }, status: { notIn: ["FAILED", "CANCELLED", "EXPIRED"] } },
+      select: { id: true },
+    });
+    if (reused) throw new AppError("CONFLICT", "This transaction ID has already been submitted", { externalReference: "Already used" });
     const sub = item.planId ? await tx.subscription.create({ data: { userId: actor.id, planId: item.planId, status: "PENDING_PAYMENT" } }) : null;
     const created = await tx.paymentTransaction.create({
       data: {
@@ -610,7 +621,7 @@ export async function confirmRecordedPayment(actorIn: Actor | null, id: string, 
   const status: PaymentStatus = confirm ? "RECORDED" : "DISPUTED";
   return db.$transaction(async (tx) => {
     const u = await tx.paymentTransaction.update({
-      where: { id },
+      where: { id, status: "PENDING" },
       data: { status, confirmedByPayeeAt: confirm ? new Date() : null, events: { create: { type: confirm ? "payee_confirmed" : "payee_disputed", source: "payee", statusBefore: p.status, statusAfter: status } } },
     });
     if (confirm && p.tenancyId) await applyToSchedule(tx, p.tenancyId, p.amountMinor);
@@ -651,6 +662,7 @@ export async function recordPlatformRefund(actorIn: Actor | null, id: string, in
   return db.$transaction(async (tx) => {
     const p = await tx.paymentTransaction.findUnique({ where: { id } });
     if (!p || p.payeeId !== null || !PLATFORM_COLLECTED_PURPOSES.includes(p.purpose)) throw notFound("Payment");
+    if (p.payerId === actor.id) throw forbidden("You cannot record a refund to yourself");
     if (p.purpose === "STAY_BOOKING") throw new AppError("CONFLICT", "Record refunds for bookings under Bookings, where the cancellation policy and any part refund are tracked");
     if (!canMovePayment(p.status, "REFUNDED") || (p.status !== "SUCCEEDED" && p.status !== "RECORDED")) throw new AppError("CONFLICT", "Only a confirmed payment can be refunded");
     const updated = await tx.paymentTransaction.update({

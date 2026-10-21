@@ -53,14 +53,11 @@ export async function login(
   const ok = await verifyPassword(password, user?.passwordHash);
   if (!user || !ok) {
     if (user) {
-      const failed = user.failedLoginCount + 1;
-      await db.user.update({
-        where: { id: user.id },
-        data: {
-          failedLoginCount: failed >= LOCK_AFTER ? 0 : failed,
-          lockedUntil: failed >= LOCK_AFTER ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null,
-        },
-      });
+      // Increment in the database so parallel guesses cannot all read the same count.
+      const { failedLoginCount } = await db.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } }, select: { failedLoginCount: true } });
+      if (failedLoginCount >= LOCK_AFTER) {
+        await db.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) } });
+      }
     }
     throw new AppError("UNAUTHENTICATED", GENERIC_LOGIN_ERROR);
   }
@@ -223,6 +220,8 @@ export async function requestPasswordReset(input: unknown) {
   const { email } = forgotPasswordSchema.parse(input);
   const user = await db.user.findUnique({ where: { email }, select: { id: true, email: true, status: true } });
   if (!user || user.status !== "ACTIVE") return;
+  // Only the newest link works.
+  await db.authToken.updateMany({ where: { userId: user.id, type: "PASSWORD_RESET", usedAt: null }, data: { usedAt: new Date() } });
   const token = await issueToken(user.id, "PASSWORD_RESET", 60);
   await sendEmail({
     to: user.email,
@@ -239,7 +238,7 @@ export async function resetPassword(input: unknown) {
     throw new AppError("BAD_REQUEST", "This reset link is invalid or has expired");
   }
   await db.$transaction([
-    db.authToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
+    db.authToken.updateMany({ where: { userId: row.userId, type: "PASSWORD_RESET", usedAt: null }, data: { usedAt: new Date() } }),
     db.user.update({
       where: { id: row.userId },
       data: { passwordHash: await hashPassword(password), failedLoginCount: 0, lockedUntil: null },

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { safeNext } from "@/lib/safe-next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatSlPhone } from "@sukkot/shared";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "Confirm your phone", robots: { index
 
 export default async function VerifyPhonePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next: rawNext } = await searchParams;
-  const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  const next = safeNext(rawNext);
   const actor = await getCurrentActor();
   if (!actor) redirect(`/auth/sign-in?next=${encodeURIComponent(`/auth/verify-phone?next=${encodeURIComponent(next)}`)}`);
   const me = await db.user.findUnique({ where: { id: actor.id }, select: { phone: true, phoneVerifiedAt: true } });

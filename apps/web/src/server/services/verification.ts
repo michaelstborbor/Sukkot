@@ -19,10 +19,17 @@ export async function submitVerification(actorIn: Actor | null, fields: unknown,
   if (!files.length) throw new AppError("VALIDATION", "Attach at least one document");
   if (files.length > 5) throw new AppError("VALIDATION", "Attach up to 5 documents");
   if (data.kind === "AGENT_CREDENTIALS" && !actor.roles.includes("AGENT")) throw forbidden("Only agent accounts can request agent verification");
-  if (data.kind === "LISTING_AUTHORITY" || data.kind === "PROPERTY_DOCUMENTS") {
-    if (!data.propertyId) throw new AppError("VALIDATION", "Choose the listing", { propertyId: "Required" });
+  const aboutListing = data.kind === "LISTING_AUTHORITY" || data.kind === "PROPERTY_DOCUMENTS";
+  if (aboutListing && !data.propertyId) throw new AppError("VALIDATION", "Choose the listing", { propertyId: "Required" });
+  // A listing can only be attached to a listing check, and only by its lister or owner: the decision is written to that listing.
+  if (!aboutListing && data.propertyId) throw new AppError("VALIDATION", "This check is not about a listing", { propertyId: "Not allowed" });
+  if (data.propertyId) {
     const p = await db.property.findUnique({ where: { id: data.propertyId }, select: { listerId: true, ownerId: true } });
     if (!p || (p.listerId !== actor.id && p.ownerId !== actor.id)) throw notFound("Listing");
+  }
+  if (data.agencyId) {
+    const member = await db.agencyMember.findUnique({ where: { agencyId_userId: { agencyId: data.agencyId, userId: actor.id } }, select: { id: true } });
+    if (!member) throw notFound("Agency");
   }
   const open = await db.verificationRequest.findFirst({
     where: { userId: actor.id, kind: data.kind, propertyId: data.propertyId ?? null, status: { in: ["PENDING_REVIEW", "INFO_REQUIRED"] } },

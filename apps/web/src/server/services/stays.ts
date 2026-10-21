@@ -551,7 +551,7 @@ export async function listStayBookings(actorIn: Actor | null, status?: string) {
 }
 
 async function loadForStaff(id: string) {
-  const b = await db.stayBooking.findUnique({ where: { id }, include: { property: { select: { title: true, stayCommissionBps: true } }, roomType: { select: { name: true } } } });
+  const b = await db.stayBooking.findUnique({ where: { id }, include: { property: { select: { title: true, stayCommissionBps: true, listerId: true, ownerId: true } }, roomType: { select: { name: true } } } });
   if (!b) throw notFound("Booking");
   return b;
 }
@@ -684,7 +684,9 @@ export async function recordStayPayout(actorIn: Actor | null, id: string, input:
   const amount = parseMajorToMinor(data.amount, b.currency);
   if (amount === null || amount < 0n) throw new AppError("VALIDATION", "Enter the amount as a number", { amount: "Numbers only" });
   if (amount > b.totalMinor - b.refundedMinor) throw new AppError("VALIDATION", "That is more than Sukkot Salone kept from the guest's payment", { amount: "Too much" });
-  await db.stayBooking.update({ where: { id }, data: { payoutMinor: amount, payoutReference: data.reference, payoutAt: new Date(), payoutById: actor.id } });
+  if (b.property.listerId === actor.id || b.property.ownerId === actor.id) throw forbidden("You cannot record a payout to your own property");
+  const moved = await db.stayBooking.updateMany({ where: { id, payoutAt: null }, data: { payoutMinor: amount, payoutReference: data.reference, payoutAt: new Date(), payoutById: actor.id } });
+  if (!moved.count) throw new AppError("CONFLICT", "A payout is already recorded for this booking");
   await audit({ actorId: actor.id, action: "stay.payout", targetType: "StayBooking", targetId: id, metadata: { amountMinor: amount.toString(), reference: data.reference }, ipHash });
 }
 
@@ -709,10 +711,12 @@ export async function recordStayRefund(actorIn: Actor | null, id: string, input:
   const refundedMinor = b.refundedMinor + amount;
   const full = refundedMinor >= paid.amountMinor;
   return db.$transaction(async (tx) => {
+    // Guarded on the refunded total we checked, so two refunds recorded at once cannot pass the cap.
+    const moved = await tx.stayBooking.updateMany({ where: { id, refundedMinor: b.refundedMinor }, data: { refundedMinor } });
+    if (!moved.count) throw new AppError("CONFLICT", "Another refund was just recorded for this booking. Reload and check the amount.");
     await tx.refund.create({ data: { transactionId: paid.id, amountMinor: amount, currency: b.currency, reason: `Booking ${b.reference}${b.cancelReason ? `: ${b.cancelReason}` : ""}`, status: "RECORDED" } });
     await tx.paymentEvent.create({ data: { transactionId: paid.id, type: "refund_recorded", source: "finance", statusBefore: paid.status, statusAfter: full ? "REFUNDED" : paid.status, payload: { by: actor.id, amountMinor: amount.toString(), externalReference: data.externalReference } } });
     if (full) await tx.paymentTransaction.update({ where: { id: paid.id }, data: { status: "REFUNDED" } });
-    await tx.stayBooking.update({ where: { id }, data: { refundedMinor } });
     await notify([{ userId: b.guestId, type: "payment.refunded", title: "Refund sent", body: `We sent back ${formatMoney(amount, b.currency)} for booking ${b.reference} at ${b.property.title} (refund transaction ${data.externalReference}).`, link: `/dashboard/stays/${b.reference}`, email: true }], tx);
     await audit({ actorId: actor.id, action: "stay.refund_record", targetType: "StayBooking", targetId: id, metadata: { amountMinor: amount.toString(), externalReference: data.externalReference, outstandingBefore: outstanding.toString() }, ipHash }, tx);
   });

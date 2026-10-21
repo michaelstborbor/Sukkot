@@ -546,6 +546,7 @@ export async function moderateListing(
   const result = await db.$transaction(async (tx) => {
     const p = await tx.property.findUnique({ where: { id } });
     if (!p) throw notFound("Listing");
+    if (p.listerId === actor.id || p.ownerId === actor.id) throw forbidden("Another moderator must review your own listing");
     const next = listingMachine.next(p.listingStatus, input.action, "MODERATOR");
     firstPublish = next === "PUBLISHED" && !p.publishedAt;
     const data: Prisma.PropertyUpdateInput = { listingStatus: next };
@@ -553,7 +554,10 @@ export async function moderateListing(
     if (input.markDocumentsReviewed !== undefined && can(actor, "admin:verification.review")) {
       data.documentsStatus = input.markDocumentsReviewed ? "VERIFIED" : p.documentsStatus;
     }
-    if (input.featured !== undefined) data.isFeatured = input.featured;
+    if (input.featured !== undefined) {
+      if (input.featured && next !== "PUBLISHED") throw new AppError("CONFLICT", "Only live listings can be featured");
+      data.isFeatured = input.featured;
+    }
     const updated = await tx.property.update({ where: { id }, data });
     await tx.propertyStatusHistory.create({
       data: { propertyId: id, field: "listingStatus", fromValue: p.listingStatus, toValue: next, reason: input.reason, actorId: actor.id },

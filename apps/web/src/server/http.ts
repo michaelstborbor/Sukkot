@@ -25,8 +25,11 @@ export function errorResponse(err: unknown): NextResponse {
 }
 
 export function clientIp(req: Request): string | null {
-  const fwd = req.headers.get("x-forwarded-for");
-  return fwd?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+  // Proxies append to X-Forwarded-For, so the leftmost entries are whatever the client sent. Count
+  // back from the right by the number of proxies we trust.
+  const hops = (req.headers.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (hops.length) return hops[Math.max(0, hops.length - env.trustedProxyHops)]!;
+  return req.headers.get("x-real-ip") || null;
 }
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
